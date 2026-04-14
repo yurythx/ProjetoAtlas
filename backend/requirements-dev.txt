@@ -1,0 +1,17 @@
+# Dev Dependencies - Backend
+
+## Testing
+coverage>=7.0.0
+Faker>=20.0.0
+pytest>=8.0.0
+pytest-django>=4.8.0
+pytest-asyncio>=0.23.0
+
+## Code Quality
+ruff>=0.3.0
+mypy>=1.9
+django-stubs>=5.0
+djangorestframework-stubs>=3.14
+
+## Pre-commit
+pre-commit>=3.0.0

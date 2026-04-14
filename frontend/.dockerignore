@@ -1,0 +1,21 @@
+Dockerfile
+.dockerignore
+node_modules
+npm-debug.log
+*.log
+README.md
+.next
+.next-dev
+.git
+.gitignore
+.vscode
+# Testes e relatórios — não devem ir para a imagem de produção
+test-results/
+playwright-report/
+e2e/
+vitest.config.ts
+vitest.setup.ts
+playwriight.config.ts
+coverage/
+# TypeScript build info — gerado durante o build
+tsconfig.tsbuildinfo

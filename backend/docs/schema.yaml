@@ -1,0 +1,2576 @@
+openapi: 3.0.3
+info:
+  title: Atlas SaaS API
+  version: 1.0.0
+  description: API Multi-tenant para SaaS BlackBone
+paths:
+  /api/accounts/register/:
+    post:
+      operationId: api_accounts_register_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRegistration'
+          description: ''
+  /api/accounts/token/:
+    post:
+      operationId: api_accounts_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/accounts/token/refresh/:
+    post:
+      operationId: api_accounts_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/articles/:
+    get:
+      operationId: api_articles_list
+      description: Gerencia artigos do CMS.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedArticleList'
+          description: ''
+    post:
+      operationId: api_articles_create
+      description: Gerencia artigos do CMS.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ArticleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ArticleRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+          description: ''
+  /api/articles/{id}/:
+    get:
+      operationId: api_articles_retrieve
+      description: Gerencia artigos do CMS.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+          description: ''
+    put:
+      operationId: api_articles_update
+      description: Gerencia artigos do CMS.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ArticleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ArticleRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+          description: ''
+    patch:
+      operationId: api_articles_partial_update
+      description: Gerencia artigos do CMS.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedArticleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedArticleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedArticleRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+          description: ''
+    delete:
+      operationId: api_articles_destroy
+      description: Gerencia artigos do CMS.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/articles/categories/:
+    get:
+      operationId: api_articles_categories_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCategoryList'
+          description: ''
+    post:
+      operationId: api_articles_categories_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+  /api/articles/categories/{slug}/:
+    get:
+      operationId: api_articles_categories_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+    put:
+      operationId: api_articles_categories_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+    patch:
+      operationId: api_articles_categories_partial_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoryRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+    delete:
+      operationId: api_articles_categories_destroy
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/core/companies/:
+    get:
+      operationId: api_core_companies_list
+      description: |-
+        CRUD de Empresas.
+        Em um cenário real, a criação de empresas pode ser restrita a superadmins
+        ou via fluxo de pagamento. Aqui deixamos aberto para facilitar o setup.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCompanyList'
+          description: ''
+    post:
+      operationId: api_core_companies_create
+      description: |-
+        CRUD de Empresas.
+        Em um cenário real, a criação de empresas pode ser restrita a superadmins
+        ou via fluxo de pagamento. Aqui deixamos aberto para facilitar o setup.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompanyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompanyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+          description: ''
+  /api/core/companies/{slug}/:
+    get:
+      operationId: api_core_companies_retrieve
+      description: |-
+        CRUD de Empresas.
+        Em um cenário real, a criação de empresas pode ser restrita a superadmins
+        ou via fluxo de pagamento. Aqui deixamos aberto para facilitar o setup.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+          description: ''
+    put:
+      operationId: api_core_companies_update
+      description: |-
+        CRUD de Empresas.
+        Em um cenário real, a criação de empresas pode ser restrita a superadmins
+        ou via fluxo de pagamento. Aqui deixamos aberto para facilitar o setup.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompanyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompanyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+          description: ''
+    patch:
+      operationId: api_core_companies_partial_update
+      description: |-
+        CRUD de Empresas.
+        Em um cenário real, a criação de empresas pode ser restrita a superadmins
+        ou via fluxo de pagamento. Aqui deixamos aberto para facilitar o setup.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCompanyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCompanyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCompanyRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+          description: ''
+    delete:
+      operationId: api_core_companies_destroy
+      description: |-
+        CRUD de Empresas.
+        Em um cenário real, a criação de empresas pode ser restrita a superadmins
+        ou via fluxo de pagamento. Aqui deixamos aberto para facilitar o setup.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/licensing/features/:
+    get:
+      operationId: api_licensing_features_list
+      description: Lista features disponíveis (apenas leitura para usuários).
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFeatureList'
+          description: ''
+  /api/licensing/features/{id}/:
+    get:
+      operationId: api_licensing_features_retrieve
+      description: Lista features disponíveis (apenas leitura para usuários).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this feature.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feature'
+          description: ''
+  /api/licensing/my-license/:
+    get:
+      operationId: api_licensing_my_license_list
+      description: Gerencia a licença do tenant atual.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLicenseList'
+          description: ''
+    post:
+      operationId: api_licensing_my_license_create
+      description: Gerencia a licença do tenant atual.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LicenseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LicenseRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+          description: ''
+  /api/licensing/my-license/{id}/:
+    get:
+      operationId: api_licensing_my_license_retrieve
+      description: Gerencia a licença do tenant atual.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+          description: ''
+    put:
+      operationId: api_licensing_my_license_update
+      description: Gerencia a licença do tenant atual.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LicenseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LicenseRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+          description: ''
+    patch:
+      operationId: api_licensing_my_license_partial_update
+      description: Gerencia a licença do tenant atual.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+          description: ''
+    delete:
+      operationId: api_licensing_my_license_destroy
+      description: Gerencia a licença do tenant atual.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/licensing/plans/:
+    get:
+      operationId: api_licensing_plans_list
+      description: Lista planos disponíveis (apenas leitura para usuários).
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlanList'
+          description: ''
+  /api/licensing/plans/{id}/:
+    get:
+      operationId: api_licensing_plans_retrieve
+      description: Lista planos disponíveis (apenas leitura para usuários).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this plan.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+          description: ''
+  /api/messenger/contacts/:
+    get:
+      operationId: api_messenger_contacts_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Messenger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedContactList'
+          description: ''
+  /api/messenger/contacts/{id}/:
+    get:
+      operationId: api_messenger_contacts_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this User.
+        required: true
+      tags:
+      - Messenger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+          description: ''
+  /api/messenger/conversations/:
+    get:
+      operationId: api_messenger_conversations_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Messenger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConversationList'
+          description: ''
+    post:
+      operationId: api_messenger_conversations_create
+      tags:
+      - Messenger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+  /api/messenger/conversations/{id}/:
+    get:
+      operationId: api_messenger_conversations_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Messenger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+    put:
+      operationId: api_messenger_conversations_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Messenger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+    patch:
+      operationId: api_messenger_conversations_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Messenger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedConversationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedConversationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedConversationRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+    delete:
+      operationId: api_messenger_conversations_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Messenger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/messenger/conversations/{id}/messages/:
+    get:
+      operationId: api_messenger_conversations_messages_list
+      description: List all messages in this conversation
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Messenger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMessageList'
+          description: ''
+  /api/messenger/conversations/{id}/send_message/:
+    post:
+      operationId: api_messenger_conversations_send_message_create
+      description: Send a message to this conversation
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Messenger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/modules/available/:
+    get:
+      operationId: api_modules_available_list
+      description: Lista todos os módulos disponíveis no sistema.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedModuleList'
+          description: ''
+  /api/modules/available/{id}/:
+    get:
+      operationId: api_modules_available_retrieve
+      description: Lista todos os módulos disponíveis no sistema.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this module.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+          description: ''
+  /api/modules/my-modules/:
+    get:
+      operationId: api_modules_my_modules_list
+      description: Gerencia os módulos ativados para o tenant atual.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTenantModuleList'
+          description: ''
+    post:
+      operationId: api_modules_my_modules_create
+      description: Gerencia os módulos ativados para o tenant atual.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantModuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantModuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantModuleRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantModule'
+          description: ''
+  /api/modules/my-modules/{id}/:
+    get:
+      operationId: api_modules_my_modules_retrieve
+      description: Gerencia os módulos ativados para o tenant atual.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantModule'
+          description: ''
+    put:
+      operationId: api_modules_my_modules_update
+      description: Gerencia os módulos ativados para o tenant atual.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantModuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantModuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantModuleRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantModule'
+          description: ''
+    patch:
+      operationId: api_modules_my_modules_partial_update
+      description: Gerencia os módulos ativados para o tenant atual.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantModuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantModuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTenantModuleRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantModule'
+          description: ''
+    delete:
+      operationId: api_modules_my_modules_destroy
+      description: Gerencia os módulos ativados para o tenant atual.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/modules/my-modules/activate/:
+    post:
+      operationId: api_modules_my_modules_activate_create
+      description: |-
+        Endpoint conveniente para ativar um módulo pelo código.
+        Body: { "module_code": "messenger" }
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantModuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TenantModuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TenantModuleRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantModule'
+          description: ''
+  /api/pages/:
+    get:
+      operationId: api_pages_list
+      description: Gerencia páginas do CMS.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPageList'
+          description: ''
+    post:
+      operationId: api_pages_create
+      description: Gerencia páginas do CMS.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PageRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page'
+          description: ''
+  /api/pages/{id}/:
+    get:
+      operationId: api_pages_retrieve
+      description: Gerencia páginas do CMS.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page'
+          description: ''
+    put:
+      operationId: api_pages_update
+      description: Gerencia páginas do CMS.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PageRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page'
+          description: ''
+    patch:
+      operationId: api_pages_partial_update
+      description: Gerencia páginas do CMS.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPageRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page'
+          description: ''
+    delete:
+      operationId: api_pages_destroy
+      description: Gerencia páginas do CMS.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - basicAuth: []
+      - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        category_name:
+          type: string
+          readOnly: true
+        author_name:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+        content:
+          type: string
+        excerpt:
+          type: string
+          description: Resumo do artigo
+        is_published:
+          type: boolean
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        image:
+          type: string
+          format: uri
+          nullable: true
+        company:
+          type: string
+          format: uuid
+          readOnly: true
+        author:
+          type: integer
+          readOnly: true
+          nullable: true
+        category:
+          type: integer
+          nullable: true
+      required:
+      - author
+      - author_name
+      - category_name
+      - company
+      - content
+      - created_at
+      - id
+      - slug
+      - title
+      - updated_at
+    ArticleRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+        content:
+          type: string
+          minLength: 1
+        excerpt:
+          type: string
+          description: Resumo do artigo
+        is_published:
+          type: boolean
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        image:
+          type: string
+          format: binary
+          nullable: true
+        category:
+          type: integer
+          nullable: true
+      required:
+      - content
+      - slug
+      - title
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        company:
+          type: string
+          format: uuid
+          readOnly: true
+      required:
+      - company
+      - id
+      - name
+      - slug
+    CategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - name
+      - slug
+    Company:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        branding: {}
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+      - slug
+      - updated_at
+    CompanyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        branding: {}
+      required:
+      - name
+      - slug
+    Contact:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_online:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - is_online
+      - username
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        participants:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        participants_list:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        title:
+          type: string
+          nullable: true
+          maxLength: 255
+        is_group:
+          type: boolean
+        last_message:
+          type: string
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - last_message
+      - participants
+      - participants_list
+      - updated_at
+    ConversationRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          nullable: true
+          maxLength: 255
+        is_group:
+          type: boolean
+    Feature:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+      required:
+      - code
+      - id
+      - name
+    License:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        company:
+          type: string
+          format: uuid
+          readOnly: true
+        plan:
+          type: integer
+        plan_name:
+          type: string
+          readOnly: true
+        start_date:
+          type: string
+          format: date-time
+          readOnly: true
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+      required:
+      - company
+      - id
+      - plan
+      - plan_name
+      - start_date
+    LicenseRequest:
+      type: object
+      properties:
+        plan:
+          type: integer
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+      required:
+      - plan
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        conversation:
+          type: integer
+          readOnly: true
+        sender:
+          type: integer
+          readOnly: true
+        sender_username:
+          type: string
+          readOnly: true
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_read:
+          type: boolean
+      required:
+      - content
+      - conversation
+      - created_at
+      - id
+      - sender
+      - sender_username
+    Module:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        is_default:
+          type: boolean
+          description: Se ativado por padrão para novas empresas
+      required:
+      - code
+      - id
+      - name
+    Page:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+        content:
+          type: string
+        is_published:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        meta_title:
+          type: string
+          maxLength: 200
+        meta_description:
+          type: string
+          maxLength: 500
+        company:
+          type: string
+          format: uuid
+          readOnly: true
+      required:
+      - company
+      - created_at
+      - id
+      - slug
+      - title
+      - updated_at
+    PageRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+        content:
+          type: string
+        is_published:
+          type: boolean
+        meta_title:
+          type: string
+          maxLength: 200
+        meta_description:
+          type: string
+          maxLength: 500
+      required:
+      - slug
+      - title
+    PaginatedArticleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+    PaginatedCategoryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+    PaginatedCompanyList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Company'
+    PaginatedContactList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contact'
+    PaginatedConversationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Conversation'
+    PaginatedFeatureList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+    PaginatedLicenseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/License'
+    PaginatedMessageList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+    PaginatedModuleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+    PaginatedPageList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Page'
+    PaginatedPlanList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+    PaginatedTenantModuleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantModule'
+    PatchedArticleRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+        content:
+          type: string
+          minLength: 1
+        excerpt:
+          type: string
+          description: Resumo do artigo
+        is_published:
+          type: boolean
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        image:
+          type: string
+          format: binary
+          nullable: true
+        category:
+          type: integer
+          nullable: true
+    PatchedCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+    PatchedCompanyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        branding: {}
+    PatchedConversationRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          nullable: true
+          maxLength: 255
+        is_group:
+          type: boolean
+    PatchedLicenseRequest:
+      type: object
+      properties:
+        plan:
+          type: integer
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+    PatchedPageRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+        content:
+          type: string
+        is_published:
+          type: boolean
+        meta_title:
+          type: string
+          maxLength: 200
+        meta_description:
+          type: string
+          maxLength: 500
+    PatchedTenantModuleRequest:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+        config:
+          description: Configurações específicas do módulo para este tenant
+    Plan:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanFeature'
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        is_active:
+          type: boolean
+      required:
+      - features
+      - id
+      - name
+    PlanFeature:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        feature:
+          type: integer
+        feature_code:
+          type: string
+          readOnly: true
+        feature_name:
+          type: string
+          readOnly: true
+        value:
+          type: string
+          description: 'Valor ou limite da feature (ex: ''100'', ''true'', ''unlimited'')'
+          maxLength: 100
+      required:
+      - feature
+      - feature_code
+      - feature_name
+      - id
+      - value
+    TenantModule:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        module:
+          type: integer
+          readOnly: true
+        module_code:
+          type: string
+          readOnly: true
+        module_name:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        config:
+          description: Configurações específicas do módulo para este tenant
+      required:
+      - id
+      - module
+      - module_code
+      - module_name
+    TenantModuleRequest:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+        config:
+          description: Configurações específicas do módulo para este tenant
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+      required:
+      - access
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - refresh
+    UserRegistration:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+      required:
+      - id
+      - username
+    UserRegistrationRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        company_slug:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - company_slug
+      - password
+      - username
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Company-Slug
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

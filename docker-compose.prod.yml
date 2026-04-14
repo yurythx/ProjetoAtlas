@@ -1,0 +1,354 @@
+# Atlas Docker Compose Configuration
+# ============================================================
+# ATLAS — PRODUCTION (Cloudflare Tunnel)
+# ============================================================
+# Sem Nginx. O Cloudflare Tunnel faz o roteamento HTTPS.
+#
+# Uso:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# Portas locais expostas APENAS em 127.0.0.1 (não acessíveis
+# externamente — o tunnel conecta-se via loopback):
+#   backend  → 127.0.0.1:8005
+#   frontend → 127.0.0.1:3005
+# ============================================================
+
+x-backend-env: &backend-env
+  DEBUG: "False"
+  SECURE_SSL_REDIRECT: "${SECURE_SSL_REDIRECT:-False}"
+  SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+  DATABASE_URL: ${DATABASE_URL:-postgresql://user:pass@db:5432/db}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  USE_S3: ${USE_S3:-True}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+  AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME:-atlas-media}
+  AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://minio:9000}
+  AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME:-us-east-1}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?CSRF_TRUSTED_ORIGINS is required}
+  FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY is required}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-2}
+
+services:
+  # ──────────────────────────────────────────────────────────
+  # DATABASE
+  # ──────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: atlas_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    command: [ "postgres", "-c", "max_connections=200", "-c", "shared_buffers=128MB" ]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - atlas_internal
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ──────────────────────────────────────────────────────────
+  # CACHE / MESSAGE BROKER
+  # ──────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: atlas_redis
+    command: >
+      redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    restart: unless-stopped
+    networks:
+      - atlas_internal
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 300m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ──────────────────────────────────────────────────────────
+  # OBJECT STORAGE (MinIO)
+  # Exposto apenas internamente. Acesso externo via Django proxy.
+  # ──────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: atlas_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      MINIO_SERVER_URL: "https://minio.projetoravenna.cloud"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+    networks:
+      - atlas_internal
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ──────────────────────────────────────────────────────────
+  # MINIO BUCKET CREATOR
+  # Garante que o bucket 'atlas-media' exista na inicialização.
+  # ──────────────────────────────────────────────────────────
+  createbuckets:
+    image: minio/mc:latest
+    container_name: atlas_minio_setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+        /usr/bin/mc mb --ignore-existing myminio/${AWS_STORAGE_BUCKET_NAME:-atlas-media};
+        echo 'Bucket ${AWS_STORAGE_BUCKET_NAME:-atlas-media} is ready';
+        exit 0;
+      "
+    networks:
+      - atlas_internal
+    restart: "no" # Roda apenas uma vez na inicialização
+
+  # ──────────────────────────────────────────────────────────
+  # BACKEND (Django/Daphne)
+  # Bind em 127.0.0.1 → não acessível externamente!
+  # Cloudflare Tunnel conecta via http://localhost:8005
+  # ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ${DOCKER_REGISTRY:-ghcr.io}/${GITHUB_REPOSITORY:-yurythx/atlas}/backend:${APP_VERSION:-latest}
+    container_name: atlas_backend
+    command: daphne -b 0.0.0.0 -p 8005 config.asgi:application
+    environment:
+      <<: *backend-env
+    networks:
+      - atlas_internal
+    ports:
+      # Bind apenas no loopback para o deploy.sh e Cloudflare Tunnel local
+      - "127.0.0.1:8005:8005"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8005/api/core/health/" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ──────────────────────────────────────────────────────────
+  # CELERY WORKER
+  # ──────────────────────────────────────────────────────────
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ${DOCKER_REGISTRY:-ghcr.io}/${GITHUB_REPOSITORY:-yurythx/atlas}/backend:${APP_VERSION:-latest}
+    container_name: atlas_celery
+    command: >
+      celery -A config worker -l warning --concurrency=${CELERY_CONCURRENCY:-2} -Q default,emails,notifications
+    environment:
+      <<: *backend-env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - atlas_internal
+    healthcheck:
+      test: [ "CMD", "celery", "-A", "config", "inspect", "ping", "-d", "celery@$$HOSTNAME" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ──────────────────────────────────────────────────────────
+  # CELERY BEAT (Scheduler)
+  # ──────────────────────────────────────────────────────────
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ${DOCKER_REGISTRY:-ghcr.io}/${GITHUB_REPOSITORY:-yurythx/atlas}/backend:${APP_VERSION:-latest}
+    container_name: atlas_celery_beat
+    command: >
+      celery -A config beat -l warning --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      <<: *backend-env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - atlas_internal
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  # ──────────────────────────────────────────────────────────
+  # CLOUDFLARE TUNNEL (Seguro e Resiliente)
+  # ──────────────────────────────────────────────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:2025.9.1
+    container_name: atlas_tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:?TUNNEL_TOKEN is required}
+      - TUNNEL_METRICS=0.0.0.0:2000
+
+    # Segurança: Impede escrita no sistema de arquivos do container
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    # Saúde: Verifica se o túmel está operacional via endpoint de métricas
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:2000/metrics | grep -q 'cloudflared' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    # Recursos: Evita consumo excessivo de RAM/CPU
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 64M
+
+    # Logs: Rotatividade para não encher o disco
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - atlas_internal
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+
+  # ──────────────────────────────────────────────────────────
+  # FRONTEND (Next.js)
+  # ──────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
+    image: ${DOCKER_REGISTRY:-ghcr.io}/${GITHUB_REPOSITORY:-yurythx/atlas}/frontend:${APP_VERSION:-latest}
+    container_name: atlas_frontend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      API_URL_INTERNAL: http://backend:8005
+      NODE_ENV: production
+    ports:
+      # Bind apenas no loopback para o deploy.sh e Cloudflare Tunnel local
+      - "127.0.0.1:3005:3005"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - atlas_internal
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:3005/api/health || exit 1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  static_volume:
+  media_volume:
+
+
+networks:
+  atlas_internal:
+    driver: bridge
+    # Rede apenas interna — serviços conversam entre si.
+    # O Cloudflare Tunnel acessa backend/frontend via portas do host (127.0.0.1).

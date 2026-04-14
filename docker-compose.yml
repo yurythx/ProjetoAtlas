@@ -1,0 +1,183 @@
+services:
+  db:
+    image: postgres:16
+    container_name: atlas_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-atlas_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    command: [ "postgres", "-c", "max_connections=200", "-c", "shared_buffers=128MB" ]
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: atlas_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    container_name: atlas_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      # NOTE: These are dev-only credentials. Override via .env for staging.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    # D2: Bucket is created as PRIVATE (no anonymous access).
+    # Files must be served via the backend MediaProxyView (authenticated presigned URLs).
+    # Do NOT add 'anonymous set public' — it exposes all user files without auth.
+    entrypoint: >
+      /bin/sh -c "
+        /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+        /usr/bin/mc mb --ignore-existing myminio/atlas-media;
+        echo 'Bucket atlas-media is ready (private)';
+        exit 0;
+      "
+
+  backend:
+    image: atlas_backend
+    build: ./backend
+    container_name: atlas_backend
+    volumes:
+      - ./backend:/app
+      - media_data:/app/media
+    ports:
+      - "8005:8005"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    # SECURITY: Do NOT hardcode secrets here. Use a .env file or environment variables.
+    # Copy .env.docker.example to .env.docker and fill in the values for local dev.
+    env_file:
+      - path: ./backend/.env.docker
+        required: false # Falls back to inline env below if file not present
+    environment:
+      # These are non-secret dev defaults — override via .env.docker for real secrets.
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-atlas_db}
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=True
+      # IMPORTANT: Set a real SECRET_KEY via .env.docker in staging/production!
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-LOCAL-DEV-ONLY-do-not-use-in-production}
+      # MinIO Configuration
+      - USE_S3=True
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - AWS_STORAGE_BUCKET_NAME=atlas-media
+      - AWS_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_S3_REGION_NAME=us-east-1
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/health/')" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  celery_worker:
+    # Reuses the image built by the 'backend' service — no separate build step needed.
+    # Run `docker-compose build backend` first, then `docker-compose up celery_worker`.
+    image: atlas_backend
+    container_name: atlas_celery_worker
+    command: celery -A config worker -l info
+    volumes:
+      - ./backend:/app
+    env_file:
+      - path: ./backend/.env.docker
+        required: false
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-atlas_db}
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=True
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-LOCAL-DEV-ONLY-do-not-use-in-production}
+      - USE_S3=True
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - AWS_STORAGE_BUCKET_NAME=atlas-media
+      - AWS_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_S3_REGION_NAME=us-east-1
+    depends_on:
+      - backend
+      - db
+      - redis
+
+  celery_beat:
+    # Reuses the image built by the 'backend' service — no separate build step needed.
+    image: atlas_backend
+    container_name: atlas_celery_beat
+    command: celery -A config beat -l info
+    volumes:
+      - ./backend:/app
+    env_file:
+      - path: ./backend/.env.docker
+        required: false
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-atlas_db}
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=True
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-LOCAL-DEV-ONLY-do-not-use-in-production}
+    depends_on:
+      - backend
+      - db
+      - redis
+
+  frontend:
+    image: atlas_frontend
+    build:
+      context: ./frontend
+      target: deps
+    container_name: atlas_frontend
+    command: npm run dev
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8005
+      - API_URL_INTERNAL=http://backend:8005
+      - WATCHPACK_POLLING=true
+    extra_hosts:
+      - "localhost:host-gateway"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+  minio_data:

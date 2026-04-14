@@ -1,0 +1,205 @@
+from django.db import transaction
+from django.utils import timezone
+
+from apps.calendar.models import Event
+from apps.module_manager.models import TenantModule
+from apps.notifications.models import Notification
+
+from .models import get_column_semantic_defaults
+
+
+def create_default_stages(sender, instance, created, **kwargs):
+    """Cria os estágios padrão [Novo, Planejados, Em Andamento, Concluído] para novos Pipelines."""
+    if created:
+        from .models import Stage
+
+        default_stages = [
+            ("Novo", 10),
+            ("Planejados", 20),
+            ("Em Andamento", 30),
+            ("Concluído", 40),
+        ]
+        for name, order in default_stages:
+            Stage.objects.create(pipeline=instance, name=name, order=order, company=instance.company)
+
+
+def ensure_column_for_stage(sender, instance, created, **kwargs):
+    """Mantém uma coluna espelhada para cada legacy stage."""
+    from .models import Column
+
+    defaults = {
+        "pipeline": instance.pipeline,
+        "title": instance.name,
+        "order": instance.order,
+        "company": instance.company,
+        **get_column_semantic_defaults(title=instance.name),
+    }
+
+    if created:
+        Column.objects.create(legacy_stage=instance, **defaults)
+        return
+
+    if hasattr(instance, "column") and instance.column_id:
+        Column.all_objects.filter(id=instance.column.id).update(**defaults)
+    else:
+        Column.objects.create(legacy_stage=instance, **defaults)
+
+
+@transaction.atomic
+def sync_deal_with_calendar(sender, instance, created, **kwargs):
+    """Sincroniza automaticamente o Deal do CRM com o Calendário e envia notificações."""
+
+    if instance.column_id is None and instance.stage_id:
+        legacy_stage_column = getattr(instance.stage, "column", None)
+        if legacy_stage_column is not None:
+            instance.__class__.all_objects.filter(id=instance.id).update(column=legacy_stage_column)
+            instance.column = legacy_stage_column
+
+    # 1. Sincronização com Calendário (tenant-first: só cria evento se módulo Calendar estiver ativo)
+    if not getattr(instance, "company_id", None):
+        calendar_enabled = False
+    else:
+        calendar_enabled = TenantModule.all_objects.filter(
+            company_id=instance.company_id,
+            module__code="calendar",
+            is_active=True,
+        ).exists()
+
+    primary_dt = instance.data_agendamento or instance.closing_date
+
+    if not calendar_enabled:
+        primary_dt = None
+
+    try:
+        if not primary_dt:
+            if instance.linked_event_id:
+                Event.all_objects.filter(id=instance.linked_event_id).delete()
+                instance.__class__.all_objects.filter(id=instance.id).update(linked_event_id=None)
+        else:
+            color_map = {"LOW": "green", "MEDIUM": "blue", "HIGH": "orange", "URGENT": "red"}
+
+            start_dt = primary_dt
+            if timezone.is_naive(start_dt):
+                start_dt = timezone.make_aware(start_dt)
+
+            end_dt = start_dt + timezone.timedelta(hours=1)
+
+            owner = instance.tecnico_responsavel_id or instance.owner_id
+
+            event_data = {
+                "title": f"[{instance.priority}] {instance.title}",
+                "description": (
+                    f"CRM: {instance.description or ''}\n"
+                    f"Cliente: {instance.contact.name}\n"
+                    f"Agendamento: {instance.data_agendamento.isoformat() if instance.data_agendamento else '-'}\n"
+                    f"Prazo (SLA): {instance.closing_date.isoformat() if instance.closing_date else '-'}\n"
+                    f"Link: /crm?dealId={instance.id}"
+                ),
+                "start_datetime": start_dt,
+                "end_datetime": end_dt,
+                "color_category": color_map.get(instance.priority, "blue"),
+                "company": instance.company,
+                "owner_id": owner,
+            }
+
+            if instance.linked_event_id:
+                updated = Event.all_objects.filter(id=instance.linked_event_id, company=instance.company).update(**event_data)
+                if updated == 0:
+                    event = Event.all_objects.create(**event_data)
+                    instance.__class__.all_objects.filter(id=instance.id).update(linked_event_id=event.id)
+            else:
+                event = Event.all_objects.create(**event_data)
+                instance.__class__.all_objects.filter(id=instance.id).update(linked_event_id=event.id)
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "crm_calendar_sync_failed",
+            extra={
+                "company_id": getattr(instance, "company_id", None),
+                "deal_id": getattr(instance, "id", None),
+                "linked_event_id": getattr(instance, "linked_event_id", None),
+            },
+        )
+
+    # 2. Sistema de notificações e histórico
+    from .models import DealActivity
+
+    if created:
+        current_column = getattr(instance.stage, "column", None) or instance.column
+        column_name = current_column.title if current_column else instance.stage.name
+        DealActivity.objects.create(
+            company=instance.company,
+            deal=instance,
+            actor=instance.owner,
+            activity_type="creation",
+            description=f"Card criado na coluna {column_name}.",
+            new_value={"column": column_name}
+        )
+        Notification.objects.create(
+            recipient=instance.owner,
+            company=instance.company,
+            title="Novo Card Criado",
+            message=f"O card '{instance.title}' foi adicionado a coluna {column_name}.",
+            notification_type=Notification.TYPE_SYSTEM,
+            metadata={"deal_uuid": str(instance.uuid)},
+        )
+    elif "stage" in (kwargs.get("update_fields") or []):
+        current_column = getattr(instance.stage, "column", None) or instance.column
+        column_name = current_column.title if current_column else instance.stage.name
+        DealActivity.objects.create(
+            company=instance.company,
+            deal=instance,
+            actor=instance.owner,
+            activity_type="column_change",
+            description=f"Card movido para a coluna {column_name}.",
+            new_value={"column": column_name}
+        )
+        Notification.objects.create(
+            recipient=instance.owner,
+            company=instance.company,
+            title="Card Movimentado",
+            message=f"O card '{instance.title}' foi movido para a coluna {column_name}.",
+            notification_type=Notification.TYPE_SYSTEM,
+            metadata={"deal_uuid": str(instance.uuid)},
+        )
+
+
+def delete_calendar_event(sender, instance, **kwargs):
+    """Remove o evento da agenda ao deletar o card do CRM."""
+    if instance.linked_event_id:
+        from apps.calendar.models import Event
+
+        Event.all_objects.filter(id=instance.linked_event_id).delete()
+
+
+def trigger_xla_survey(sender, instance, **kwargs):
+    """Gatilha pesquisa XLA via WhatsApp quando um Deal é fechado."""
+    update_fields = kwargs.get("update_fields") or []
+    
+    # Verifica se o card foi marcado como fechado agora
+    if "is_closed" in update_fields and instance.is_closed:
+        from .models import EvolutionConfig
+        from .integrations import EvolutionClient
+        
+        # Busca config ativa para a empresa
+        config = EvolutionConfig.objects.filter(company=instance.company, is_active=True).first()
+        
+        if config and instance.contact and instance.contact.phone:
+            client = EvolutionClient(config)
+            
+            message_text = (
+                f"Olá {instance.contact.name}! 🌟\n\n"
+                f"Sua solicitação '{instance.title}' foi concluída.\n"
+                "Para nos ajudar a melhorar o fluxo de valor, como você avalia sua experiência?"
+            )
+            
+            # Envia a mensagem de texto inicial
+            client.send_text(instance.contact.phone, message_text)
+            
+            # Envia a enquete de XLA (1 a 5)
+            client.send_poll(
+                number=instance.contact.phone,
+                name="Avaliação de Experiência (XLA)",
+                options=["1 - Muito Insatisfeito", "2", "3", "4", "5 - Excelente"]
+            )

@@ -1,0 +1,17 @@
+{% extends "emails/base.html" %}
+
+{% block content %}
+<h1 style="font-size: 24px; font-weight: 700; margin-bottom: 16px;">Olá, {{ first_name }}!</h1>
+<p>Você foi convidado para se juntar à equipe da <span className="highlight">{{ company_name }}</span> no **Atlas**.
+</p>
+<p>O Atlas é a plataforma central para gestão do seu ecossistema. Com ele, você poderá colaborar em artigos,
+    gerenciar mídias e muito mais.</p>
+
+<div style="text-align: center;">
+    <a href="{{ invite_url }}" className="button">Aceitar Convite</a>
+</div>
+
+<p style="margin-top: 32px; font-size: 14px; color: #64748b;">
+    Se você não esperava este convite, pode ignorar este email com segurança.
+</p>
+{% endblock %}

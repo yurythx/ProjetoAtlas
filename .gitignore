@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.coverage
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Reports & outputs
+mypy_report.txt
+coverage_report/
+htmlcov/
+*.prof
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+*.log
+
+# Environments & secrets - CRITICAL: NEVER COMMIT
+.env
+.env.*
+!.env.prod.example
+!.env.example
+*.pem
+*.key
+*.crt
+venv/
+.venv/
+
+# Prod secrets — NUNCA commitar!
+.env.prod
+backups/
+
+# Node/Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.next/
+frontend/.nuxt/
+frontend/.cache/
+
+# IDE/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Build artifacts
+backend/**/dist/
+backend/**/build/
+
+# OS files
+Thumbs.db
+
+# Debug / scratch scripts — should never be committed
+# These are one-off scripts created during development/debugging.
+backend/debug*.py
+backend/debug*.txt
+backend/check_users.py
+backend/fix_*.sql
+backend/create_*.py
+backend/quick_create.py
+backend/test_paths.py
+backend/test_*.txt
+backend/celerybeat-schedule
+
+# Docker secrets — .env.docker contains real credentials
+# Commit only .env.docker.example (the template)
+backend/.env.docker

@@ -1,0 +1,10 @@
+# Auth state — contains session data, never commit
+/e2e/.auth/
+
+# Test output artifacts
+/e2e/results/
+/e2e/report/
+
+# Playwright test results
+test-results/
+playwright-report/
