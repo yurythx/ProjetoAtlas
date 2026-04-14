@@ -1,0 +1,1869 @@
+"use client"
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { format, formatDistanceToNow } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { Camera, Loader2, Search, Trash2, X } from "lucide-react"
+import Image from "next/image"
+import Link from "next/link"
+import { toast } from "sonner"
+import { useQueryClient } from "@tanstack/react-query"
+
+import { Deal, DealActivity, isCRMNetworkError, useCRM, useServiceCatalog, useCMDB, useXLA } from "./use-crm"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { cn, fixImageUrl } from "@/lib/utils"
+import { getDeadlineMeta, getPriorityMeta, getProgressMeta } from "./crm-visuals"
+import { getColumnTransitionGuard, getDealColumnId, getDealColumnTitle, getPipelineColumns, getProgressValue, isDealDone, resolveColumnSemantics } from "./use-crm"
+import { getUserDisplayName, getUserInitials } from "./crm-utils"
+import { useCRMUsers } from "./use-crm-users"
+import { MediaDialog } from "@/features/media/media-dialog"
+import { enqueueOfflineDealAttachmentUpload, flushOfflineDealAttachmentUploads, listOfflineDealAttachmentUploads, removeOfflineDealAttachmentUpload } from "./offline-attachments"
+import { useModules } from "@/hooks/use-modules"
+import { usePermission } from "@/hooks/use-permission"
+
+interface DealDetailsModalProps {
+  deal: Deal
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+type ActivityFilterId = "all" | "updates" | "moves" | "creation" | "automation"
+
+const ACTIVITY_FILTER_OPTIONS: Array<{ id: ActivityFilterId; label: string }> = [
+  { id: "all", label: "Tudo" },
+  { id: "updates", label: "Updates" },
+  { id: "moves", label: "Movimentações" },
+  { id: "creation", label: "Criação" },
+  { id: "automation", label: "Automações & IA" },
+]
+
+const EMPTY_ACTIVITIES: DealActivity[] = []
+const EMPTY_ATTACHMENTS: NonNullable<Deal["attachments"]> = []
+
+function getRelatedUserIds(deal: Deal) {
+  const value = deal.custom_fields?.related_user_ids
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => Number(item))
+    .filter((item) => Number.isInteger(item) && item > 0)
+}
+
+function getActivityTypeLabel(activityType: DealActivity["activity_type"]) {
+  if (activityType === "column_change" || activityType === "stage_change") return "Mudança de coluna"
+  if (activityType === "creation") return "Criação do card"
+  if (activityType === "note") return "Anotação"
+  if (activityType === "automation") return "Automação"
+  if (activityType === "ai_action") return "Ação de IA"
+  if (activityType === "ai_suggestion") return "Sugestão de IA"
+  return activityType
+}
+
+function matchesActivityFilter(
+  activity: DealActivity,
+  filter: ActivityFilterId
+) {
+  if (filter === "all") return true
+  if (filter === "updates") return activity.activity_type === "note"
+  if (filter === "moves") return activity.activity_type === "column_change" || activity.activity_type === "stage_change"
+  if (filter === "creation") return activity.activity_type === "creation"
+  if (filter === "automation") return activity.activity_type === "automation" || activity.activity_type === "ai_action" || activity.activity_type === "ai_suggestion"
+  return true
+}
+
+export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalProps) {
+  const { deals, pipelines, updateDeal, addDealNote, addDealAttachment, deleteDealAttachment } = useCRM()
+  const { categories, items } = useServiceCatalog()
+  const { cis } = useCMDB()
+  const queryClient = useQueryClient()
+  const { isModuleActive } = useModules()
+  const { hasPermission } = usePermission()
+  const currentDeal = useMemo(
+    () => deals.find((item) => item.id === deal.id) || deal,
+    [deal, deals]
+  )
+  const [draftDescription, setDraftDescription] = useState("")
+  const [draftRecordType, setDraftRecordType] = useState<Deal["record_type"]>("incident")
+  const [draftPriority, setDraftPriority] = useState<Deal["priority"]>("MEDIUM")
+  const [draftColumnId, setDraftColumnId] = useState("")
+  const [draftServiceItemId, setDraftServiceItemId] = useState<string>("none")
+  const [draftAffectedCis, setDraftAffectedCis] = useState<number[]>([])
+  const [draftRelatedUsers, setDraftRelatedUsers] = useState<number[]>([])
+  const [draftProgress, setDraftProgress] = useState("0")
+  const [draftRiskLevel, setDraftRiskLevel] = useState<Deal["risk_level"] | "none">("none")
+  const [draftChangeJustification, setDraftChangeJustification] = useState("")
+  const [draftImplementationPlan, setDraftImplementationPlan] = useState("")
+  const [draftBackoutPlan, setDraftBackoutPlan] = useState("")
+  const [draftTestPlan, setDraftTestPlan] = useState("")
+  const [draftRootCause, setDraftRootCause] = useState("")
+  const [draftResolutionSteps, setDraftResolutionSteps] = useState("")
+  const [draftIsKnownError, setDraftIsKnownError] = useState(false)
+  const [userSearch, setUserSearch] = useState("")
+  const [draftUpdateNote, setDraftUpdateNote] = useState("")
+  const [activityFilter, setActivityFilter] = useState<ActivityFilterId>("all")
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
+  const [activeTab, setActiveTab] = useState<"overview" | "details" | "images" | "history" | "cis" | "governance" | "xla">("details")
+  const { data: xlaFeedbacks = [], createFeedback: submitXla } = useXLA(currentDeal.id)
+  const [imagesFilter, setImagesFilter] = useState<"all" | "before" | "during" | "after">("all")
+  const updateTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const [mentionQuery, setMentionQuery] = useState("")
+  const [mentionOpen, setMentionOpen] = useState(false)
+  const [mentionIndex, setMentionIndex] = useState(0)
+  const [draftAttachmentPhase, setDraftAttachmentPhase] = useState<"before" | "during" | "after">("during")
+  const [draftAttachmentCaption, setDraftAttachmentCaption] = useState("")
+  const [pendingAttachmentPreviews, setPendingAttachmentPreviews] = useState<
+    Array<{ id: string; url: string; title: string; phase: "before" | "during" | "after"; caption: string }>
+  >([])
+  const [queuedAttachmentPreviews, setQueuedAttachmentPreviews] = useState<
+    Array<{ id: string; url: string; title: string; phase: "before" | "during" | "after"; caption: string; isObjectUrl: boolean }>
+  >([])
+  const queueAbortRef = useRef<AbortController | null>(null)
+  const queuedUrlsRef = useRef<string[]>([])
+
+  const { data: users = [] } = useCRMUsers(true)
+
+  const columns = useMemo(
+    () => pipelines.flatMap((pipeline) => getPipelineColumns(pipeline)),
+    [pipelines]
+  )
+
+  useEffect(() => {
+    if (!open) return
+    setDraftDescription(currentDeal.description || "")
+    setDraftRecordType(currentDeal.record_type || "incident")
+    setDraftPriority(currentDeal.priority)
+    setDraftColumnId(String(getDealColumnId(currentDeal) ?? ""))
+    setDraftRelatedUsers(getRelatedUserIds(currentDeal))
+    setDraftProgress(getProgressValue(currentDeal).toString())
+    setDraftServiceItemId(
+      typeof currentDeal.service_item === "object" && currentDeal.service_item !== null
+        ? String(currentDeal.service_item.id)
+        : currentDeal.service_item ? String(currentDeal.service_item) : "none"
+    )
+    setUserSearch("")
+    setDraftAffectedCis(
+      (currentDeal.affected_cis || []).map((ci) => (typeof ci === "object" ? ci.id : ci))
+    )
+    setDraftRiskLevel(currentDeal.risk_level || "none")
+    setDraftChangeJustification(currentDeal.change_justification || "")
+    setDraftImplementationPlan(currentDeal.implementation_plan || "")
+    setDraftBackoutPlan(currentDeal.backout_plan || "")
+    setDraftTestPlan(currentDeal.test_plan || "")
+    setDraftRootCause(currentDeal.root_cause || "")
+    setDraftResolutionSteps(currentDeal.resolution_steps || "")
+    setDraftIsKnownError(currentDeal.is_known_error || false)
+    setUserSearch("")
+    setDraftUpdateNote("")
+    setActivityFilter("all")
+  }, [currentDeal, open])
+
+  const selectedUsers = useMemo(
+    () => users.filter((user) => draftRelatedUsers.includes(user.id)),
+    [draftRelatedUsers, users]
+  )
+  const filteredUsers = useMemo(() => {
+    const normalizedQuery = userSearch.trim().toLowerCase()
+    if (!normalizedQuery) return users
+
+    return users.filter((user) => {
+      const displayName = getUserDisplayName(user).toLowerCase()
+      const email = user.email?.toLowerCase() || ""
+      const username = user.username.toLowerCase()
+      return (
+        displayName.includes(normalizedQuery) ||
+        email.includes(normalizedQuery) ||
+        username.includes(normalizedQuery)
+      )
+    })
+  }, [userSearch, users])
+  const ownerUser = users.find((user) => user.id === currentDeal.owner)
+  const selectedColumn = columns.find((column) => column.id.toString() === draftColumnId)
+  const selectedColumnSemantics = resolveColumnSemantics(selectedColumn)
+  const draftPriorityMeta = getPriorityMeta(draftPriority)
+  const currentPriorityMeta = getPriorityMeta(currentDeal.priority)
+  const deadlineMeta = getDeadlineMeta(currentDeal.closing_date, isDealDone(currentDeal, pipelines))
+  const activities = currentDeal.activities || EMPTY_ACTIVITIES
+  const latestActivity = activities[0]
+  const latestManualUpdate = useMemo(
+    () =>
+      activities
+        .filter((activity) => activity.activity_type === "note")
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0],
+    [activities]
+  )
+  const filteredActivities = useMemo(
+    () => activities.filter((activity) => matchesActivityFilter(activity, activityFilter)),
+    [activities, activityFilter]
+  )
+  const activityFilterCounts = useMemo(
+    () =>
+      ACTIVITY_FILTER_OPTIONS.reduce<Record<ActivityFilterId, number>>(
+        (accumulator, option) => {
+          accumulator[option.id] = activities.filter((activity) => matchesActivityFilter(activity, option.id)).length
+          return accumulator
+        },
+        {
+          all: 0,
+          updates: 0,
+          moves: 0,
+          creation: 0,
+          automation: 0,
+        }
+      ),
+    [activities]
+  )
+  const currentProgress = getProgressValue(currentDeal)
+  const normalizedDraftProgressValue = Number(draftProgress)
+  const safeDraftProgress =
+    Number.isFinite(normalizedDraftProgressValue) ? Math.max(0, Math.min(100, Math.round(normalizedDraftProgressValue))) : 0
+  const draftProgressMeta = getProgressMeta(safeDraftProgress)
+  const hasChanges =
+    draftDescription !== (currentDeal.description || "") ||
+    draftRecordType !== currentDeal.record_type ||
+    draftPriority !== currentDeal.priority ||
+    draftColumnId !== String(getDealColumnId(currentDeal) ?? "") ||
+    draftServiceItemId !== (
+      typeof currentDeal.service_item === "object" && currentDeal.service_item !== null
+        ? String(currentDeal.service_item.id)
+        : currentDeal.service_item ? String(currentDeal.service_item) : "none"
+    ) ||
+    JSON.stringify([...draftAffectedCis].sort((a, b) => a - b)) !==
+      JSON.stringify(
+        [...(currentDeal.affected_cis || [])]
+          .map((ci) => (typeof ci === "object" ? ci.id : ci))
+          .sort((a, b) => a - b)
+      ) ||
+    draftRiskLevel !== (currentDeal.risk_level || "none") ||
+    draftChangeJustification !== (currentDeal.change_justification || "") ||
+    draftImplementationPlan !== (currentDeal.implementation_plan || "") ||
+    draftBackoutPlan !== (currentDeal.backout_plan || "") ||
+    draftTestPlan !== (currentDeal.test_plan || "") ||
+    draftRootCause !== (currentDeal.root_cause || "") ||
+    draftResolutionSteps !== (currentDeal.resolution_steps || "") ||
+    draftIsKnownError !== (currentDeal.is_known_error || false) ||
+    safeDraftProgress !== currentProgress ||
+    JSON.stringify([...draftRelatedUsers].sort((a, b) => a - b)) !==
+      JSON.stringify([...getRelatedUserIds(currentDeal)].sort((a, b) => a - b))
+  const selectedColumnGuard = getColumnTransitionGuard(currentDeal, selectedColumn, deals, pipelines)
+
+  const resetDraft = () => {
+    setDraftDescription(currentDeal.description || "")
+    setDraftRecordType(currentDeal.record_type || "incident")
+    setDraftPriority(currentDeal.priority)
+    setDraftColumnId(String(getDealColumnId(currentDeal) ?? ""))
+    setDraftRelatedUsers(getRelatedUserIds(currentDeal))
+    setDraftProgress(getProgressValue(currentDeal).toString())
+    setDraftServiceItemId(
+      typeof currentDeal.service_item === "object" && currentDeal.service_item !== null
+        ? String(currentDeal.service_item.id)
+        : currentDeal.service_item ? String(currentDeal.service_item) : "none"
+    )
+    setUserSearch("")
+    setDraftAffectedCis(
+      (currentDeal.affected_cis || []).map((ci) => (typeof ci === "object" ? ci.id : ci))
+    )
+    setDraftRiskLevel(currentDeal.risk_level || "none")
+    setDraftChangeJustification(currentDeal.change_justification || "")
+    setDraftImplementationPlan(currentDeal.implementation_plan || "")
+    setDraftBackoutPlan(currentDeal.backout_plan || "")
+    setDraftTestPlan(currentDeal.test_plan || "")
+    setDraftRootCause(currentDeal.root_cause || "")
+    setDraftResolutionSteps(currentDeal.resolution_steps || "")
+    setDraftIsKnownError(currentDeal.is_known_error || false)
+  }
+
+  const handleToggleRelatedUser = (userId: number, checked: boolean) => {
+    setDraftRelatedUsers((current) =>
+      checked ? [...current, userId] : current.filter((id) => id !== userId)
+    )
+  }
+
+  const handleSave = async () => {
+    const nextCustomFields = { ...(currentDeal.custom_fields || {}) } as Record<string, unknown>
+
+    if (draftRelatedUsers.length > 0) {
+      nextCustomFields.related_user_ids = draftRelatedUsers
+    } else {
+      delete nextCustomFields.related_user_ids
+    }
+
+    nextCustomFields.progress_percentage = safeDraftProgress
+    const numericColumn = Number(draftColumnId)
+    const column = Number.isFinite(numericColumn) && numericColumn > 0 ? numericColumn : undefined
+
+    await updateDeal.mutateAsync({
+      id: currentDeal.id,
+      description: draftDescription,
+      record_type: draftRecordType,
+      priority: draftPriority,
+      column,
+      service_item: draftServiceItemId === "none" ? undefined : Number(draftServiceItemId),
+      affected_cis: draftAffectedCis,
+      risk_level: draftRiskLevel === "none" ? null : draftRiskLevel,
+      change_justification: draftChangeJustification,
+      implementation_plan: draftImplementationPlan,
+      backout_plan: draftBackoutPlan,
+      test_plan: draftTestPlan,
+      root_cause: draftRootCause,
+      resolution_steps: draftResolutionSteps,
+      is_known_error: draftIsKnownError,
+      custom_fields: nextCustomFields,
+    })
+  }
+
+  const handlePublishUpdate = async () => {
+    const description = draftUpdateNote.trim()
+    if (!description) return
+
+    await addDealNote.mutateAsync({
+      dealId: currentDeal.id,
+      description,
+    })
+    setDraftUpdateNote("")
+  }
+
+  const attachments = currentDeal.attachments ?? EMPTY_ATTACHMENTS
+  const totalQueuedAttachments = queuedAttachmentPreviews.length
+  const totalPendingUploads = pendingAttachmentPreviews.length
+  const canOpenMessenger = Boolean(currentDeal.messenger_conversation) && isModuleActive("messenger") && hasPermission("messenger.view")
+  const canPublishUpdate = hasPermission("crm.deal_comment")
+  const canMentionUsers = canPublishUpdate
+  const canAttachFiles = hasPermission("crm.deal_attach")
+  const canDeleteAttachments = hasPermission("crm.deal_attach_delete")
+
+  const mentionSuggestions = useMemo(() => {
+    if (!mentionOpen) return []
+    const q = mentionQuery.trim().toLowerCase()
+    if (!q) return users.slice(0, 8)
+    return users
+      .filter((u) => {
+        const name = getUserDisplayName(u).toLowerCase()
+        return u.username.toLowerCase().includes(q) || name.includes(q) || (u.email || "").toLowerCase().includes(q)
+      })
+      .slice(0, 8)
+  }, [mentionOpen, mentionQuery, users])
+
+  useEffect(() => {
+    if (!mentionOpen) {
+      setMentionIndex(0)
+      return
+    }
+    setMentionIndex(0)
+  }, [mentionOpen, mentionQuery])
+
+  useEffect(() => {
+    if (!mentionOpen) return
+    setMentionIndex((current) => {
+      if (mentionSuggestions.length === 0) return 0
+      return Math.max(0, Math.min(current, mentionSuggestions.length - 1))
+    })
+  }, [mentionOpen, mentionSuggestions.length])
+
+  useEffect(() => {
+    if (activeTab === "history") return
+    if (!mentionOpen) return
+    setMentionOpen(false)
+    setMentionQuery("")
+    setMentionIndex(0)
+  }, [activeTab, mentionOpen])
+
+  const updateMentionState = useCallback(
+    (value: string, cursor: number | null) => {
+      if (!canMentionUsers) {
+        setMentionOpen(false)
+        setMentionQuery("")
+        return
+      }
+      const pos = cursor ?? value.length
+      const before = value.slice(0, pos)
+      const match = before.match(/@([a-zA-Z0-9._-]{0,50})$/)
+      if (!match) {
+        setMentionOpen(false)
+        setMentionQuery("")
+        return
+      }
+      setMentionOpen(true)
+      setMentionQuery(match[1] || "")
+    },
+    [canMentionUsers]
+  )
+
+  const insertMention = useCallback(
+    (username: string) => {
+      const el = updateTextareaRef.current
+      const value = draftUpdateNote
+      const cursor = el?.selectionStart ?? value.length
+      const before = value.slice(0, cursor)
+      const after = value.slice(cursor)
+      const match = before.match(/@([a-zA-Z0-9._-]{0,50})$/)
+      if (!match) return
+      const start = before.length - match[0].length
+      const nextValue = `${value.slice(0, start)}@${username} ${after}`
+      setDraftUpdateNote(nextValue)
+      setMentionOpen(false)
+      setMentionQuery("")
+      requestAnimationFrame(() => {
+        const nextCursor = start + username.length + 2
+        if (el) {
+          el.focus()
+          el.setSelectionRange(nextCursor, nextCursor)
+        }
+      })
+    },
+    [draftUpdateNote]
+  )
+
+  const filteredQueuedAttachmentPreviews = useMemo(() => {
+    if (imagesFilter === "all") return queuedAttachmentPreviews
+    return queuedAttachmentPreviews.filter((item) => item.phase === imagesFilter)
+  }, [imagesFilter, queuedAttachmentPreviews])
+
+  const filteredPendingAttachmentPreviews = useMemo(() => {
+    if (imagesFilter === "all") return pendingAttachmentPreviews
+    return pendingAttachmentPreviews.filter((item) => item.phase === imagesFilter)
+  }, [imagesFilter, pendingAttachmentPreviews])
+
+  const filteredAttachments = useMemo(() => {
+    if (imagesFilter === "all") return attachments
+    return attachments.filter((item) => item.phase === imagesFilter)
+  }, [attachments, imagesFilter])
+
+  useEffect(() => {
+    if (!open) return
+    setActiveTab("details")
+    setImagesFilter("all")
+    setMentionOpen(false)
+    setMentionQuery("")
+    setMentionIndex(0)
+  }, [open, currentDeal.id])
+
+  useEffect(() => {
+    if (!open) return
+    let disposed = false
+
+    void (async () => {
+      const queued = await listOfflineDealAttachmentUploads(currentDeal.id)
+      if (disposed) return
+      const previews = queued.map((item) => {
+        if (item.source === "media") {
+          return {
+            id: item.id,
+            url: fixImageUrl(item.previewUrl),
+            title: item.title,
+            phase: item.phase,
+            caption: item.caption,
+            isObjectUrl: false,
+          }
+        }
+        const url = URL.createObjectURL(item.blob)
+        return {
+          id: item.id,
+          url,
+          title: item.fileName,
+          phase: item.phase,
+          caption: item.caption,
+          isObjectUrl: true,
+        }
+      })
+      queuedUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+      queuedUrlsRef.current = previews.filter((p) => p.isObjectUrl).map((p) => p.url)
+      setQueuedAttachmentPreviews(previews)
+    })()
+
+    return () => {
+      disposed = true
+      queuedUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+      queuedUrlsRef.current = []
+    }
+  }, [open, currentDeal.id])
+
+  const handleFlushQueuedAttachments = useCallback(async () => {
+    if (queueAbortRef.current) {
+      queueAbortRef.current.abort()
+    }
+    const controller = new AbortController()
+    queueAbortRef.current = controller
+    const result = await flushOfflineDealAttachmentUploads({ dealId: currentDeal.id, signal: controller.signal })
+    if (result.uploaded > 0) {
+      queryClient.invalidateQueries({ queryKey: ["crm-deals"] })
+      toast.success(`Sincronizado: ${result.uploaded} foto(s) enviada(s).`)
+    }
+    const queued = await listOfflineDealAttachmentUploads(currentDeal.id)
+    const previews = queued.map((item) => {
+      if (item.source === "media") {
+        return {
+          id: item.id,
+          url: fixImageUrl(item.previewUrl),
+          title: item.title,
+          phase: item.phase,
+          caption: item.caption,
+          isObjectUrl: false,
+        }
+      }
+      return {
+        id: item.id,
+        url: URL.createObjectURL(item.blob),
+        title: item.fileName,
+        phase: item.phase,
+        caption: item.caption,
+        isObjectUrl: true,
+      }
+    })
+    queuedUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    queuedUrlsRef.current = previews.filter((p) => p.isObjectUrl).map((p) => p.url)
+    setQueuedAttachmentPreviews(previews)
+  }, [currentDeal.id, queryClient])
+
+  const handleRemoveQueuedAttachment = useCallback(async (id: string) => {
+    const item = queuedAttachmentPreviews.find((preview) => preview.id === id)
+    if (item?.isObjectUrl) {
+      URL.revokeObjectURL(item.url)
+      queuedUrlsRef.current = queuedUrlsRef.current.filter((url) => url !== item.url)
+    }
+    setQueuedAttachmentPreviews((prev) => prev.filter((preview) => preview.id !== id))
+    await removeOfflineDealAttachmentUpload(id)
+    toast.success("Foto pendente removida.")
+  }, [queuedAttachmentPreviews])
+
+  const handleCapturePhoto = async (file: File | null) => {
+    if (!file) return
+    const previewUrl = URL.createObjectURL(file)
+    const previewId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `tmp-${Date.now()}-${Math.random()}`
+    const caption = draftAttachmentCaption.trim()
+    const phase = draftAttachmentPhase
+    setPendingAttachmentPreviews((prev) => [{ id: previewId, url: previewUrl, title: file.name, phase, caption }, ...prev])
+    let keepPreviewUrl = false
+    try {
+      await addDealAttachment.mutateAsync({
+        dealId: currentDeal.id,
+        file,
+        kind: "photo",
+        phase,
+        caption,
+        title: file.name,
+      })
+      setDraftAttachmentCaption("")
+    } catch (err) {
+      if (isCRMNetworkError(err)) {
+        const queued = await enqueueOfflineDealAttachmentUpload({
+          dealId: currentDeal.id,
+          source: "file",
+          blob: file,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          kind: "photo",
+          phase,
+          caption,
+        })
+        keepPreviewUrl = true
+        setQueuedAttachmentPreviews((prev) => [{ id: queued.id, url: previewUrl, title: file.name, phase, caption, isObjectUrl: true }, ...prev])
+        queuedUrlsRef.current = [previewUrl, ...queuedUrlsRef.current]
+        setPendingAttachmentPreviews((prev) => prev.filter((item) => item.id !== previewId))
+        toast.success("Sem conexão: foto salva localmente e será enviada quando voltar a internet.")
+        return
+      }
+      throw err
+    } finally {
+      setPendingAttachmentPreviews((prev) => prev.filter((item) => item.id !== previewId))
+      if (!keepPreviewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ""
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn(
+          "w-[calc(100vw-1.5rem)] sm:w-auto max-h-[calc(100vh-1.5rem)] overflow-hidden border bg-background p-0 glass grid grid-rows-[auto_1fr]",
+          activeTab === "images" ? "sm:max-w-[1440px]" : "sm:max-w-[1120px]"
+        )}
+      >
+        <DialogHeader className="border-b bg-muted/30 px-4 py-4 text-left sm:px-6 sm:py-5">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">{selectedColumn?.title || getDealColumnTitle(currentDeal)}</Badge>
+                <Badge variant="outline" className="uppercase font-bold border-primary/20">
+                  {draftRecordType === 'service_request' ? 'Requisição' : 
+                   draftRecordType === 'incident' ? 'Incidente' :
+                   draftRecordType === 'problem' ? 'Problema' :
+                   draftRecordType === 'change' ? 'Mudança' : 'Oportunidade'}
+                </Badge>
+                <Badge className={draftPriorityMeta.className}>{draftPriorityMeta.label}</Badge>
+                <Badge className={draftProgressMeta.badgeClassName}>{safeDraftProgress}%</Badge>
+                <Badge className={deadlineMeta.badgeClassName}>{deadlineMeta.label}</Badge>
+                {hasChanges && <Badge>Alterações pendentes</Badge>}
+              </div>
+              <DialogTitle className="text-2xl font-semibold">{currentDeal.title}</DialogTitle>
+              <DialogDescription className="flex flex-wrap items-center gap-3 text-sm">
+                <span className="rounded-full bg-background px-3 py-1 text-foreground shadow-sm">
+                  {currentDeal.contact_name}
+                </span>
+                <span className="rounded-full bg-background px-3 py-1 text-foreground shadow-sm">
+                  {ownerUser ? getUserDisplayName(ownerUser) : `Usuário #${currentDeal.owner}`}
+                </span>
+                <span className="text-muted-foreground">
+                  {latestActivity
+                    ? `Última atividade ${formatDistanceToNow(new Date(latestActivity.created_at), { addSuffix: true, locale: ptBR })}`
+                    : "Sem histórico recente"}
+                </span>
+                {currentDeal.sla_status && (
+                  <Badge className={cn(
+                    "uppercase font-black px-2 tracking-widest",
+                    currentDeal.sla_status === "breached" ? "bg-red-600 text-white" : 
+                    currentDeal.sla_status === "at_risk" ? "bg-amber-500 text-white" : "bg-emerald-600 text-white"
+                  )}>
+                    SLA: {currentDeal.sla_status === "breached" ? "Violado" : currentDeal.sla_status === "at_risk" ? "Em Risco" : "OK"}
+                  </Badge>
+                )}
+              </DialogDescription>
+            </div>
+
+            <div className="flex flex-col gap-4 xl:min-w-[320px] xl:items-end">
+              <div className="text-left xl:text-right">
+                <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  Valor do card
+                </div>
+                <div className="text-3xl font-bold text-primary">
+                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(currentDeal.value))}
+                </div>
+                {currentDeal.closing_date && (
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    Fechamento: {format(new Date(currentDeal.closing_date), "dd/MM/yyyy", { locale: ptBR })}
+                  </div>
+                )}
+                <div className="mt-3 space-y-2 rounded-2xl border bg-background/80 p-4 xl:min-w-[280px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Progresso</span>
+                    <Badge className={draftProgressMeta.badgeClassName}>{draftProgressMeta.label}</Badge>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={cn("h-full rounded-full transition-all", draftProgressMeta.barClassName)}
+                      style={{ width: `${safeDraftProgress}%` }}
+                    />
+                  </div>
+                  <div className="text-sm font-semibold">{safeDraftProgress}% concluído</div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
+                {canOpenMessenger ? (
+                  <Button asChild variant="outline">
+                    <Link href={`/messenger?conversation=${currentDeal.messenger_conversation}`} target="_blank" rel="noreferrer">
+                      Abrir chat
+                    </Link>
+                  </Button>
+                ) : null}
+                <Button
+                  variant="outline"
+                  onClick={resetDraft}
+                  disabled={!hasChanges || updateDeal.isPending}
+                >
+                  Descartar
+                </Button>
+                <Button onClick={handleSave} disabled={!hasChanges || updateDeal.isPending}>
+                  {updateDeal.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar alterações
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="min-h-0 h-full overflow-y-auto">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="h-full">
+            <div className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+              <div className="px-4 py-3 sm:px-6">
+                <div className="overflow-x-auto">
+                  <TabsList className="w-max">
+                    <TabsTrigger value="details" className="gap-2">
+                      Detalhes
+                    </TabsTrigger>
+                    <TabsTrigger value="images" className="gap-2">
+                      Imagens
+                      <Badge variant="secondary" className="ml-1">
+                        {attachments.length + totalQueuedAttachments + totalPendingUploads}
+                      </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="overview" className="gap-2">
+                      Visão geral
+                    </TabsTrigger>
+                    <TabsTrigger value="cis" className="gap-2">
+                      ICs Afetados
+                      <Badge variant="secondary" className="ml-1">
+                        {draftAffectedCis.length}
+                      </Badge>
+                    </TabsTrigger>
+                    {draftRecordType === 'change' && (
+                      <TabsTrigger value="governance" className="gap-2">
+                        Governança
+                        {draftRiskLevel !== 'none' && <Badge variant="secondary" className="ml-1 capitalize">{draftRiskLevel}</Badge>}
+                      </TabsTrigger>
+                    )}
+                    {draftRecordType === 'problem' && (
+                      <TabsTrigger value="governance" className="gap-2">
+                        Investigação
+                        {draftIsKnownError && <Badge className="ml-1 bg-amber-500">KEDB</Badge>}
+                      </TabsTrigger>
+                    )}
+                    <TabsTrigger value="xla" className="gap-2">
+                      Experiência (XLA)
+                      {currentDeal.xla_score && <Badge variant="outline" className="ml-1">{currentDeal.xla_score}</Badge>}
+                    </TabsTrigger>
+                    <TabsTrigger value="history" className="gap-2">
+                      Histórico
+                      <Badge variant="secondary" className="ml-1">
+                        {activities.length}
+                      </Badge>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              </div>
+            </div>
+
+            <TabsContent value="overview" className="mt-0 space-y-6 p-4 sm:p-6">
+              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Fase do Fluxo (VSM)</p>
+                  <div className="mt-3">
+                    <Badge variant="outline" className="text-sm bg-primary/10 border-primary/20">
+                      {selectedColumn?.value_stream_phase ? (
+                         selectedColumn.value_stream_phase === 'demand' ? 'Demanda' :
+                         selectedColumn.value_stream_phase === 'product_design' ? 'Design' :
+                         selectedColumn.value_stream_phase === 'creation' ? 'Criação' :
+                         selectedColumn.value_stream_phase === 'onboarding' ? 'Entrega' : 'Valor'
+                      ) : 'Não mapeado'}
+                    </Badge>
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Posição atual no Fluxo de Valor Digital (DPSM).
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Coluna atual</p>
+                  <div className="mt-3">
+                    <Badge variant="secondary" className="text-sm">
+                      {selectedColumn?.title || getDealColumnTitle(currentDeal)}
+                    </Badge>
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    O card segue a coluna selecionada no painel e persiste ao salvar.
+                  </p>
+                  {selectedColumnSemantics.wip_limit ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Limite WIP: {selectedColumnSemantics.wip_limit} card{selectedColumnSemantics.wip_limit === 1 ? "" : "s"}.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="rounded-2xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Prioridade</p>
+                  <div className="mt-3">
+                    <Badge className={draftPriorityMeta.className}>{draftPriorityMeta.label}</Badge>
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Antes: {currentPriorityMeta.label}. Agora: {draftPriorityMeta.label}.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Progresso</p>
+                  <div className="mt-3 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <Badge className={draftProgressMeta.badgeClassName}>{draftProgressMeta.label}</Badge>
+                      <span className="text-lg font-semibold">{safeDraftProgress}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={cn("h-full rounded-full transition-all", draftProgressMeta.barClassName)}
+                        style={{ width: `${safeDraftProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Ajuste o avanço do trabalho como em um board operacional estilo Monday.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Colaboradores</p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="flex -space-x-2">
+                      {selectedUsers.slice(0, 4).map((user) => {
+                        const displayName = getUserDisplayName(user)
+
+                        return (
+                          <Avatar key={user.id} className="h-10 w-10 border-2 border-background">
+                            <AvatarFallback className="text-xs font-semibold">
+                              {getUserInitials(displayName)}
+                            </AvatarFallback>
+                          </Avatar>
+                        )
+                      })}
+                      {selectedUsers.length === 0 && (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-dashed text-xs text-muted-foreground">
+                          0
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-lg font-semibold">{selectedUsers.length}</div>
+                      <p className="text-sm text-muted-foreground">usuários relacionados</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {latestManualUpdate ? (
+                <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge>Último update manual</Badge>
+                      {latestManualUpdate.actor_name ? (
+                        <span className="text-xs text-muted-foreground">por {latestManualUpdate.actor_name}</span>
+                      ) : null}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(latestManualUpdate.created_at), { addSuffix: true, locale: ptBR })}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm text-foreground">{latestManualUpdate.description}</p>
+                  <div className="mt-4">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setActiveTab("history")}>
+                      Ver histórico completo
+                    </Button>
+                  </div>
+                </section>
+              ) : null}
+            </TabsContent>
+
+            <TabsContent value="details" className="mt-0 space-y-6 p-4 sm:p-6">
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_380px]">
+                <div className="space-y-6">
+                  <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Atualização do trabalho</h3>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Escreva como se fosse a atualização principal do item no board: contexto, andamento, bloqueios e próximos passos.
+                        </p>
+                      </div>
+                      <Badge variant={hasChanges ? "default" : "outline"}>
+                        {hasChanges ? "Pronto para salvar" : "Sem alterações"}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium">Descrição do que está sendo feito</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Este campo funciona como o update central do card, semelhante ao painel lateral do Monday.com.
+                        </p>
+                        <Textarea
+                          value={draftDescription}
+                          onChange={(event) => setDraftDescription(event.target.value)}
+                          placeholder="Descreva o andamento, bloqueios, próximos passos e contexto do card..."
+                          className="mt-4 min-h-[320px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-2xl border bg-background p-4">
+                          <p className="text-sm font-medium">Responsável principal</p>
+                          <div className="mt-3 flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="text-xs font-semibold">
+                                {getUserInitials(ownerUser ? getUserDisplayName(ownerUser) : `Usuário ${currentDeal.owner}`)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-semibold">
+                                {ownerUser ? getUserDisplayName(ownerUser) : `Usuário #${currentDeal.owner}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground">Responsável pelo card</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border bg-background p-4">
+                          <p className="text-sm font-medium">Contato vinculado</p>
+                          <div className="mt-3">
+                            <p className="text-sm font-semibold">{currentDeal.contact_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Referência principal do atendimento ou oportunidade
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+
+                <div className="space-y-6">
+                  <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                    <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Campos principais</h3>
+
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Coluna</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Atualize o andamento do card sem sair do painel.</p>
+                        <Select value={draftColumnId} onValueChange={setDraftColumnId}>
+                          <SelectTrigger className="mt-3">
+                            <SelectValue placeholder="Selecione uma coluna" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {columns.map((column) => (
+                              <SelectItem
+                                key={column.id}
+                                value={column.id.toString()}
+                                disabled={!getColumnTransitionGuard(currentDeal, column, deals, pipelines).allowed}
+                              >
+                                {column.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {!selectedColumnGuard.allowed && (
+                          <p className="mt-3 text-xs font-medium text-amber-700">
+                            {selectedColumnGuard.reason}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Catálogo de Serviços</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Vincule este card a um serviço do catálogo para aplicar SLAs e fluxos automáticos.</p>
+                        <Select value={draftServiceItemId} onValueChange={setDraftServiceItemId}>
+                          <SelectTrigger className="mt-3">
+                            <SelectValue placeholder="Selecione um serviço" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nenhum serviço</SelectItem>
+                            {items.map((item) => (
+                              <SelectItem key={item.id} value={String(item.id)}>
+                                {item.category_name && <span className="text-[10px] text-muted-foreground block uppercase">{item.category_name}</span>}
+                                {item.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {draftServiceItemId !== "none" && (
+                          <div className="mt-2 text-[10px] text-muted-foreground flex items-center gap-1">
+                            <div className="h-1 w-1 rounded-full bg-primary/40" />
+                            SLA Padrão: {items.find((item: { id: number | string }) => String(item.id) === draftServiceItemId)?.sla_policy_name || "Conforme modalidade"}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Tipo de registro (ITIL version 5)</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Classifique o card conforme o processo ITIL version 5.</p>
+                        <Select value={draftRecordType} onValueChange={(value) => setDraftRecordType(value as Deal["record_type"])}>
+                          <SelectTrigger className="mt-3">
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="incident">Incidente</SelectItem>
+                            <SelectItem value="service_request">Requisição de Serviço</SelectItem>
+                            <SelectItem value="problem">Problema</SelectItem>
+                            <SelectItem value="change">Mudança</SelectItem>
+                            <SelectItem value="opportunity">Oportunidade (Vendas)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Prioridade</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Destaque rápido para urgência e foco do time.</p>
+                        <Select value={draftPriority} onValueChange={(value) => setDraftPriority(value as Deal["priority"])}>
+                          <SelectTrigger className="mt-3">
+                            <SelectValue placeholder="Selecione a prioridade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="LOW">Baixa</SelectItem>
+                            <SelectItem value="MEDIUM">Média</SelectItem>
+                            <SelectItem value="HIGH">Alta</SelectItem>
+                            <SelectItem value="URGENT">Urgente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Progresso</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Defina o percentual de conclusão do trabalho em andamento.</p>
+                        <div className="mt-3 flex items-center gap-3">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={draftProgress}
+                            onChange={(event) => setDraftProgress(event.target.value)}
+                            className="max-w-[120px] font-semibold"
+                            aria-label="Editar progresso do card no painel"
+                          />
+                          <Badge className={draftProgressMeta.badgeClassName}>{safeDraftProgress}%</Badge>
+                        </div>
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className={cn("h-full rounded-full transition-all", draftProgressMeta.barClassName)}
+                            style={{ width: `${safeDraftProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Pessoas</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">Organize responsáveis relacionados ao card em um painel editável no estilo Monday.</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {selectedUsers.length > 0 && (
+                        <div className="rounded-2xl border bg-background p-4">
+                          <p className="text-sm font-medium">Time relacionado</p>
+                          <div className="mt-3 flex flex-wrap gap-3">
+                            {selectedUsers.map((user) => {
+                              const displayName = getUserDisplayName(user)
+
+                              return (
+                                <div key={user.id} className="flex items-center gap-2 rounded-full border bg-card px-2 py-1">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="text-[11px] font-semibold">
+                                      {getUserInitials(displayName)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">{displayName}</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium">Usuários relacionados</p>
+                        <div className="relative mt-3">
+                          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={userSearch}
+                            onChange={(event) => setUserSearch(event.target.value)}
+                            placeholder="Buscar por nome, usuário ou e-mail"
+                            className="pl-9"
+                          />
+                        </div>
+
+                        <ScrollArea className="mt-4 h-72 rounded-2xl border">
+                          <div className="space-y-2 p-3">
+                            {filteredUsers.length > 0 ? (
+                              filteredUsers.map((user) => {
+                                const checked = draftRelatedUsers.includes(user.id)
+                                const displayName = getUserDisplayName(user)
+
+                                return (
+                                  <label
+                                    key={user.id}
+                                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${checked ? "border-primary/30 bg-primary/5" : "bg-background/70 hover:bg-muted/40"}`}
+                                  >
+                                    <Checkbox
+                                      checked={checked}
+                                      onClick={(event) => {
+                                        event.preventDefault()
+                                        handleToggleRelatedUser(user.id, !checked)
+                                      }}
+                                      onCheckedChange={(value) => handleToggleRelatedUser(user.id, value === true)}
+                                    />
+                                    <Avatar className="h-10 w-10">
+                                      <AvatarFallback className="text-xs font-semibold">
+                                        {getUserInitials(displayName)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="space-y-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-sm font-medium">{displayName}</p>
+                                        {checked && <Badge variant="secondary">Selecionado</Badge>}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">{user.email || user.username}</p>
+                                    </div>
+                                  </label>
+                                )
+                              })
+                            ) : (
+                              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                                Nenhum usuário encontrado para a busca atual.
+                              </div>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="images" className="mt-0 space-y-6 p-4 sm:p-6">
+              <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Imagens</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Tire uma foto na hora (câmera) ou selecione um arquivo já enviado na biblioteca.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">{attachments.length}</Badge>
+                    {totalQueuedAttachments > 0 ? <Badge variant="secondary">Pendentes: {totalQueuedAttachments}</Badge> : null}
+                  </div>
+                </div>
+
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null
+                    void handleCapturePhoto(file)
+                  }}
+                />
+
+                <div className="grid gap-2 sm:grid-cols-[170px_1fr_auto_auto]">
+                  <Select value={draftAttachmentPhase} onValueChange={(value) => setDraftAttachmentPhase(value as "before" | "during" | "after")}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Fase" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="before">Antes</SelectItem>
+                      <SelectItem value="during">Durante</SelectItem>
+                      <SelectItem value="after">Depois</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Input
+                    value={draftAttachmentCaption}
+                    onChange={(event) => setDraftAttachmentCaption(event.target.value)}
+                    maxLength={255}
+                    placeholder="Legenda (opcional)"
+                    className="w-full"
+                  />
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => cameraInputRef.current?.click()}
+                    disabled={!canAttachFiles || addDealAttachment.isPending}
+                    className="w-full sm:w-auto"
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    Câmera
+                  </Button>
+
+                  <MediaDialog
+                    onSelect={() => {}}
+                    onSelectItem={(item) => {
+                      const url = fixImageUrl(item.file_url)
+                      const previewId =
+                        typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `tmp-${Date.now()}-${Math.random()}`
+                      const caption = draftAttachmentCaption.trim()
+                      const phase = draftAttachmentPhase
+                      setPendingAttachmentPreviews((prev) => [{ id: previewId, url, title: item.title, phase, caption }, ...prev])
+                      void addDealAttachment
+                        .mutateAsync({
+                          dealId: currentDeal.id,
+                          mediaId: item.id,
+                          kind: item.file_type.startsWith("image/") ? "photo" : "file",
+                          phase,
+                          caption,
+                        })
+                        .catch(async (err) => {
+                          if (!isCRMNetworkError(err)) return
+                          const queued = await enqueueOfflineDealAttachmentUpload({
+                            dealId: currentDeal.id,
+                            source: "media",
+                            mediaId: item.id,
+                            previewUrl: url,
+                            title: item.title,
+                            fileType: item.file_type,
+                            kind: item.file_type.startsWith("image/") ? "photo" : "file",
+                            phase,
+                            caption,
+                          })
+                          setQueuedAttachmentPreviews((prev) => [{ id: queued.id, url, title: item.title, phase, caption, isObjectUrl: false }, ...prev])
+                          toast.success("Sem conexão: anexo salvo localmente e será enviado quando voltar a internet.")
+                        })
+                        .finally(() => {
+                          setPendingAttachmentPreviews((prev) => prev.filter((p) => p.id !== previewId))
+                        })
+                    }}
+                    trigger={
+                      <Button type="button" variant="outline" disabled={!canAttachFiles || addDealAttachment.isPending} className="w-full sm:w-auto">
+                        Biblioteca
+                      </Button>
+                    }
+                  />
+                </div>
+                {!canAttachFiles ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Você não tem permissão para anexar imagens/arquivos neste card.
+                  </p>
+                ) : null}
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={imagesFilter === "all" ? "default" : "outline"}
+                      onClick={() => setImagesFilter("all")}
+                    >
+                      Tudo
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={imagesFilter === "before" ? "default" : "outline"}
+                      onClick={() => setImagesFilter("before")}
+                    >
+                      Antes
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={imagesFilter === "during" ? "default" : "outline"}
+                      onClick={() => setImagesFilter("during")}
+                    >
+                      Durante
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={imagesFilter === "after" ? "default" : "outline"}
+                      onClick={() => setImagesFilter("after")}
+                    >
+                      Depois
+                    </Button>
+                  </div>
+                  {queuedAttachmentPreviews.length > 0 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => void handleFlushQueuedAttachments()}
+                      disabled={typeof navigator !== "undefined" && navigator.onLine === false}
+                    >
+                      Enviar pendentes ({queuedAttachmentPreviews.length})
+                    </Button>
+                  ) : null}
+                </div>
+
+                {addDealAttachment.isPending && (
+                  <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    Enviando anexo...
+                  </div>
+                )}
+
+                {filteredQueuedAttachmentPreviews.length > 0 || filteredPendingAttachmentPreviews.length > 0 || filteredAttachments.length > 0 ? (
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    {filteredQueuedAttachmentPreviews.slice(0, 6).map((preview) => (
+                      <div key={preview.id} className="group relative overflow-hidden rounded-xl border bg-background">
+                        <div className="block aspect-square">
+                          <div className="relative h-full w-full">
+                            <Image src={preview.url} alt={preview.title || "Anexo"} fill className="object-cover opacity-60" sizes="160px" unoptimized loading="lazy" />
+                          </div>
+                        </div>
+                        <div className="absolute left-2 top-2 rounded-full bg-background/80 px-2 py-0.5 text-xs">
+                          {preview.phase === "before" ? "Antes" : preview.phase === "after" ? "Depois" : "Durante"}
+                        </div>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="secondary"
+                          className="absolute right-2 top-2 h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
+                          onClick={() => void handleRemoveQueuedAttachment(preview.id)}
+                          aria-label="Remover foto pendente"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 to-transparent p-2">
+                          <div className="text-xs text-muted-foreground">Pendente (offline)</div>
+                          {preview.caption ? <div className="mt-1 text-xs text-foreground">{preview.caption}</div> : null}
+                        </div>
+                      </div>
+                    ))}
+
+                    {filteredPendingAttachmentPreviews.slice(0, 6).map((preview) => (
+                      <div key={preview.id} className="relative overflow-hidden rounded-xl border bg-background">
+                        <div className="block aspect-square">
+                          <div className="relative h-full w-full">
+                            <Image src={preview.url} alt={preview.title || "Anexo"} fill className="object-cover opacity-60" sizes="160px" unoptimized loading="lazy" />
+                          </div>
+                        </div>
+                        <div className="absolute left-2 top-2 rounded-full bg-background/80 px-2 py-0.5 text-xs">
+                          {preview.phase === "before" ? "Antes" : preview.phase === "after" ? "Depois" : "Durante"}
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 to-transparent p-2">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                            Enviando...
+                          </div>
+                          {preview.caption ? <div className="mt-1 text-xs text-foreground">{preview.caption}</div> : null}
+                        </div>
+                      </div>
+                    ))}
+
+                    {filteredAttachments.map((attachment) => {
+                      const isImage = attachment.media_file_type?.startsWith("image/")
+                      const url = fixImageUrl(attachment.media_file_url)
+                      if (!url) return null
+
+                      return (
+                        <div key={attachment.id} className="group relative overflow-hidden rounded-xl border bg-background">
+                          <a href={url} target="_blank" rel="noreferrer" className="block aspect-square">
+                            {isImage ? (
+                              <div className="relative h-full w-full">
+                                <Image
+                                  src={url}
+                                  alt={attachment.caption || attachment.media_title || "Anexo"}
+                                  fill
+                                  className="object-cover"
+                                  sizes="160px"
+                                  unoptimized
+                                  loading="lazy"
+                                />
+                              </div>
+                            ) : (
+                              <div className="flex h-full items-center justify-center p-3 text-center text-xs text-muted-foreground">
+                                {attachment.media_title || "Arquivo"}
+                              </div>
+                            )}
+                          </a>
+
+                          <div className="absolute left-2 top-2 rounded-full bg-background/80 px-2 py-0.5 text-xs">
+                            {attachment.phase === "before" ? "Antes" : attachment.phase === "after" ? "Depois" : "Durante"}
+                          </div>
+
+                          {attachment.caption ? (
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 to-transparent p-2">
+                              <div className="text-xs text-foreground">{attachment.caption}</div>
+                            </div>
+                          ) : null}
+
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="secondary"
+                            className="absolute right-2 top-2 h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
+                            onClick={() => {
+                              if (!canDeleteAttachments) return
+                              void deleteDealAttachment.mutateAsync({ dealId: currentDeal.id, attachmentId: attachment.id })
+                            }}
+                            disabled={!canDeleteAttachments || deleteDealAttachment.isPending}
+                            aria-label="Remover anexo"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
+                    Nenhuma imagem anexada ainda.
+                  </div>
+                )}
+              </section>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-0 space-y-6 p-4 sm:p-6">
+              <div className="mx-auto w-full max-w-4xl space-y-6">
+                <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Publicar atualização</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Registre um update rápido no histórico do card com contexto, bloqueios ou próximos passos sem alterar a descrição principal.
+                      </p>
+                    </div>
+                    <Badge variant="outline">Histórico colaborativo</Badge>
+                  </div>
+
+                  <div className="rounded-2xl border bg-background p-4">
+                    <div className="relative">
+                      <Textarea
+                        ref={updateTextareaRef}
+                        value={draftUpdateNote}
+                        onChange={(event) => {
+                          const next = event.target.value
+                          setDraftUpdateNote(next)
+                          updateMentionState(next, event.target.selectionStart)
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape" && mentionOpen) {
+                            event.preventDefault()
+                            setMentionOpen(false)
+                            setMentionQuery("")
+                            return
+                          }
+
+                          if (mentionOpen && mentionSuggestions.length > 0) {
+                            if (event.key === "ArrowDown") {
+                              event.preventDefault()
+                              setMentionIndex((current) => Math.min(current + 1, mentionSuggestions.length - 1))
+                              return
+                            }
+                            if (event.key === "ArrowUp") {
+                              event.preventDefault()
+                              setMentionIndex((current) => Math.max(current - 1, 0))
+                              return
+                            }
+                            if (event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+                              event.preventDefault()
+                              const target = mentionSuggestions[mentionIndex]
+                              if (target) insertMention(target.username)
+                              return
+                            }
+                            if (event.key === "Tab") {
+                              setMentionOpen(false)
+                              setMentionQuery("")
+                            }
+                          }
+
+                          if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                            event.preventDefault()
+                            if (draftUpdateNote.trim() && !addDealNote.isPending) {
+                              void handlePublishUpdate()
+                            }
+                          }
+                        }}
+                        onClick={(event) => updateMentionState((event.target as HTMLTextAreaElement).value, (event.target as HTMLTextAreaElement).selectionStart)}
+                        onKeyUp={(event) => updateMentionState((event.target as HTMLTextAreaElement).value, (event.target as HTMLTextAreaElement).selectionStart)}
+                        maxLength={5000}
+                        placeholder="Ex.: Cliente respondeu, agenda confirmada para amanhã e aguardamos a liberação do acesso remoto. Use @usuario para mencionar."
+                        className="min-h-[140px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      />
+
+                      {mentionOpen && mentionSuggestions.length > 0 ? (
+                        <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border bg-background shadow-sm">
+                          <div className="max-h-56 overflow-y-auto p-2">
+                            {mentionSuggestions.map((u) => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                className={cn(
+                                  "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-muted",
+                                  mentionSuggestions[mentionIndex]?.id === u.id ? "bg-muted" : ""
+                                )}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => insertMention(u.username)}
+                              >
+                                <span className="truncate font-medium">{getUserDisplayName(u)}</span>
+                                <span className="truncate text-xs text-muted-foreground">@{u.username}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        A atualização entra no histórico do card como anotação manual. Ctrl+Enter publica.
+                      </p>
+                      <Button
+                        onClick={handlePublishUpdate}
+                        disabled={!canPublishUpdate || !draftUpdateNote.trim() || addDealNote.isPending}
+                        className="w-full sm:w-auto"
+                      >
+                        {addDealNote.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Publicar update
+                      </Button>
+                    </div>
+                    {!canPublishUpdate ? (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Você não tem permissão para publicar updates neste card.
+                      </p>
+                    ) : null}
+                  </div>
+                </section>
+
+                <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Histórico</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Filtre rapidamente os eventos do card para acompanhar updates manuais, movimentações e automações.
+                      </p>
+                    </div>
+                    <Badge variant="outline">
+                      {filteredActivities.length} de {activities.length}
+                    </Badge>
+                  </div>
+
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {ACTIVITY_FILTER_OPTIONS.map((option) => (
+                      <Button
+                        key={option.id}
+                        type="button"
+                        variant={activityFilter === option.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setActivityFilter(option.id)}
+                      >
+                        {option.label} ({activityFilterCounts[option.id]})
+                      </Button>
+                    ))}
+                  </div>
+
+                  <p className="mb-4 text-xs text-muted-foreground">
+                    Exibindo {filteredActivities.length} registro{filteredActivities.length === 1 ? "" : "s"} para o filtro selecionado.
+                  </p>
+
+                  <div className="space-y-4">
+                    {filteredActivities.length > 0 ? (
+                      filteredActivities.map((activity) => (
+                        <div key={activity.id} className="rounded-2xl border bg-background/80 p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline">{getActivityTypeLabel(activity.activity_type)}</Badge>
+                                {latestManualUpdate?.id === activity.id && activity.activity_type === "note" && (
+                                  <Badge variant="secondary">Update mais recente</Badge>
+                                )}
+                                {activity.actor_name && (
+                                  <span className="text-xs text-muted-foreground">por {activity.actor_name}</span>
+                                )}
+                                {activity.activity_type === "ai_action" && (
+                                  <Badge className="bg-purple-100 text-purple-700 border-purple-200">AI AGENT</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-foreground">{activity.description}</p>
+                            </div>
+                            <span className="whitespace-nowrap text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true, locale: ptBR })}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">
+                        Nenhuma atividade encontrada para o filtro atual.
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="cis" className="mt-0 space-y-6 p-4 sm:p-6">
+              <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Itens de Configuração (CMDB)</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Escolha os ativos ou serviços de TI impactados por este card para manter a rastreabilidade ITIL version 5.</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-2xl border bg-background p-4">
+                    <p className="text-sm font-medium">Buscar ICs</p>
+                    <div className="relative mt-3">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={userSearch} // Reusing search state for simplicity or could new one
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        placeholder="Buscar por nome, tag ou número de série"
+                        className="pl-9"
+                      />
+                    </div>
+
+                    <ScrollArea className="mt-4 h-96 rounded-2xl border">
+                      <div className="space-y-2 p-3">
+                        {cis.filter((ci: any) => 
+                          ci.name.toLowerCase().includes(userSearch.toLowerCase()) || 
+                          (ci.asset_tag || "").toLowerCase().includes(userSearch.toLowerCase()) ||
+                          (ci.serial_number || "").toLowerCase().includes(userSearch.toLowerCase())
+                        ).length > 0 ? (
+                          cis.filter((ci: any) => 
+                            ci.name.toLowerCase().includes(userSearch.toLowerCase()) || 
+                            (ci.asset_tag || "").toLowerCase().includes(userSearch.toLowerCase()) ||
+                            (ci.serial_number || "").toLowerCase().includes(userSearch.toLowerCase())
+                          ).map((ci: any) => {
+                            const checked = draftAffectedCis.includes(ci.id)
+                            return (
+                              <label
+                                key={ci.id}
+                                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${checked ? "border-primary/30 bg-primary/5" : "bg-background/70 hover:bg-muted/40"}`}
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(value) => {
+                                    setDraftAffectedCis(prev => 
+                                      value ? [...prev, ci.id] : prev.filter(id => id !== ci.id)
+                                    )
+                                  }}
+                                />
+                                <div className="space-y-1 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-sm font-medium">{ci.name}</p>
+                                    <Badge variant="outline" className="text-[10px]">{ci.ci_type_name}</Badge>
+                                    {ci.status === 'broken' && <Badge variant="destructive" className="text-[10px]">Falha</Badge>}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {ci.asset_tag ? `Tag: ${ci.asset_tag}` : ""} {ci.serial_number ? ` | SN: ${ci.serial_number}` : ""}
+                                    {ci.location ? ` | Local: ${ci.location}` : ""}
+                                  </p>
+                                </div>
+                              </label>
+                            )
+                          })
+                        ) : (
+                          <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground text-center">
+                            Nenhum Item de Configuração encontrado.
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  {draftAffectedCis.length > 0 && (
+                    <div className="rounded-2xl border bg-muted/20 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-3">Selecionados</p>
+                      <div className="flex flex-wrap gap-2">
+                        {draftAffectedCis.map(id => {
+                          const ci = cis.find((c: any) => c.id === id)
+                          if (!ci) return null
+                          return (
+                            <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                              {ci.name}
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-4 w-4 rounded-full p-0 hover:bg-muted" 
+                                onClick={() => setDraftAffectedCis(prev => prev.filter(i => i !== id))}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </Badge>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </TabsContent>
+            <TabsContent value="governance" className="mt-0 space-y-6 p-4 sm:p-6">
+              {draftRecordType === 'change' && (
+                <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                  {/* ... Existing Change UI (I'll need to wrap it or keep it) ... */}
+                  <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Governança de Mudança</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Documentação obrigatória para requisições de mudança (RFC) conforme ITIL version 5.
+                      </p>
+                    </div>
+                    <Badge variant={draftRiskLevel === 'critical' || draftRiskLevel === 'high' ? 'destructive' : 'outline'}>
+                      Risco: {draftRiskLevel === 'none' || !draftRiskLevel ? 'Não definido' : draftRiskLevel.toUpperCase()}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="rounded-2xl border bg-background p-4">
+                      <p className="text-sm font-medium">Nível de Risco</p>
+                      <Select value={draftRiskLevel || "none"} onValueChange={(v) => setDraftRiskLevel(v as any)}>
+                        <SelectTrigger className="mt-3">
+                          <SelectValue placeholder="Selecione o risco" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Selecione o risco</SelectItem>
+                          <SelectItem value="low">Baixo (Standard Change)</SelectItem>
+                          <SelectItem value="medium">Médio (Normal Change)</SelectItem>
+                          <SelectItem value="high">Alto (High Impact)</SelectItem>
+                          <SelectItem value="critical">Crítico (Emergency/Critical)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium">Justificativa da Mudança</p>
+                        <Textarea 
+                          value={draftChangeJustification}
+                          onChange={(e) => setDraftChangeJustification(e.target.value)}
+                          placeholder="Por que esta mudança é necessária?"
+                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium">Plano de Implementação</p>
+                        <Textarea 
+                          value={draftImplementationPlan}
+                          onChange={(e) => setDraftImplementationPlan(e.target.value)}
+                          placeholder="Passo a passo da execução..."
+                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium">Plano de Recuo (Backout)</p>
+                        <Textarea 
+                          value={draftBackoutPlan}
+                          onChange={(e) => setDraftBackoutPlan(e.target.value)}
+                          placeholder="Como reverter em caso de falha?"
+                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium">Plano de Testes</p>
+                        <Textarea 
+                          value={draftTestPlan}
+                          onChange={(e) => setDraftTestPlan(e.target.value)}
+                          placeholder="Como validar o sucesso?"
+                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {draftRecordType === 'problem' && (
+                <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                  <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Investigação de Problema</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Análise de Causa Raiz (RCA) e definição de Error Conhecido.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-full border bg-background px-3 py-1">
+                      <span className="text-xs font-semibold text-muted-foreground mr-2">PUBLICAR NO KEDB</span>
+                      <Switch 
+                        checked={draftIsKnownError} 
+                        onCheckedChange={setDraftIsKnownError} 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="rounded-2xl border bg-background p-4">
+                      <p className="text-sm font-medium">Análise de Causa Raiz (RCA)</p>
+                      <p className="mt-1 text-xs text-muted-foreground mb-3">Identifique o motivo fundamental da falha encontrada.</p>
+                      <Textarea 
+                        value={draftRootCause}
+                        onChange={(e) => setDraftRootCause(e.target.value)}
+                        placeholder="Ex: Falha no disco rígido por desgaste físico após 5 anos..."
+                        className="mt-3 min-h-[160px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      />
+                    </div>
+
+                    <div className="rounded-2xl border bg-background p-4">
+                      <p className="text-sm font-medium">Solução Definitiva / Workaround</p>
+                      <p className="mt-1 text-xs text-muted-foreground mb-3">Estes passos serão visíveis para o Service Desk como erro conhecido.</p>
+                      <Textarea 
+                        value={draftResolutionSteps}
+                        onChange={(e) => setDraftResolutionSteps(e.target.value)}
+                        placeholder="Passos para resolver ou contornar..."
+                        className="mt-3 min-h-[160px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
+            </TabsContent>
+
+            <TabsContent value="xla" className="mt-0 space-y-6 p-4 sm:p-6">
+              <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                <div className="mb-6 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Experiência do Usuário (XLA)</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Acordos de Nível de Experiência medem a satisfação subjetiva e a percepção de valor do produto digital.
+                    </p>
+                  </div>
+                  {currentDeal.xla_score && (
+                    <div className="flex flex-col items-end">
+                      <span className="text-2xl font-bold text-primary">{currentDeal.xla_score}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase">Score Médio</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  {/* Form for new XLA if closed (simplified) */}
+                  {currentDeal.is_closed && (
+                    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                      <p className="text-sm font-semibold">Como foi sua experiência com este item?</p>
+                      <div className="mt-4 flex flex-wrap gap-4">
+                         <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground uppercase">Geral</p>
+                            <div className="flex gap-1">
+                               {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                                 <button 
+                                   key={n} 
+                                   onClick={() => submitXla.mutate({ rating: n, deal: currentDeal.id, contact: currentDeal.contact ?? undefined })}
+                                   className="h-8 w-8 rounded-lg border bg-background hover:bg-primary hover:text-primary-foreground transition-colors text-xs font-medium"
+                                 >
+                                   {n}
+                                 </button>
+                               ))}
+                            </div>
+                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Histórico de Feedback</p>
+                    {xlaFeedbacks.length > 0 ? (
+                      xlaFeedbacks.map((f: any) => (
+                        <div key={f.id} className="rounded-2xl border p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-2">
+                               <Badge variant="secondary">{f.rating}/10</Badge>
+                               <span className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleDateString()}</span>
+                             </div>
+                          </div>
+                          {f.comment && <p className="text-sm italic text-muted-foreground">"{f.comment}"</p>}
+                          <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground uppercase">
+                             <div>Uso: {f.ease_of_use}/10</div>
+                             <div>Velocidade: {f.speed_satisfaction}/10</div>
+                             <div>Resultado: {f.outcome_satisfaction}/10</div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                        Nenhum feedback XLA registrado ainda.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

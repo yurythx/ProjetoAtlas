@@ -60,7 +60,7 @@ jobs:
           push: true
           # Note: Next.js needs build args for public env vars
           build-args: |
-            NEXT_PUBLIC_API_URL=https://api.projetoravenna.cloud
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api.projetoravenna.cloud' }}
           tags: |
             ghcr.io/${{ steps.meta.outputs.repo_lower }}/frontend:latest
             ghcr.io/${{ steps.meta.outputs.repo_lower }}/frontend:${{ steps.meta.outputs.version }}
@@ -101,7 +101,7 @@ jobs:
             # Login no GHCR no servidor (usando token de curta duração ou PAT)
             # DICA: Para maior segurança, use um Personal Access Token com escopo read:packages
             # ou use o login via SSH de forma transparente se o servidor estiver autorizado.
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # O script deploy.sh agora suporta --pull
             chmod +x scripts/deploy.sh

@@ -151,20 +151,7 @@ HEALTH_IGNORE_REDIS = env.bool("HEALTH_IGNORE_REDIS", default=False)
 LICENSING_ENFORCE = env.bool("LICENSING_ENFORCE", default=False)
 WEBHOOKS_ALLOW_PRIVATE_ENDPOINTS = env.bool("WEBHOOKS_ALLOW_PRIVATE_ENDPOINTS", default=False)
 
-SENTRY_DSN = env("SENTRY_DSN", default="")
-if SENTRY_DSN and not TESTING:
-    import sentry_sdk
-    from sentry_sdk.integrations.celery import CeleryIntegration
-    from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.redis import RedisIntegration
 
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration(), CeleryIntegration(), RedisIntegration()],
-        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
-        send_default_pii=True,
-        environment=env("DJANGO_ENV", default="production"),
-    )
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Atlas API",
@@ -659,14 +646,4 @@ if not DEBUG and not TESTING and not BUILDING and not FIELD_ENCRYPTION_KEY:
 # Content Security Policy (CSP)
 from .csp_config import *
 
-# -----------------
-# SECURITY SETTINGS
-# -----------------
-# Forcing settings for production based on `DEBUG`
-if not DEBUG and not TESTING:
-    SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
-    SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
-    CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=True)
-    SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000)  # 1 year
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True)
-    SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=True)
+
