@@ -1,6 +1,7 @@
 import logging
 
 from django.db import models
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,8 @@ class TenantManager(models.Manager):
 
 class BaseTenantModel(models.Model):
     company = models.ForeignKey("core.Company", on_delete=models.CASCADE, db_index=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = TenantManager()
     all_objects = models.Manager()

@@ -232,7 +232,7 @@ export function Sidebar() {
           <div className="bg-gradient-to-br from-primary/10 to-transparent rounded-2xl p-4 border border-primary/10 shadow-sm group hover:border-primary/20 transition-all cursor-default">
             <div className="flex items-center gap-3 mb-2">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center relative overflow-hidden ring-1 ring-border">
-                <img src="/logo.png" alt="Atlas" className="object-cover w-full h-full p-1" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = '<span class="text-xs font-bold text-primary">AT</span>'; }} />
+                <img src={fixImageUrl(config.logo) || "/logo.svg"} alt={config.companyName || "Atlas"} className="object-cover w-full h-full p-1" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-xs font-bold text-primary">${(config.companyName || "Atlas").substring(0, 2).toUpperCase()}</span>`; }} />
               </div>
               <div>
                 <p className="text-xs font-bold text-foreground">Atlas ITIL v5</p>
@@ -243,7 +243,7 @@ export function Sidebar() {
         ) : (
           <div className="flex justify-center">
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center relative overflow-hidden ring-1 ring-border cursor-help" title="Atlas v1.0">
-               <img src="/logo.png" alt="Atlas" className="object-cover w-full h-full p-1" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = '<span class="text-[10px] font-bold text-primary">v1</span>'; }} />
+               <img src={fixImageUrl(config.logo) || "/logo.svg"} alt={config.companyName || "Atlas"} className="object-cover w-full h-full p-1" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = '<span class="text-[10px] font-bold text-primary">AT</span>'; }} />
             </div>
           </div>
         )}

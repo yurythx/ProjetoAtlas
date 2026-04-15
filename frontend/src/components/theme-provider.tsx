@@ -155,6 +155,9 @@ function useThemeHooks(): ThemeConfigShape {
   }, [fetchConfig])
 
   const updatePalette = async (palette: string) => {
+    // Optimistic update
+    setUserTheme(prev => prev ? { ...prev, theme_palette: palette, use_tenant_theme: false } : null)
+    
     try {
       await api.patch("/api/accounts/preferences/theme/update_current/", {
         theme_palette: palette,
@@ -166,6 +169,8 @@ function useThemeHooks(): ThemeConfigShape {
       await fetchConfig()
     } catch (err) {
       console.error("Failed to update palette", err)
+      // Revert on error
+      await fetchConfig()
     }
   }
 
@@ -182,6 +187,9 @@ function useThemeHooks(): ThemeConfigShape {
   }
 
   const updateDarkModePreference = async (mode: "light" | "dark" | "system") => {
+    // Optimistic update
+    setUserTheme(prev => prev ? { ...prev, dark_mode_preference: mode } : null)
+
     try {
       await api.patch("/api/accounts/preferences/theme/update_current/", { dark_mode_preference: mode })
       if (typeof window !== "undefined") {
@@ -190,6 +198,8 @@ function useThemeHooks(): ThemeConfigShape {
       await fetchConfig()
     } catch (err) {
       console.error("Failed to update dark mode preference", err)
+      // Revert on error
+      await fetchConfig()
     }
   }
 

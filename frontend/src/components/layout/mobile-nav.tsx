@@ -111,7 +111,7 @@ export function MobileNav() {
                                             <Image src={logo} alt={companyName || "Logo"} width={32} height={32} className="object-contain" />
                                         ) : (
                                             <div className="h-full w-full rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden ring-1 ring-border">
-                                                <img src="/logo.png" alt="Atlas" className="object-cover w-full h-full p-1.5" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = '<span class="text-xl">🌍</span>'; }} />
+                                                <img src={fixImageUrl(config.logo) || "/logo.svg"} alt={config.companyName || "Atlas"} className="object-cover w-full h-full p-1.5" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-xl">${(config.companyName || "A")[0]}</span>`; }} />
                                             </div>
                                         )}
                                     </div>

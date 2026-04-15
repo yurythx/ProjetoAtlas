@@ -430,7 +430,6 @@ class DealActivity(BaseTenantModel):
     description = models.TextField()
     old_value = models.JSONField(null=True, blank=True)
     new_value = models.JSONField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -464,7 +463,6 @@ class DealAttachment(BaseTenantModel):
         null=True,
         blank=True,
     )
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -501,8 +499,6 @@ class IntegrationInboundEvent(BaseTenantModel):
     response_status_code = models.IntegerField(null=True, blank=True)
     error = models.TextField(blank=True, null=True)
 
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-
     class Meta:
         ordering = ["-created_at"]
         indexes = [
@@ -530,8 +526,6 @@ class XLAFeedback(BaseTenantModel):
     speed_satisfaction = models.IntegerField(default=5)
     outcome_satisfaction = models.IntegerField(default=5)
     
-    created_at = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return f"XLA {self.rating}/10 for {self.deal.title}"
 
