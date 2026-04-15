@@ -226,7 +226,7 @@ export function useXLA(dealId?: number) {
   const query = useQuery<XLAFeedback[]>({
     queryKey: ["xla-feedbacks", dealId],
     queryFn: async () => {
-      const { data } = await api.get<XLAFeedback[]>(`/crm/xla-feedbacks/`, {
+      const { data } = await api.get<XLAFeedback[]>(`/api/crm/xla-feedbacks/`, {
         params: dealId ? { deal: dealId } : {}
       })
       return data
@@ -236,7 +236,7 @@ export function useXLA(dealId?: number) {
 
   const createFeedback = useMutation({
     mutationFn: async (payload: Partial<XLAFeedback>) => {
-      const response = await api.post("/crm/xla-feedbacks/", payload)
+      const response = await api.post("/api/crm/xla-feedbacks/", payload)
       return response.data
     },
     onSuccess: () => {
@@ -259,7 +259,7 @@ export function useDPSMDashboard() {
   return useQuery<DPSMDashboardData>({
     queryKey: ["dpsm-dashboard"],
     queryFn: async () => {
-      const { data } = await api.get<DPSMDashboardData>("/crm/dpsm-dashboard/")
+      const { data } = await api.get<DPSMDashboardData>("/api/crm/dpsm-dashboard/")
       return data
     }
   })
@@ -277,7 +277,7 @@ export function useDPSMRecommendations() {
   return useQuery<{ vulnerabilities: DPSMRecommendation[]; opportunities: DPSMRecommendation[] }>({
     queryKey: ["dpsm-recommendations"],
     queryFn: async () => {
-      const { data } = await api.get("/crm/dpsm-dashboard/recommendations/")
+      const { data } = await api.get("/api/crm/dpsm-dashboard/recommendations/")
       return data
     }
   })

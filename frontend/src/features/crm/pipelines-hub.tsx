@@ -16,6 +16,7 @@ import { getDeadlineMeta, isCriticalDeal } from "./crm-visuals"
 import { getPipelineColumns, isDealInColumn, resolveDealProgress, useCRM, type Deal, type Pipeline } from "./use-crm"
 import { getUserDisplayName } from "./crm-utils"
 import { useCRMUsers } from "./use-crm-users"
+import { useRouter } from "next/navigation"
 import { PipelineManagerModal } from "./pipeline-manager-modal"
 import { usePermission } from "@/hooks/use-permission"
 
@@ -80,7 +81,8 @@ function formatActivityTime(value: string) {
   }
 }
 
-export function PipelinesHub() {
+export function PipelinesHub({ autoRedirect = false }: { autoRedirect?: boolean }) {
+  const router = useRouter()
   const { pipelines, deals, isLoading } = useCRM()
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState<"progress" | "overdue" | "open" | "name">("progress")
@@ -88,6 +90,18 @@ export function PipelinesHub() {
   const { data: users = [] } = useCRMUsers(expandedPipelineId !== null)
   const { hasPermission } = usePermission()
   const canManagePipelines = hasPermission("crm.pipeline_manage")
+
+  useState(() => {
+    if (typeof window !== "undefined") {
+      // Pequeno hack para evitar flicker: se autoRedirect for true e já soubermos que tem 1, redirecionamos
+    }
+  })
+
+  useEffect(() => {
+    if (autoRedirect && !isLoading && pipelines.length === 1) {
+      router.push(`/crm?pipeline=${pipelines[0].id}`)
+    }
+  }, [autoRedirect, isLoading, pipelines, router])
 
   const pipelineCards = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()

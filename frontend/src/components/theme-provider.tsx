@@ -103,15 +103,28 @@ function useThemeHooks(): ThemeConfigShape {
   const [userTheme, setUserTheme] = useState<UserPreferences | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Limpeza de Service Worker legado (PWA desativado)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister();
+          console.log('Antigravity: Service Worker legado desinstalado.');
+        }
+      });
+    }
+  }, []);
+
+  const effectiveCompany = useMemo(() => {
+    if (typeof window === "undefined") return process.env.NEXT_PUBLIC_COMPANY_SLUG || "unknown"
+    return localStorage.getItem("companySlug") || process.env.NEXT_PUBLIC_COMPANY_SLUG || "unknown"
+  }, [])
+
   const fetchConfig = useCallback(async () => {
     setIsLoading(true)
     try {
       // Check if user is logged in
       const token = typeof window !== "undefined" ? localStorage.getItem('accessToken') : null
-      const effectiveCompany =
-        typeof window !== "undefined"
-          ? localStorage.getItem("companySlug") || process.env.NEXT_PUBLIC_COMPANY_SLUG || "unknown"
-          : process.env.NEXT_PUBLIC_COMPANY_SLUG || "unknown"
 
       // Fetch Tenant branding
       // Use public endpoint for public routes or when not authenticated to avoid 401 loops
@@ -163,13 +176,19 @@ function useThemeHooks(): ThemeConfigShape {
         theme_palette: palette,
         use_tenant_theme: false
       })
-      if (typeof window !== "undefined") {
-        queryClient.invalidateQueries({ queryKey: ["accounts", "preferences", "theme"] })
+      
+      const updatedPrefs: UserPreferences = {
+        ...userTheme!,
+        theme_palette: palette,
+        use_tenant_theme: false
       }
-      await fetchConfig()
+      
+      if (typeof window !== "undefined") {
+        localStorage.setItem('atlas_user_preferences', JSON.stringify(updatedPrefs))
+        queryClient.setQueryData(["accounts", "preferences", "theme", effectiveCompany], updatedPrefs)
+      }
     } catch (err) {
       console.error("Failed to update palette", err)
-      // Revert on error
       await fetchConfig()
     }
   }
@@ -192,13 +211,18 @@ function useThemeHooks(): ThemeConfigShape {
 
     try {
       await api.patch("/api/accounts/preferences/theme/update_current/", { dark_mode_preference: mode })
-      if (typeof window !== "undefined") {
-        queryClient.invalidateQueries({ queryKey: ["accounts", "preferences", "theme"] })
+      
+      const updatedPrefs: UserPreferences = {
+        ...userTheme!,
+        dark_mode_preference: mode
       }
-      await fetchConfig()
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem('atlas_user_preferences', JSON.stringify(updatedPrefs))
+        queryClient.setQueryData(["accounts", "preferences", "theme", effectiveCompany], updatedPrefs)
+      }
     } catch (err) {
       console.error("Failed to update dark mode preference", err)
-      // Revert on error
       await fetchConfig()
     }
   }

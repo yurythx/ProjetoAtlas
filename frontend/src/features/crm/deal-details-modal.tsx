@@ -167,14 +167,15 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
   }, [currentDeal, open])
 
   const selectedUsers = useMemo(
-    () => users.filter((user) => draftRelatedUsers.includes(user.id)),
+    () => (Array.isArray(users) ? users : []).filter((user) => draftRelatedUsers.includes(user.id)),
     [draftRelatedUsers, users]
   )
   const filteredUsers = useMemo(() => {
     const normalizedQuery = userSearch.trim().toLowerCase()
-    if (!normalizedQuery) return users
+    const usersArray = Array.isArray(users) ? users : []
+    if (!normalizedQuery) return usersArray
 
-    return users.filter((user) => {
+    return usersArray.filter((user) => {
       const displayName = getUserDisplayName(user).toLowerCase()
       const email = user.email?.toLowerCase() || ""
       const username = user.username.toLowerCase()
@@ -201,14 +202,15 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     [activities]
   )
   const filteredActivities = useMemo(
-    () => activities.filter((activity) => matchesActivityFilter(activity, activityFilter)),
+    () => (Array.isArray(activities) ? activities : []).filter((activity) => matchesActivityFilter(activity, activityFilter)),
     [activities, activityFilter]
   )
   const activityFilterCounts = useMemo(
-    () =>
-      ACTIVITY_FILTER_OPTIONS.reduce<Record<ActivityFilterId, number>>(
+    () => {
+      const activitiesArray = Array.isArray(activities) ? activities : []
+      return ACTIVITY_FILTER_OPTIONS.reduce<Record<ActivityFilterId, number>>(
         (accumulator, option) => {
-          accumulator[option.id] = activities.filter((activity) => matchesActivityFilter(activity, option.id)).length
+          accumulator[option.id] = activitiesArray.filter((activity) => matchesActivityFilter(activity, option.id)).length
           return accumulator
         },
         {
@@ -218,7 +220,8 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
           creation: 0,
           automation: 0,
         }
-      ),
+      )
+    },
     [activities]
   )
   const currentProgress = getProgressValue(currentDeal)
@@ -342,9 +345,10 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
   const mentionSuggestions = useMemo(() => {
     if (!mentionOpen) return []
+    const usersArray = Array.isArray(users) ? users : []
     const q = mentionQuery.trim().toLowerCase()
-    if (!q) return users.slice(0, 8)
-    return users
+    if (!q) return usersArray.slice(0, 8)
+    return usersArray
       .filter((u) => {
         const name = getUserDisplayName(u).toLowerCase()
         return u.username.toLowerCase().includes(q) || name.includes(q) || (u.email || "").toLowerCase().includes(q)
@@ -423,18 +427,21 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
   )
 
   const filteredQueuedAttachmentPreviews = useMemo(() => {
-    if (imagesFilter === "all") return queuedAttachmentPreviews
-    return queuedAttachmentPreviews.filter((item) => item.phase === imagesFilter)
+    const list = Array.isArray(queuedAttachmentPreviews) ? queuedAttachmentPreviews : []
+    if (imagesFilter === "all") return list
+    return list.filter((item) => item.phase === imagesFilter)
   }, [imagesFilter, queuedAttachmentPreviews])
 
   const filteredPendingAttachmentPreviews = useMemo(() => {
-    if (imagesFilter === "all") return pendingAttachmentPreviews
-    return pendingAttachmentPreviews.filter((item) => item.phase === imagesFilter)
+    const list = Array.isArray(pendingAttachmentPreviews) ? pendingAttachmentPreviews : []
+    if (imagesFilter === "all") return list
+    return list.filter((item) => item.phase === imagesFilter)
   }, [imagesFilter, pendingAttachmentPreviews])
 
   const filteredAttachments = useMemo(() => {
-    if (imagesFilter === "all") return attachments
-    return attachments.filter((item) => item.phase === imagesFilter)
+    const list = Array.isArray(attachments) ? attachments : []
+    if (imagesFilter === "all") return list
+    return list.filter((item) => item.phase === imagesFilter)
   }, [attachments, imagesFilter])
 
   useEffect(() => {

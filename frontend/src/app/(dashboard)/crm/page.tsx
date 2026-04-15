@@ -16,7 +16,7 @@ export default async function Page({
   const pipeline = Array.isArray(pipelineParam) ? pipelineParam[0] : pipelineParam
 
   if (!pipeline) {
-    return <PipelinesHub />
+    return <PipelinesHub autoRedirect={true} />
   }
 
   return <CRMPage />
