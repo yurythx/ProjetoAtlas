@@ -8,7 +8,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0014_company_soft_delete'),
+        ('core', '0015_pg_trgm'),
         ('crm', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]

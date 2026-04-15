@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('articles', '0012_comment_replies_and_public_flag'),
-        ('core', '0014_company_soft_delete'),
+        ('core', '0015_pg_trgm'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

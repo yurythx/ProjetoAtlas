@@ -8,9 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     initial = True
 
-    dependencies = [
-        ("core", "0000_pg_trgm"),
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(

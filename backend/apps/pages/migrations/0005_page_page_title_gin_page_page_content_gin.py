@@ -7,7 +7,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0014_company_soft_delete'),
+        ('core', '0015_pg_trgm'),
         ('pages', '0004_remove_is_published'),
     ]
 
