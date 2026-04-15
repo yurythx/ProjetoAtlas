@@ -40,7 +40,7 @@ const navItems = [
   { label: "Páginas", href: "/cms", module: "pages" },
   { label: "Artigos", href: "/artigos", module: "articles" },
   { label: "Messenger", href: "/messenger", module: "messenger" },
-  { label: "CRM / Suporte", href: "/crm", module: "crm" },
+  { label: "Service Desk", href: "/crm", module: "crm" },
   { label: "Financeiro", href: "/finance", module: "finance" },
   { label: "Agenda", href: "/calendar", module: "calendar" },
 ]

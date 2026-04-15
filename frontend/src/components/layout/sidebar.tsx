@@ -22,7 +22,8 @@ import {
   KeyRound,
   Calendar as CalendarIcon,
   DollarSign,
-  ClipboardList
+  ClipboardList,
+  BarChart3
 } from "lucide-react"
 import { motion } from "framer-motion"
 import {
@@ -74,6 +75,13 @@ const sidebarSections: SidebarSection[] = [
         title: "Service Desk",
         href: "/crm",
         icon: ClipboardList,
+        module: "crm",
+        exact: true,
+      },
+      {
+        title: "Processos",
+        href: "/crm/pipelines",
+        icon: BarChart3,
         module: "crm",
       },
       {
