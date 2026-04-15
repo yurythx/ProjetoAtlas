@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { BarChart3, Menu, X, LayoutDashboard, MessageSquare, FileText, Settings, ShieldCheck, Box, LogOut, User, DollarSign, Calendar, Headset } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn, fixImageUrl } from "@/lib/utils"
 import { useModules } from "@/hooks/use-modules"
 import { useTheme } from "@/components/theme-provider"
 import { useAuth } from "@/hooks/use-auth"
@@ -22,12 +22,17 @@ import { SIDEBAR_CONFIG } from "@/config/navigation"
 const navItems = SIDEBAR_CONFIG.flatMap(section => section.items)
 
 export function MobileNav() {
+    const [mounted, setMounted] = React.useState(false)
     const [isOpen, setIsOpen] = React.useState(false)
     const [isLoggingOut, setIsLoggingOut] = React.useState(false)
     const setMobileNavOpen = useMobileNavStore((s) => s.setMobileNavOpen)
     const pathname = usePathname()
     const { isModuleActive } = useModules()
     const { logo, companyName } = useTheme()
+
+    React.useEffect(() => {
+        setMounted(true)
+    }, [])
     const { user } = useAuth()
     const { hasPermission } = usePermission()
 
@@ -107,12 +112,14 @@ export function MobileNav() {
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <div className="h-10 w-10 flex-shrink-0 flex items-center justify-center relative">
-                                        {logo ? (
-                                            <Image src={logo} alt={companyName || "Logo"} width={32} height={32} className="object-contain" />
-                                        ) : (
-                                            <div className="h-full w-full rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden ring-1 ring-border">
-                                                <img src={fixImageUrl(config.logo) || "/logo.svg"} alt={config.companyName || "Atlas"} className="object-cover w-full h-full p-1.5" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-xl">${(config.companyName || "A")[0]}</span>`; }} />
-                                            </div>
+                                        {mounted && (
+                                            logo ? (
+                                                <Image src={fixImageUrl(logo)} alt={companyName || "Logo"} width={32} height={32} className="object-contain" />
+                                            ) : (
+                                                <div className="h-full w-full rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden ring-1 ring-border">
+                                                    <img src="/logo.svg" alt={companyName || "Atlas"} className="object-cover w-full h-full p-1.5" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-xl">${(companyName || "A")[0]}</span>`; }} />
+                                                </div>
+                                            )
                                         )}
                                     </div>
                                     <span className="text-lg font-bold tracking-tight truncate max-w-[150px]">
