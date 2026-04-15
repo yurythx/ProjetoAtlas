@@ -11,6 +11,7 @@ import Link from "next/link"
 import { Company } from "@/types"
 import dynamic from "next/dynamic"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useModules } from "@/hooks/use-modules"
 
 const DjangoHero = dynamic(
   () => import("@/components/dashboard/django-hero").then((m) => m.DjangoHero),
@@ -58,6 +59,7 @@ const OnboardingWizard = dynamic(
 )
 
 export default function DashboardPage() {
+  const { isModuleActive } = useModules()
   const companySlug = typeof window !== 'undefined' ? localStorage.getItem('companySlug') : null
   const envCompany = process.env.NEXT_PUBLIC_COMPANY_SLUG
   const effectiveCompany = companySlug || envCompany || 'unknown'
@@ -118,8 +120,8 @@ export default function DashboardPage() {
         <DjangoHero
           title={`Bem-vindo ao ${stats?.counters?.users?.total > 0 ? 'seu' : ''} Atlas`}
           subtitle="Sua central de inteligência para gestão de conteúdo, comunicação e crescimento escalável."
-          ctaText="Publicar Artigo"
-          ctaHref="/artigos"
+          ctaText={isModuleActive('articles') ? "Publicar Artigo" : "Ver Perfil"}
+          ctaHref={isModuleActive('articles') ? "/artigos" : "/perfil"}
           secondaryCtaText="Ver Analytics"
           secondaryCtaHref="#analytics-section"
         />
@@ -137,22 +139,26 @@ export default function DashboardPage() {
               icon={Users}
             />
           </div>
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.12s" }}>
-            <StatItem
-              title="Conteúdo Publicado"
-              value={stats?.counters?.articles?.total || 0}
-              growth={stats?.counters?.articles?.growth}
-              icon={FileText}
-            />
-          </div>
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.16s" }}>
-            <StatItem
-              title="Mensagens Trocadas"
-              value={stats?.counters?.messages?.total || 0}
-              growth={stats?.counters?.messages?.growth}
-              icon={MessageSquare}
-            />
-          </div>
+          {isModuleActive('articles') && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.12s" }}>
+              <StatItem
+                title="Conteúdo Publicado"
+                value={stats?.counters?.articles?.total || 0}
+                growth={stats?.counters?.articles?.growth}
+                icon={FileText}
+              />
+            </div>
+          )}
+          {isModuleActive('messenger') && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.16s" }}>
+              <StatItem
+                title="Mensagens Trocadas"
+                value={stats?.counters?.messages?.total || 0}
+                growth={stats?.counters?.messages?.growth}
+                icon={MessageSquare}
+              />
+            </div>
+          )}
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.20s" }}>
             <StatItem
               title="Status do Sistema"

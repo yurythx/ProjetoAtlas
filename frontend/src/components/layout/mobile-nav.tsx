@@ -17,27 +17,9 @@ import Image from "next/image"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useMobileNavStore } from "@/hooks/use-mobile-nav-store"
 
-interface SidebarItem {
-    title: string
-    href: string
-    icon: React.ComponentType<{ className?: string }>
-    module?: string
-    permission?: string
-    requireSuperuser?: boolean
-}
+import { SIDEBAR_CONFIG } from "@/config/navigation"
 
-const navItems: SidebarItem[] = [
-    { title: "Painel Admin", href: "/admin", icon: LayoutDashboard, permission: "admin.view_dashboard" },
-    { title: "Mensagens", href: "/messenger", icon: MessageSquare, module: "messenger" },
-    { title: "Páginas", href: "/cms", icon: ShieldCheck, module: "pages" },
-    { title: "Artigos", href: "/artigos", icon: FileText, module: "articles" },
-    { title: "Service Desk", href: "/crm", icon: Headset, module: "crm" },
-    { title: "Processos", href: "/crm/pipelines", icon: BarChart3, module: "crm" },
-    { title: "Financeiro", href: "/finance", icon: DollarSign, module: "finance" },
-    { title: "Agenda", href: "/calendar", icon: Calendar, module: "calendar" },
-    { title: "Módulos", href: "/admin/modules", icon: Box, permission: "admin.settings_manage" },
-    { title: "Configurações", href: "/settings", icon: Settings },
-]
+const navItems = SIDEBAR_CONFIG.flatMap(section => section.items)
 
 export function MobileNav() {
     const [isOpen, setIsOpen] = React.useState(false)

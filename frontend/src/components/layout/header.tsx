@@ -35,19 +35,11 @@ const NotificationBell = dynamic(() => import("@/components/layout/notification-
 })
 
 
-const navItems = [
-  { label: "Painel Admin", href: "/admin" },
-  { label: "Páginas", href: "/cms", module: "pages" },
-  { label: "Artigos", href: "/artigos", module: "articles" },
-  { label: "Messenger", href: "/messenger", module: "messenger" },
-  { label: "Service Desk", href: "/crm", module: "crm" },
-  { label: "Financeiro", href: "/finance", module: "finance" },
-  { label: "Agenda", href: "/calendar", module: "calendar" },
-]
+import { HEADER_NAV_ITEMS } from "@/config/navigation"
 
-const guestNavItems: { label: string; href: string; module?: string }[] = [
-  { label: "Início", href: "/" },
-  { label: "Artigos", href: "/p/artigos", module: "articles" },
+const guestNavItems: { title: string; href: string; module?: string }[] = [
+  { title: "Início", href: "/" },
+  { title: "Artigos", href: "/p/artigos", module: "articles" },
 ]
 
 export function Header() {
@@ -141,7 +133,7 @@ export function Header() {
         {/* Desktop Navigation */}
         {showDesktopNav ? (
           <nav className="hidden md:flex items-center gap-1" role="navigation" aria-label="Navegação do cabeçalho">
-            {(me ? navItems : guestNavItems)
+            {(me ? HEADER_NAV_ITEMS : guestNavItems)
               .filter((item) => !("module" in item) || isModuleActive(item.module as string))
               .map((item, index) => (
                 <div
@@ -163,7 +155,7 @@ export function Header() {
                         pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href)) ? "page" : undefined
                       }
                     >
-                      {item.label}
+                      {item.title}
                       {(pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href))) && (
                         <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
                       )}

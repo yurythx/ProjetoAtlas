@@ -33,130 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-interface SidebarItem {
-  title: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  module?: string
-  exact?: boolean
-}
-
-interface SidebarSection {
-  title?: string
-  items: SidebarItem[]
-}
-
-const sidebarSections: SidebarSection[] = [
-  {
-    items: [
-      {
-        title: "Visão Geral",
-        href: "/admin",
-        icon: LayoutDashboard,
-        exact: true,
-      },
-      {
-        title: "Insights",
-        href: "/insights",
-        icon: TrendingUp,
-      },
-    ]
-  },
-  {
-    title: "Módulos",
-    items: [
-      {
-        title: "Agenda",
-        href: "/calendar",
-        icon: CalendarIcon, // Renamed to avoid conflict with imported Calendar icon if any
-        module: "calendar",
-      },
-      {
-        title: "Service Desk",
-        href: "/crm",
-        icon: ClipboardList,
-        module: "crm",
-        exact: true,
-      },
-      {
-        title: "Processos",
-        href: "/crm/pipelines",
-        icon: BarChart3,
-        module: "crm",
-      },
-      {
-        title: "Financeiro",
-        href: "/finance",
-        icon: DollarSign,
-        module: "finance",
-      },
-      {
-        title: "Mensagens",
-        href: "/messenger",
-        icon: MessageSquare,
-        module: "messenger",
-      },
-      {
-        title: "Páginas",
-        href: "/cms",
-        icon: Globe,
-        module: "pages",
-      },
-      {
-        title: "Artigos",
-        href: "/artigos",
-        icon: FileText,
-        module: "articles",
-      },
-      {
-        title: "Comentários",
-        href: "/artigos/comentarios",
-        icon: MessageSquare,
-        module: "articles",
-      },
-    ]
-  },
-  {
-    title: "Administração",
-    items: [
-      {
-        title: "Membros",
-        href: "/admin/users",
-        icon: Users,
-      },
-      {
-        title: "LDAP",
-        href: "/admin/ldap",
-        icon: KeyRound,
-      },
-      {
-        title: "Papéis e Permissões",
-        href: "/admin/roles",
-        icon: Shield,
-      },
-      {
-        title: "Módulos do Sistema",
-        href: "/admin/modules",
-        icon: Package,
-      },
-      {
-        title: "Empresas",
-        href: "/admin/companies",
-        icon: LayoutDashboard,
-      },
-      {
-        title: "Configurações",
-        href: "/settings",
-        icon: Settings,
-      },
-      {
-        title: "Meu Perfil",
-        href: "/perfil",
-        icon: Users, // Using Users icon for profile as User is imported but not used in the original list
-      },
-    ]
-  },
-]
+import { SIDEBAR_CONFIG } from "@/config/navigation"
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -203,7 +80,7 @@ export function Sidebar() {
     canModerateComments ? (moderationMetricsQuery.data?.pending_total ?? 0) : 0
 
   // Filter sections based on permissions
-  const filteredSections = sidebarSections.map(section => {
+  const filteredSections = SIDEBAR_CONFIG.map(section => {
     const filteredItems = section.items.filter(item => {
       // Module check
       if (item.module && !isModuleActive(item.module)) return false
