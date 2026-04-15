@@ -279,11 +279,10 @@ function ThemeEffects({ themeConfig }: { themeConfig: ThemeConfigShape }) {
   useEffect(() => {
     if (themeConfig.isPublicRoute) return
     const desired = themeConfig.userTheme?.dark_mode_preference
-    if (!desired) return
-    if (theme !== desired) {
+    if (desired) {
       setTheme(desired)
     }
-  }, [setTheme, theme, themeConfig.isPublicRoute, themeConfig.userTheme?.dark_mode_preference])
+  }, [setTheme, themeConfig.userTheme?.dark_mode_preference, themeConfig.isPublicRoute])
 
   // Load dynamic Google Font
   useEffect(() => {
