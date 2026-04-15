@@ -259,57 +259,6 @@ services:
         max-file: "3"
 
   # ──────────────────────────────────────────────────────────
-  # CLOUDFLARE TUNNEL (Seguro e Resiliente)
-  # ──────────────────────────────────────────────────────────
-  cloudflared:
-    image: cloudflare/cloudflared:2025.9.1
-    container_name: atlas_tunnel
-    restart: unless-stopped
-    command: tunnel run
-    environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:?TUNNEL_TOKEN is required}
-      - TUNNEL_METRICS=0.0.0.0:2000
-
-    # Segurança: Impede escrita no sistema de arquivos do container
-    read_only: true
-    tmpfs:
-      - /tmp
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-
-    # Saúde: Verifica se o túmel está operacional via endpoint de métricas
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:2000/metrics | grep -q 'cloudflared' || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    # Recursos: Evita consumo excessivo de RAM/CPU
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          memory: 64M
-
-    # Logs: Rotatividade para não encher o disco
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-    networks:
-      - atlas_internal
-    depends_on:
-      backend:
-        condition: service_healthy
-      frontend:
-        condition: service_healthy
-
-  # ──────────────────────────────────────────────────────────
   # FRONTEND (Next.js)
   # ──────────────────────────────────────────────────────────
   frontend:

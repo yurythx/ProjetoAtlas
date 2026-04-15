@@ -102,13 +102,18 @@ class TenantMiddleware:
                 if company:
                     logger.debug(f"TenantMiddleware: Identificado via query param: {company.slug}")
 
+        if not company:
+            # Final fallback: em produção, usamos a empresa 'raiz' se nenhuma for identificada
+            # Isso evita que o sistema fique 'cego' sem contexto de tenant
+            company = Company.objects.filter(slug="raiz").first()
+            if company:
+                logger.debug(f"TenantMiddleware: Fallback final para empresa 'raiz' (Host: {host})")
+
         request.company = company
         set_current_company(company)
 
         if not company and not request.path.startswith("/api/accounts/"):
-            # Se não identificou mas não é auth, pode ser um problema ou um acesso cross-tenant
-            # Registramos no log para depuração
-            logger.warning(f"TenantMiddleware: Contexto de tenant ausente para: {request.path} (Host: {host})")
+            logger.warning(f"TenantMiddleware: Contexto de tenant ausente e SEM fallback para: {request.path} (Host: {host})")
 
         response = self.get_response(request)
         return response

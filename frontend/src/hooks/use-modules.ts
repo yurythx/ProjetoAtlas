@@ -29,9 +29,10 @@ export function useModules() {
      * Helper to check if a module is active by its code
      */
     const isModuleActive = (moduleCode: string): boolean => {
-        if (isLoading) return true
-        if (error) return true
-        if (!modules || modules.length === 0) return true
+        // Durante o loading, o ModuleGuard deve mostrar o spinner, 
+        // então aqui retornamos false para garantir que nada renderize precocemente.
+        if (isLoading) return false
+        if (error || !modules || modules.length === 0) return false
 
         return modules.some((tm: TenantModule) =>
             tm && tm.is_active === true && tm.module_code === moduleCode

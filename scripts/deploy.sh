@@ -171,7 +171,7 @@ else
     info "Construindo imagens (BuildKit)..."
     BUILD_STATUS_FILE=$(mktemp /tmp/atlas_build_XXXXXX)
     COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 \
-        $DC build --no-cache > logs/build.log 2>&1
+        $DC build > logs/build.log 2>&1
     echo "$?" > "$BUILD_STATUS_FILE"
     BUILD_EXIT=$(cat "$BUILD_STATUS_FILE")
     rm -f "$BUILD_STATUS_FILE"
@@ -310,7 +310,6 @@ echo ""
 # FASE 5: SUBIR APLICACAO
 # ══════════════════════════════════════════════════════════
 echo -e "${WHITE}:: FASE 5: STARTUP DA APLICACAO${RESET}"
-# OBS: collectstatic nao e necessario aqui - o Dockerfile ja o executa no build.
 $DC up -d backend celery_worker celery_beat frontend > /dev/null 2>&1
 progress "STARTING SERVICES" 5
 ok "Containers iniciados. Aguardando healthchecks..."
@@ -321,7 +320,7 @@ echo ""
 # ══════════════════════════════════════════════════════════
 echo -e "${WHITE}:: FASE 6: VERIFICACAO DE INTEGRIDADE${RESET}"
 
-# Backend (start_period: 60s no compose, timeout aqui: 90s)
+# Backend
 echo -n "   Aguardando backend..."
 BACKEND_UP=0
 for i in $(seq 1 45); do
@@ -340,7 +339,7 @@ if [ "$BACKEND_UP" -eq 0 ]; then
     exit 1
 fi
 
-# Frontend (start_period: 180s no compose, timeout aqui: 120s)
+# Frontend
 echo -n "   Aguardando frontend..."
 FRONTEND_UP=0
 for i in $(seq 1 60); do
@@ -359,10 +358,18 @@ if [ "$FRONTEND_UP" -eq 0 ]; then
     exit 1
 fi
 
-# Cloudflare Tunnel (por ultimo — depende de backend + frontend saudaveis)
-info "Iniciando Cloudflare Tunnel..."
-$DC up -d cloudflared > /dev/null 2>&1
-progress "CLOUDFLARE TUNNEL" 3
+# ══════════════════════════════════════════════════════════
+# FASE 7: POPULACAO DE DADOS
+# ══════════════════════════════════════════════════════════
+echo -e "${WHITE}:: FASE 7: POPULACAO DE DADOS${RESET}"
+echo "   Populando tabelas base..."
+# Usando a variável $DC que já contém --env-file .env.prod
+$DC exec backend python manage.py seed_system
+$DC exec backend python manage.py seed_crm
+$DC exec backend python manage.py seed_pages
+progress "SEEDING" 3
+ok "Dados populados com sucesso"
+echo ""
 
 # Cleanup de imagens antigas
 info "Limpando imagens nao utilizadas..."

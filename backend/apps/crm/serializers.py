@@ -46,12 +46,18 @@ def should_include_legacy_overview_stages(context):
 
 
 class DealActivitySerializer(serializers.ModelSerializer):
-    actor_name = serializers.CharField(source="actor.username", read_only=True)
+    actor_name = serializers.SerializerMethodField()
 
     class Meta:
         model = DealActivity
         fields = "__all__"
         read_only_fields = ["id", "company", "deal", "actor", "created_at"]
+
+    def get_actor_name(self, obj):
+        if obj.actor:
+            full_name = (obj.actor.get_full_name() or "").strip()
+            return full_name or obj.actor.username
+        return "Sistema"
 
 
 class DealAttachmentSerializer(serializers.ModelSerializer):
@@ -59,7 +65,7 @@ class DealAttachmentSerializer(serializers.ModelSerializer):
     media_file_type = serializers.CharField(source="media.file_type", read_only=True)
     media_file_size = serializers.IntegerField(source="media.file_size", read_only=True)
     media_title = serializers.CharField(source="media.title", read_only=True)
-    created_by_username = serializers.CharField(source="created_by.username", read_only=True)
+    created_by_username = serializers.SerializerMethodField()
 
     class Meta:
         model = DealAttachment
@@ -79,6 +85,12 @@ class DealAttachmentSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = fields
+
+    def get_created_by_username(self, obj):
+        if obj.created_by:
+            full_name = (obj.created_by.get_full_name() or "").strip()
+            return full_name or obj.created_by.username
+        return "Desconhecido"
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -625,8 +637,7 @@ class CRMIntegrationUserOptionSerializer(serializers.ModelSerializer):
         return full_name or obj.username
 
     def get_progress_percentage(self, obj):
-        from .use_crm import resolve_deal_progress # Assuming this exists or similar logic
-        return 0 # Placeholder if not imported
+        return 0
 
 
 class XLAFeedbackSerializer(serializers.ModelSerializer):
