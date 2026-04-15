@@ -115,10 +115,10 @@ class SLAPolicySerializer(serializers.ModelSerializer):
 
 
 class CardNestedSerializer(serializers.ModelSerializer):
-    contact_name = serializers.CharField(source="contact.name", read_only=True)
-    owner_name = serializers.CharField(source="owner.username", read_only=True)
-    column_id = serializers.IntegerField(source="column.id", read_only=True)
-    column_title = serializers.CharField(source="column.title", read_only=True)
+    contact_name = serializers.SerializerMethodField()
+    owner_name = serializers.SerializerMethodField()
+    column_id = serializers.SerializerMethodField()
+    column_title = serializers.SerializerMethodField()
 
     class Meta:
         model = Deal
@@ -145,6 +145,18 @@ class CardNestedSerializer(serializers.ModelSerializer):
             "column_id",
             "column_title",
         ]
+
+    def get_contact_name(self, obj):
+        return obj.contact.name if obj.contact else "Sem Contato"
+
+    def get_owner_name(self, obj):
+        return obj.owner.username if obj.owner else "Sistema"
+
+    def get_column_id(self, obj):
+        return obj.column_id if obj.column_id else None
+
+    def get_column_title(self, obj):
+        return obj.column.title if obj.column else "Sem Coluna"
 
 
 class ColumnSummarySerializer(serializers.ModelSerializer):
@@ -305,9 +317,9 @@ class PipelineOverviewSerializer(serializers.Serializer):
 
 
 class DealSerializer(serializers.ModelSerializer):
-    contact_name = serializers.CharField(source="contact.name", read_only=True)
-    column_id = serializers.IntegerField(source="column.id", read_only=True)
-    column_title = serializers.CharField(source="column.title", read_only=True)
+    contact_name = serializers.SerializerMethodField()
+    column_id = serializers.SerializerMethodField()
+    column_title = serializers.SerializerMethodField()
     column_data = ColumnSummarySerializer(source="column", read_only=True)
     activities = DealActivitySerializer(many=True, read_only=True)
     attachments = DealAttachmentSerializer(many=True, read_only=True)
@@ -367,6 +379,19 @@ class DealSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "uuid", "company", "linked_event_id", "created_at", "updated_at"]
+
+    def get_contact_name(self, obj):
+        return obj.contact.name if obj.contact else "Sem Contato"
+
+    def get_column_id(self, obj):
+        return obj.column_id if obj.column_id else None
+
+    def get_column_title(self, obj):
+        if obj.column:
+            return obj.column.title
+        if obj.stage:
+            return obj.stage.name
+        return "Sem Coluna"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

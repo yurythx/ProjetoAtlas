@@ -6,7 +6,7 @@ const pwaConfig = withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
+  disable: true, // Forçamos desativado para parar o flickering em produção
 });
 
 const nextConfig: NextConfig = {
