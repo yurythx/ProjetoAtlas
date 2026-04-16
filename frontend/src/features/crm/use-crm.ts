@@ -260,7 +260,13 @@ export function useDPSMDashboard() {
     queryKey: ["dpsm-dashboard"],
     queryFn: async () => {
       const { data } = await api.get<DPSMDashboardData>("/api/crm/dpsm-dashboard/")
-      return data
+      return {
+        health_score: data?.health_score ?? 0,
+        avg_xla: data?.avg_xla ?? 0,
+        xla_count: data?.xla_count ?? 0,
+        total_active_flows: data?.total_active_flows ?? 0,
+        vsm_distribution: Array.isArray(data?.vsm_distribution) ? data.vsm_distribution : []
+      }
     }
   })
 }
@@ -277,8 +283,11 @@ export function useDPSMRecommendations() {
   return useQuery<{ vulnerabilities: DPSMRecommendation[]; opportunities: DPSMRecommendation[] }>({
     queryKey: ["dpsm-recommendations"],
     queryFn: async () => {
-      const { data } = await api.get("/api/crm/dpsm-dashboard/recommendations/")
-      return data
+      const { data } = await api.get<{ vulnerabilities?: DPSMRecommendation[]; opportunities?: DPSMRecommendation[] }>("/api/crm/dpsm-dashboard/recommendations/")
+      return {
+        vulnerabilities: Array.isArray(data?.vulnerabilities) ? data.vulnerabilities : [],
+        opportunities: Array.isArray(data?.opportunities) ? data.opportunities : []
+      }
     }
   })
 }
@@ -357,6 +366,12 @@ export interface Deal {
   resolution_steps?: string
   is_known_error?: boolean
   xla_score?: number | null
+  ai_metadata?: {
+    risk_level?: "low" | "medium" | "high" | "critical"
+    risk_reason?: string
+    suggested_actions?: string[]
+    insight?: string
+  } | null
   owner: number
   is_closed: boolean
   external_id?: string | null

@@ -370,29 +370,39 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
       <DPSMHealthWidget />
       {isMobile ? (
         <div className="space-y-4">
-          <div className="rounded-3xl border bg-card p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex-1">
-                <Select
-                  value={mobileColumnId?.toString() || ""}
-                  onValueChange={(value) => setMobileColumnId(Number(value))}
-                >
-                  <SelectTrigger className="glass">
-                    <SelectValue placeholder="Selecione a coluna" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {orderedColumns.map((column) => (
-                      <SelectItem key={column.id} value={column.id.toString()}>
-                        {column.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+          <div className="flex items-center gap-2 px-1 overflow-x-auto no-scrollbar pb-2">
+            {orderedColumns.map((column) => (
+              <Button
+                key={column.id}
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileColumnId(column.id)}
+                className={cn(
+                  "rounded-full px-4 h-8 text-[10px] font-bold uppercase tracking-widest transition-all shrink-0",
+                  mobileColumnId === column.id 
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {column.title}
+              </Button>
+            ))}
           </div>
 
-          {mobileColumnId ? renderColumn(orderedColumns.find((c) => c.id === mobileColumnId) || orderedColumns[0], 0) : null}
+          <div className="relative touch-pan-y min-h-[60vh]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={mobileColumnId}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="w-full"
+              >
+                {mobileColumnId ? renderColumn(orderedColumns.find((c) => c.id === mobileColumnId) || orderedColumns[0], 0) : null}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
       ) : (
         <ScrollArea className="w-full whitespace-nowrap pb-6">
@@ -535,11 +545,23 @@ function DealCard({
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex flex-col gap-1.5">
-                {statusBadge && (
-                  <Badge variant="outline" className={cn("w-fit text-[9px] font-black px-1.5 h-4 tracking-wider", statusBadge.className)}>
-                    {statusBadge.label}
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {statusBadge && (
+                    <Badge variant="outline" className={cn("w-fit text-[9px] font-black px-1.5 h-4 tracking-wider", statusBadge.className)}>
+                      {statusBadge.label}
+                    </Badge>
+                  )}
+                  {/* AI Suggestion Indicator */}
+                  {deal.priority === "URGENT" || isCritical ? (
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="flex items-center gap-1 bg-violet-600 text-white text-[8px] px-1.5 h-4 rounded-full font-black uppercase tracking-tighter shadow-sm"
+                    >
+                      <span className="animate-pulse">✨ AI Insight</span>
+                    </motion.div>
+                  ) : null}
+                </div>
                 {deal.record_type && (
                   <Badge variant="secondary" className="w-fit text-[8px] px-1.5 h-3.5 uppercase font-bold bg-slate-100 text-slate-600 border-slate-200">
                     {deal.record_type === 'service_request' ? 'Requisição' : 
@@ -561,16 +583,13 @@ function DealCard({
                     Crítico
                   </Badge>
                 )}
-                {deal.sla_status === "breached" && (
-                  <Badge className="text-[10px] uppercase font-bold shrink-0 border-red-500 bg-red-600 text-white">
-                    SLA Estourado
-                  </Badge>
-                )}
-                {deal.sla_status === "at_risk" && (
-                  <Badge className="text-[10px] uppercase font-bold shrink-0 border-amber-500 bg-amber-500 text-white">
-                    SLA em Risco
-                  </Badge>
-                )}
+                {/* Sentiment (XLA) - ITIL v5 Focus */}
+                <div className="flex items-center gap-1 mt-1 bg-muted/50 px-1.5 py-0.5 rounded-full border border-primary/5">
+                  <span className="text-[12px]">
+                    {deal.xla_score && deal.xla_score >= 8 ? "😊" : deal.xla_score && deal.xla_score >= 5 ? "😐" : "😟"}
+                  </span>
+                  <span className="text-[10px] font-black text-muted-foreground">XLA</span>
+                </div>
               </div>
             </div>
 

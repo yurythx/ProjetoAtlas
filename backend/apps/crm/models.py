@@ -316,6 +316,7 @@ class Deal(BaseTenantModel):
     
     # DPSM Experience
     xla_score = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True, help_text="Average XLA score (1-10)")
+    ai_metadata = models.JSONField(default=dict, blank=True, help_text="AI Insights, Risk Analysis, and Actionable Intelligence")
 
     value = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     integration_source = models.CharField(max_length=50, default="manual")

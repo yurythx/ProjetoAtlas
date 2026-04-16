@@ -358,6 +358,7 @@ class DealSerializer(serializers.ModelSerializer):
             "resolution_steps",
             "is_known_error",
             "xla_score",
+            "ai_metadata",
             "integration_source",
             "external_id",
             "owner",

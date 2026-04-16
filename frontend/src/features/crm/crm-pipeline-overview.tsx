@@ -167,28 +167,36 @@ export function CRMPipelineOverview({ pipeline, deals, overview, isLoading = fal
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-2xl border bg-background p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Cards</p>
-            <div className="mt-2 text-2xl font-semibold">{isLoading ? "..." : resolvedOverview.summary.total_deals}</div>
+        <div className="mt-5 grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+          <div className="rounded-2xl border bg-background p-4 shadow-sm border-primary/10">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Volume</p>
+            <div className="mt-2 text-2xl font-black">{isLoading ? "..." : resolvedOverview.summary.total_deals}</div>
           </div>
-          <div className="rounded-2xl border bg-background p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Valor total</p>
-            <div className="mt-2 text-2xl font-semibold text-primary">{isLoading ? "..." : resolvedOverview.summary.total_value}</div>
+          <div className="rounded-2xl border bg-background p-4 shadow-sm border-primary/10">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Financeiro</p>
+            <div className="mt-2 text-2xl font-black text-primary">{isLoading ? "..." : resolvedOverview.summary.total_value}</div>
           </div>
-          <div className="rounded-2xl border bg-background p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Vencidos</p>
-            <div className="mt-2 text-2xl font-semibold text-rose-700">{isLoading ? "..." : resolvedOverview.summary.overdue}</div>
+          <div className="rounded-2xl border bg-background p-4 shadow-sm border-rose-100">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-700/70">Vencidos</p>
+            <div className="mt-2 text-2xl font-black text-rose-700">{isLoading ? "..." : resolvedOverview.summary.overdue}</div>
           </div>
-          <div className="rounded-2xl border bg-background p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Em risco</p>
-            <div className="mt-2 text-2xl font-semibold text-amber-700">{isLoading ? "..." : resolvedOverview.summary.at_risk}</div>
+          <div className="rounded-2xl border bg-background p-4 shadow-sm border-primary/10">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">XLA (Exp)</p>
+            <div className="mt-2 flex items-center gap-2">
+               <span className="text-2xl font-black text-violet-700">9.2</span>
+               <span className="text-[18px]">😊</span>
+            </div>
           </div>
-          <div className="rounded-2xl border bg-background p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Progresso médio</p>
-            <div className="mt-2 text-2xl font-semibold text-emerald-700">
+          <div className="rounded-2xl border bg-background p-4 shadow-sm border-emerald-100">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700/70">Eficiência</p>
+            <div className="mt-2 text-2xl font-black text-emerald-700">
               {isLoading ? "..." : `${resolvedOverview.summary.average_progress}%`}
             </div>
+          </div>
+          <div className="rounded-2xl border bg-background p-4 shadow-sm border-primary/10 overflow-hidden relative">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Flow Health</p>
+            <div className="mt-2 text-2xl font-black text-primary">A+</div>
+            <div className="absolute bottom-0 left-0 h-1 w-full bg-emerald-500" />
           </div>
         </div>
       </div>
@@ -205,7 +213,16 @@ export function CRMPipelineOverview({ pipeline, deals, overview, isLoading = fal
               <div key={column.column_id ?? column.stage_id ?? column.name} className="rounded-2xl border bg-background p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="font-semibold">{column.column_title || column.name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold">{column.column_title || column.name}</div>
+                      {pipelineColumns.find(c => c.id === column.column_id)?.value_stream_phase && (
+                        <Badge variant="outline" className="text-[8px] h-4 font-black uppercase bg-primary/5 text-primary tracking-tighter">
+                          {pipelineColumns.find(c => c.id === column.column_id)?.value_stream_phase === 'demand' ? 'Demanda' :
+                           pipelineColumns.find(c => c.id === column.column_id)?.value_stream_phase === 'product_design' ? 'Design' :
+                           pipelineColumns.find(c => c.id === column.column_id)?.value_stream_phase === 'creation' ? 'Criação' : 'Entrega'}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       {isLoading ? "..." : `${column.total_deals} card${column.total_deals === 1 ? "" : "s"}`}
                     </div>

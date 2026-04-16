@@ -1185,7 +1185,7 @@ class DPSMDashboardViewSet(viewsets.ViewSet):
         # VSM Distribution
         from apps.crm.models import Column
         vsm_distribution = Column.objects.filter(company=company).values('value_stream_phase').annotate(
-            count=Count('deals')
+            count=Count('cards')
         )
         
         # CI Stability

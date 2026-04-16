@@ -25,6 +25,7 @@ const KanbanBoard = dynamic(() => import("./kanban-board").then(m => m.KanbanBoa
 import { CreateDealModal } from "./create-deal-modal"
 import { ColumnGovernanceSheet } from "./column-governance-sheet"
 import { CRMTableView } from "./crm-table-view"
+import { CRMTriageInbox } from "./crm-triage-inbox"
 import { CRMPipelineOverview, PipelineOverviewData } from "./crm-pipeline-overview"
 import { PipelineManagerModal } from "./pipeline-manager-modal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -679,44 +680,44 @@ export default function CRMPage() {
                         </Select>
 
                         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                          <Input
-                            value={savedViewName}
-                            onChange={(event) => setSavedViewName(event.target.value)}
-                            placeholder="Nome da vista"
-                            className="w-full"
-                          />
-                          <Button
-                            variant="outline"
-                            onClick={() => createSavedView.mutate()}
-                            disabled={!currentPipeline || !savedViewName.trim() || createSavedView.isPending}
-                            className="w-full sm:w-auto"
-                          >
-                            Salvar nova
-                          </Button>
+                           <Input
+                             value={savedViewName}
+                             onChange={(event) => setSavedViewName(event.target.value)}
+                             placeholder="Nome da vista"
+                             className="w-full"
+                           />
+                           <Button
+                             variant="outline"
+                             onClick={() => createSavedView.mutate()}
+                             disabled={!currentPipeline || !savedViewName.trim() || createSavedView.isPending}
+                             className="w-full sm:w-auto"
+                           >
+                             Salvar nova
+                           </Button>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => updateSavedView.mutate({})}
-                            disabled={!selectedSavedViewId || !savedViewName.trim() || updateSavedView.isPending}
-                          >
-                            Atualizar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => updateSavedView.mutate({ is_default: true })}
-                            disabled={!selectedSavedViewId || updateSavedView.isPending}
-                          >
-                            Definir padrão
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            onClick={() => deleteSavedView.mutate()}
-                            disabled={!selectedSavedViewId || deleteSavedView.isPending}
-                          >
-                            Remover
-                          </Button>
+                           <Button
+                             variant="outline"
+                             onClick={() => updateSavedView.mutate({})}
+                             disabled={!selectedSavedViewId || !savedViewName.trim() || updateSavedView.isPending}
+                           >
+                             Atualizar
+                           </Button>
+                           <Button
+                             variant="outline"
+                             onClick={() => updateSavedView.mutate({ is_default: true })}
+                             disabled={!selectedSavedViewId || updateSavedView.isPending}
+                           >
+                             Definir padrão
+                           </Button>
+                           <Button
+                             variant="ghost"
+                             onClick={() => deleteSavedView.mutate()}
+                             disabled={!selectedSavedViewId || deleteSavedView.isPending}
+                           >
+                             Remover
+                           </Button>
                         </div>
                       </div>
                     </section>
@@ -729,6 +730,8 @@ export default function CRMPage() {
               Nenhum pipeline configurado para este fluxo.
             </div>
           )}
+
+          <CRMTriageInbox />
 
           <Tabs value={view} onValueChange={(v) => setView(v as CRMViewMode)} className="w-full">
             <div className="flex items-center justify-between mb-4">
