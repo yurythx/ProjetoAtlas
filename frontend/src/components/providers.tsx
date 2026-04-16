@@ -33,28 +33,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }
 
     if (!("serviceWorker" in navigator)) return
-
-    if (process.env.NODE_ENV !== "production") {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((registration) => {
-          registration.unregister()
-        })
-      })
-
-      if ("caches" in window) {
-        caches.keys().then((keys) => {
-          keys.forEach((key) => {
-            if (key.startsWith("workbox-") || key.includes("precache")) {
-              caches.delete(key)
-            }
-          })
-        })
-      }
-
-      return
-    }
-
-    navigator.serviceWorker.register("/sw.js").catch(() => {})
   }, []);
 
   const [queryClient] = useState(() => new QueryClient({
