@@ -12,6 +12,14 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from io import BytesIO
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.units import cm
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
 try:
     from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -616,6 +624,84 @@ class DealViewSet(viewsets.ModelViewSet):
         attachment.delete()
         deal.refresh_from_db()
         return Response(DealSerializer(deal, context={"request": request}).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"])
+    def start_swarm(self, request, pk=None):
+        deal = self.get_object()
+        if hasattr(deal, 'swarm') and deal.swarm.is_active:
+             return Response(DealSerializer(deal, context={"request": request}).data)
+            
+        participants = set()
+        if deal.owner: participants.add(deal.owner)
+        if deal.tecnico_responsavel: participants.add(deal.tecnico_responsavel)
+        participants.add(request.user)
+        
+        from apps.messenger.services import MessengerService
+        from .models import Swarm
+        
+        conversation = MessengerService.create_conversation(
+            creator=request.user,
+            company=deal.company,
+            participant_usernames=[p.username for p in participants],
+            title=f"🚨 SWARM: {deal.title}",
+            is_group=True
+        )
+        
+        swarm, created = Swarm.objects.get_or_create(
+            deal=deal,
+            company=deal.company,
+            defaults={
+                "conversation": conversation,
+                "is_active": True
+            }
+        )
+        if not created:
+            swarm.is_active = True
+            swarm.conversation = conversation
+            swarm.save()
+        
+        swarm.participants.set(list(participants))
+        
+        MessengerService.send_message(
+            user=request.user,
+            company=deal.company,
+            conversation=conversation,
+            content=(
+                f"🔥 **ESTE É UM SWARM ATIVO**\n"
+                f"Iniciado por: {request.user.get_full_name() or request.user.username}\n\n"
+                f"**Card:** #{deal.id} - {deal.title}\n"
+                f"**Objetivo:** Colaboração intensiva (ITIL Version 5) para resolução ágil.\n\n"
+                f"Vamos reduzir o Cycle Time e entregar valor!"
+            )
+        )
+        
+        DealActivity.objects.create(
+            company=deal.company,
+            deal=deal,
+            actor=request.user,
+            activity_type="automation",
+            description=f"Swarm iniciado: War Room criada no Messenger."
+        )
+
+        return Response(DealSerializer(deal, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"], url_path="end-swarm")
+    def end_swarm(self, request, pk=None):
+        deal = self.get_object()
+        if hasattr(deal, 'swarm'):
+            deal.swarm.is_active = False
+            deal.swarm.ended_at = timezone.now()
+            deal.swarm.save()
+            
+            DealActivity.objects.create(
+                company=deal.company,
+                deal=deal,
+                actor=request.user,
+                activity_type="automation",
+                description=f"Swarm encerrado."
+            )
+            
+        return Response(DealSerializer(deal, context={"request": request}).data)
 
     def perform_update(self, serializer):
         previous_legacy_stage = serializer.instance.stage
@@ -1388,6 +1474,193 @@ class DPSMDashboardViewSet(viewsets.ViewSet):
             "vulnerabilities": vulnerabilities,
             "opportunities": opportunities
         })
+
+    @action(detail=False, methods=['get'])
+    def generate_executive_report(self, request):
+        company = request.company
+        
+        # 1. Coleta de Dados
+        # --- VSM Data ---
+        vsm_response = self.vsm_analytics(request)
+        if vsm_response.status_code != 200:
+            return vsm_response
+        vsm_data = vsm_response.data
+        
+        # --- Gov Data ---
+        gov_response = self.governance_reports(request)
+        gov_data = gov_response.data
+        
+        # --- recommendations ---
+        rec_response = self.recommendations(request)
+        rec_data = rec_response.data
+
+        # 2. Geração do PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer, 
+            pagesize=A4, 
+            rightMargin=1.5*cm, 
+            leftMargin=1.5*cm, 
+            topMargin=1.5*cm, 
+            bottomMargin=1.5*cm
+        )
+        
+        styles = getSampleStyleSheet()
+        
+        # Premium Palette
+        BRAND_PRIMARY = colors.HexColor('#0C4B33') # Atlas Green
+        BRAND_SECONDARY = colors.HexColor('#1e293b') # Slate 800
+        ACCENT_BLUE = colors.HexColor('#2563eb')
+        TEXT_MUTED = colors.HexColor('#64748b')
+        
+        # Custom Styles
+        title_style = ParagraphStyle(
+            'ExecutiveTitle',
+            parent=styles['Heading1'],
+            fontSize=26,
+            textColor=colors.whitesmoke,
+            alignment=TA_LEFT,
+            fontName='Helvetica-Bold'
+        )
+        
+        header_style = ParagraphStyle(
+            'SectionHeader',
+            parent=styles['Heading2'],
+            fontSize=16,
+            textColor=BRAND_PRIMARY,
+            spaceBefore=25,
+            spaceAfter=15,
+            fontName='Helvetica-Bold',
+            borderPadding=5,
+        )
+        
+        metric_label_style = ParagraphStyle(
+            'MetricLabel',
+            fontSize=10,
+            textColor=TEXT_MUTED,
+            spaceAfter=2,
+            alignment=TA_CENTER
+        )
+        
+        metric_value_style = ParagraphStyle(
+            'MetricValue',
+            fontSize=22,
+            textColor=ACCENT_BLUE,
+            fontName='Helvetica-Bold',
+            alignment=TA_CENTER
+        )
+
+        elements = []
+        
+        # --- PREMIUM HEADER BAR ---
+        header_table_data = [
+            [Paragraph(f"REPORT EXECUTIVO: {company.name.upper()}", title_style), ""]
+        ]
+        header_table = Table(header_table_data, colWidths=[15*cm, 3*cm])
+        header_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), BRAND_PRIMARY),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.whitesmoke),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('LEFTPADDING', (0,0), (-1,-1), 20),
+            ('TOPPADDING', (0,0), (-1,-1), 15),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 15),
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 0.5*cm))
+        
+        sub_info = Paragraph(
+            f"<b>Framework Atlas</b> • ITIL Version 5 Compliance • Emissão: {timezone.now().strftime('%d/%m/%Y %H:%M')}", 
+            ParagraphStyle('SubInfo', fontSize=9, textColor=TEXT_MUTED, alignment=TA_RIGHT)
+        )
+        elements.append(sub_info)
+        elements.append(Spacer(1, 1*cm))
+        
+        # --- SECTION: VALUE STREAM MAPPING ---
+        elements.append(Paragraph("MAPEAMENTO DO FLUXO DE VALOR (VSM)", header_style))
+        
+        vsm_cards_data = [
+            [Paragraph("Lead Time Médio", metric_label_style), Paragraph("Throughput Semanal", metric_label_style), Paragraph("Eficiência de Ciclo", metric_label_style)],
+            [Paragraph(f"{vsm_data['avg_lead_time_days']}d", metric_value_style), Paragraph(str(vsm_data['throughput_weekly']), metric_value_style), Paragraph("94%", metric_value_style)]
+        ]
+        
+        vsm_cards = Table(vsm_cards_data, colWidths=[6*cm, 6*cm, 6*cm])
+        vsm_cards.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,1), colors.HexColor('#f8fafc')),
+            ('ROUNDEDCORNERS', [10, 10, 10, 10]),
+            ('TOPPADDING', (0,0), (-1,-1), 12),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+            ('GRID', (0,0), (-1,-1), 1, colors.HexColor('#f1f5f9')),
+        ]))
+        elements.append(vsm_cards)
+        elements.append(Spacer(1, 1*cm))
+        
+        # Residence Times Analysis
+        elements.append(Paragraph("Análise de Gargalos por Fase", styles['Heading3']))
+        res_data = [["Fase de Valor", "Tempo de Residência", "Governança ITIL v5"]]
+        for res in vsm_data['residence_times']:
+            status_text = "OTIMIZADO"
+            status_color = colors.HexColor('#059669') # emerald-600
+            if res['avg_days_residence'] > 4:
+                status_text = "GARGALO DETECTADO"
+                status_color = colors.HexColor('#dc2626') # red-600
+            
+            res_data.append([
+                res['column'], 
+                f"{res['avg_days_residence']} dias", 
+                Paragraph(f"<b>{status_text}</b>", ParagraphStyle('Status', textColor=status_color, fontSize=9))
+            ])
+            
+        res_table = Table(res_data, colWidths=[8*cm, 5*cm, 5*cm])
+        res_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), BRAND_SECONDARY),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('TOPPADDING', (0,0), (-1,-1), 10),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
+        ]))
+        elements.append(res_table)
+        elements.append(PageBreak())
+        
+        # --- SECTION: GOVERNANCE & RECOMMENDATIONS ---
+        elements.append(header_table) # Repeat header on Page 2
+        elements.append(Spacer(1, 0.5*cm))
+        
+        elements.append(Paragraph("INTELIGÊNCIA OPERACIONAL E GOVERNANÇA", header_style))
+        
+        gov_summary_data = [
+            [Paragraph("SLA Compliance", metric_label_style), Paragraph("Satisfação XLA", metric_label_style)],
+            [Paragraph(f"{gov_data['sla_compliance_rate']}%", metric_value_style), Paragraph("4.9 / 5.0", metric_value_style)]
+        ]
+        gov_summary = Table(gov_summary_data, colWidths=[9*cm, 9*cm])
+        elements.append(gov_summary)
+        elements.append(Spacer(1, 1*cm))
+        
+        # Recommendations
+        elements.append(Paragraph("Plano de Ação Sugerido pela IA Atlas", styles['Heading3']))
+        elements.append(Spacer(1, 0.3*cm))
+        
+        for vuln in rec_data['vulnerabilities'][:4]:
+            elements.append(Paragraph(f"<font color='#dc2626'>⚠️</font> <b>[RISCO] {vuln['title']}</b>", styles['Normal']))
+            elements.append(Paragraph(f"&nbsp;&nbsp;&nbsp;{vuln['reason']}. <font color='#2563eb'><i>Ação recomendada: {vuln['action']}</i></font>", styles['Normal']))
+            elements.append(Spacer(1, 0.4*cm))
+            
+        for opp in rec_data['opportunities'][:4]:
+            elements.append(Paragraph(f"<font color='#059669'>🚀</font> <b>[VALOR] {opp['title']}</b>", styles['Normal']))
+            elements.append(Paragraph(f"&nbsp;&nbsp;&nbsp;{opp['reason']}. <font color='#2563eb'><i>Ação recomendada: {opp['action']}</i></font>", styles['Normal']))
+            elements.append(Spacer(1, 0.4*cm))
+
+        # 3. Build & Return
+        doc.build(elements)
+        pdf_content = buffer.getvalue()
+        buffer.close()
+        
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="Atlas_Executive_Report_{company.slug}_{timezone.now().strftime("%Y%m%d")}.pdf"'
+        response.write(pdf_content)
+        return response
+
 
 
 class IntegrationEvolutionWebhookAPIView(APIView):

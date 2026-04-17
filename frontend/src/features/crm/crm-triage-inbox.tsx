@@ -10,7 +10,7 @@ import { toast } from "sonner"
 export function CRMTriageInbox() {
   const { deals, updateDeal, pipelines } = useCRM()
   
-  // No ITIL v5, triagem foca em itens sem coluna ativa ou marcados como 'backlog' sem dono
+  // No ITIL Version 5, triagem foca em itens sem coluna ativa ou marcados como 'backlog' sem dono
   const triageDeals = deals.filter(d => 
     !d.column && !d.tecnico_responsavel && !d.is_closed
   )
@@ -18,7 +18,7 @@ export function CRMTriageInbox() {
   const handleAIClassify = async (deal: Deal) => {
     if (pipelines.length === 0) return
 
-    // Simulação de Inteligência ITIL v5
+    // Simulação de Inteligência ITIL Version 5
     // Em produção, isso chamaria um endpoint de IA real
     const currentPipeline = pipelines.find(p => 
       p.stages.some(s => s.id === deal.stage) || 

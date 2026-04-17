@@ -4,6 +4,7 @@ from django.utils import timezone
 from apps.calendar.models import Event
 from apps.module_manager.models import TenantModule
 from apps.notifications.models import Notification
+from apps.notifications.tasks import notify_user_push
 
 from .models import get_column_semantic_defaults
 
@@ -203,3 +204,66 @@ def trigger_xla_survey(sender, instance, **kwargs):
                 name="Avaliação de Experiência (XLA)",
                 options=["1 - Muito Insatisfeito", "2", "3", "4", "5 - Excelente"]
             )
+
+def check_wip_and_sla_risks(sender, instance, created, **kwargs):
+    """
+    Analisa riscos de governança em tempo real (WIP e SLA) e notifica via Push.
+    """
+    from .models import Deal, Column
+    
+    # 1. Verificação de Limite de WIP
+    if instance.column_id:
+        column = instance.column
+        if column.wip_limit:
+            current_cards_count = Deal.objects.filter(column=column, is_closed=False).count()
+            
+            if current_cards_count >= column.wip_limit:
+                # Notificar o dono do card e o técnico responsável
+                recipients = set()
+                if instance.owner: recipients.add(instance.owner)
+                if instance.tecnico_responsavel: recipients.add(instance.tecnico_responsavel)
+                
+                msg = f"Governança Atlas: A coluna '{column.title}' atingiu o limite de WIP ({column.wip_limit}). O card '{instance.title}' entrou na zona de monitoramento intensivo (ITIL Version 5)."
+                
+                for user in recipients:
+                    Notification.objects.create(
+                        recipient=user,
+                        company=instance.company,
+                        title="⚠️ Limite de WIP Atingido",
+                        message=msg,
+                        notification_type=Notification.TYPE_SYSTEM,
+                    )
+                    notify_user_push(user, "⚠️ Limite de WIP", msg, f"/crm?dealId={instance.id}")
+
+    # 2. IA Early Warning: Risco de Quebra de SLA Iminente
+    if not instance.is_closed and instance.closing_date:
+        now = timezone.now()
+        time_to_sla = instance.closing_date - now
+        
+        # Heurística de risco: menos de 4 horas para o prazo ou menos de 20% do tempo total restando
+        # Aqui simulamos a 'detecção AI'
+        is_at_high_risk = False
+        reason = ""
+        
+        if time_to_sla.total_seconds() < 14400 and time_to_sla.total_seconds() > 0: # 4 horas
+            is_at_high_risk = True
+            reason = "Menos de 4 horas para expiração do SLA."
+        
+        if is_at_high_risk:
+            msg = f"AI Early Warning: O card '{instance.title}' tem alta probabilidade de quebra de SLA. {reason} (Governança de Fluxo ITIL Version 5)."
+            
+            # Notificar para ação imediata
+            recipients = set()
+            if instance.owner: recipients.add(instance.owner)
+            if instance.tecnico_responsavel: recipients.add(instance.tecnico_responsavel)
+            
+            for user in recipients:
+                Notification.objects.create(
+                    recipient=user,
+                    company=instance.company,
+                    title="🚨 Risco de SLA Iminente",
+                    message=msg,
+                    notification_type=Notification.TYPE_SYSTEM,
+                    metadata={"risk_level": "high"}
+                )
+                notify_user_push(user, "🚨 Risco de SLA", msg, f"/crm?dealId={instance.id}")

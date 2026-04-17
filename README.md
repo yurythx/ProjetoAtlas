@@ -1,6 +1,6 @@
-# 🌍 Atlas - Plataforma SaaS Multi-Tenant (ITIL v5 Suite)
+# 🌍 Atlas - Plataforma SaaS Multi-Tenant (ITIL Version 5 Suite)
 
-> Plataforma SaaS white-label de nível empresarial orientada ao ITIL v5, multitenant (clientes múltiples).
+> Plataforma SaaS white-label de nível empresarial orientada ao ITIL Version 5, multitenant (clientes múltiples).
 
 ---
 
@@ -61,9 +61,9 @@ Para uma lista completa e atualizada: [docs/FEATURES.md](docs/FEATURES.md).
 - **Moderação**: Painel de aprovação/rejeição em lote com motivos de auditoria.
 - **Otimização SEO**: Meta tags, sitemaps e portal público.
 
-### 💻 ITIL v5 Suite (Service Desk & Operations)
+### 💻 ITIL Version 5 Suite (Service Desk & Operations)
 - **Gestão de Incidentes e Requisições**: Service Desk integrado.
-- **Catálogo de Serviços**: Foco no ciclo de vida de ativos e catálogo de serviços (ITIL v5).
+- **Catálogo de Serviços**: Foco no ciclo de vida de ativos e catálogo de serviços (ITIL Version 5).
 - **Gestão de Mudanças e Problemas**: Rastreio de impactos no ecossistema.
 
 ### 💰 Financeiro & Folha de Pagamento

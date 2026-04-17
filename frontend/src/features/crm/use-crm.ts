@@ -143,6 +143,16 @@ export interface ServiceCategory {
   icon?: string
 }
 
+export interface Swarm {
+  id: number
+  started_at: string
+  ended_at: string | null
+  is_active: boolean
+  conversation_id: number | null
+  participants: number[]
+  participant_names: string[]
+}
+
 export interface ServiceDefinition {
   id: number
   category: number
@@ -400,6 +410,7 @@ export interface Deal {
   sla_resolution_deadline?: string | null
   first_response_at?: string | null
   sla_status: "within" | "at_risk" | "breached"
+  swarm?: Swarm | null
 }
 
 function normalizeListResponse<T>(data: T[] | { results?: T[] } | undefined): T[] {
@@ -965,7 +976,27 @@ export function useCRM() {
     updateDeal,
     addDealNote,
     addDealAttachment,
-    deleteDealAttachment
+    deleteDealAttachment,
+    startSwarm: useMutation({
+      mutationFn: async (dealId: number) => {
+        const { data } = await api.post<Deal>(`/api/crm/deals/${dealId}/start_swarm/`)
+        return data
+      },
+      onSuccess: (updatedDeal) => {
+        queryClient.setQueryData<Deal[]>(['crm-deals'], (old) => mergeDealCache(old, updatedDeal))
+        toast.success("Swarm (War Room) iniciado!")
+      }
+    }),
+    endSwarm: useMutation({
+      mutationFn: async (dealId: number) => {
+        const { data } = await api.post<Deal>(`/api/crm/deals/${dealId}/end-swarm/`)
+        return data
+      },
+      onSuccess: (updatedDeal) => {
+        queryClient.setQueryData<Deal[]>(['crm-deals'], (old) => mergeDealCache(old, updatedDeal))
+        toast.success("Swarm finalizado.")
+      }
+    })
   }
 }
 

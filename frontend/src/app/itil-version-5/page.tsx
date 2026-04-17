@@ -15,7 +15,7 @@ import {
   Target
 } from "lucide-react"
 
-export default function ITILV5Page() {
+export default function ITILVersion5Page() {
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -56,7 +56,7 @@ export default function ITILV5Page() {
             <p className="text-sm font-semibold text-primary/70 uppercase">Value Stream Mapping</p>
           </CardHeader>
           <CardContent className="text-muted-foreground leading-relaxed">
-            No ITIL v5, abandonamos processos isolados. Tudo o que fazemos é parte de um fluxo de valor que transforma a demanda em realização real para o negócio.
+            No ITIL Version 5, abandonamos processos isolados. Tudo o que fazemos é parte de um fluxo de valor que transforma a demanda em realização real para o negócio.
           </CardContent>
         </Card>
 
@@ -80,7 +80,7 @@ export default function ITILV5Page() {
             <p className="text-sm font-semibold text-amber-500/70 uppercase">Intelligence Shift-Left</p>
           </CardHeader>
           <CardContent className="text-muted-foreground leading-relaxed">
-            A IA não apenas sugere; ela previne. No ITIL v5, a tecnologia resolve problemas antes que o usuário precise abrir um chamado.
+            A IA não apenas sugere; ela previne. No ITIL Version 5, a tecnologia resolve problemas antes que o usuário precise abrir um chamado.
           </CardContent>
         </Card>
       </div>
@@ -115,7 +115,7 @@ export default function ITILV5Page() {
             </div>
             <div>
               <h3 className="font-bold text-lg">Estabilidade de Produto</h3>
-              <p className="text-muted-foreground">O ITIL v4 focava em serviços. O v5 foca em Produtos Digitais estáveis e resilientes.</p>
+              <p className="text-muted-foreground">O ITIL v4 focava em serviços. O ITIL Version 5 foca em Produtos Digitais estáveis e resilientes.</p>
             </div>
           </motion.div>
 
@@ -153,7 +153,7 @@ export default function ITILV5Page() {
           o Centro de Swarming Inteligente. Estamos construindo o futuro da TI juntos.
         </p>
         <div className="flex justify-center gap-4">
-           <Badge className="bg-primary hover:bg-primary/90 cursor-default px-6 py-2 rounded-full">ITIL Expert v5 Ready</Badge>
+           <Badge className="bg-primary hover:bg-primary/90 cursor-default px-6 py-2 rounded-full">ITIL Expert Version 5 Ready</Badge>
            <Badge className="bg-muted text-muted-foreground px-6 py-2 rounded-full">VSM Certification</Badge>
         </div>
       </motion.div>

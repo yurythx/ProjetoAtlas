@@ -49,8 +49,18 @@
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(100 80 200 / 0.05);
   --shadow: 0 4px 6px -1px rgb(100 80 200 / 0.1), 0 2px 4px -2px rgb(100 80 200 / 0.1);
-  --shadow-md: 0 10px 15px -3px rgb(100 80 200 / 0.1), 0 4px 6px -4px rgb(100 80 200 / 0.1);
+  --shadow-md: 10px 15px -3px rgb(100 80 200 / 0.1), 0 4px 6px -4px rgb(100 80 200 / 0.1);
   --shadow-lg: 0 20px 25px -5px rgb(100 80 200 / 0.1), 0 8px 10px -6px rgb(100 80 200 / 0.1);
+
+  /* Fluid Typography */
+  --font-size-base: clamp(0.875rem, 0.825rem + 0.25vw, 1rem);
+  --font-size-lg: clamp(1rem, 0.95rem + 0.3vw, 1.25rem);
+  --font-size-h1: clamp(2.25rem, 1.5rem + 3vw, 4rem);
+  --font-size-h2: clamp(1.75rem, 1.25rem + 2vw, 3rem);
+  
+  /* Layout Framing */
+  --container-padding: clamp(1rem, 3vw, 3rem);
+  --max-content-width: 1440px;
 }
 
 /* Palette Overrides */
@@ -226,6 +236,26 @@
   p {
     text-wrap: pretty;
   }
+  h1 { font-size: var(--font-size-h1); font-weight: 800; letter-spacing: -0.04em; line-height: 1.1; }
+  h2 { font-size: var(--font-size-h2); font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .content-frame {
+    max-width: var(--max-content-width);
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
+  }
+
   body {
     @apply bg-background text-foreground;
     /* Subtle Grid Pattern - Robust Implementation */
@@ -237,5 +267,39 @@
     background-position: 0 0, 0 0, top center;
     background-repeat: repeat, repeat, no-repeat;
     background-attachment: fixed;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .shimmer-mask {
+    @apply relative overflow-hidden;
+  }
+
+  .shimmer-mask::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.2),
+      rgba(255, 255, 255, 0.05),
+      transparent
+    );
+    animation: shimmer 3s infinite;
+  }
+
+  .dark .shimmer-mask::after {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.02),
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.02),
+      transparent
+    );
   }
 }

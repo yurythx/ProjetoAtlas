@@ -90,26 +90,17 @@ export function Sidebar() {
   // Filter sections based on permissions
   const filteredSections = SIDEBAR_CONFIG.map(section => {
     const filteredItems = section.items.filter(item => {
-      // Module check
+      // 1. Module check
       if (item.module && !isModuleActive(item.module)) return false
 
-      // Permission check for specific items
-      if (item.href.startsWith('/admin')) {
-        // Basic check: if it's an admin route, user needs at least view_dashboard
-        // More specific checks can be added if we map routes to permissions in the sidebar config
+      // 2. Superuser check
+      if (item.requireSuperuser && !isSuperuser) return false
 
-        // Specific route checks:
-        if (item.href === '/admin/users' && !hasPermission('admin.user_manage')) return false
-        if (item.href === '/admin/roles' && !hasPermission('admin.user_manage')) return false
-        if (item.href === '/admin/modules' && !hasPermission('admin.settings_manage')) return false
-        if (item.href === '/admin/ldap' && !hasPermission('admin.settings_manage')) return false
-        if (item.href === '/admin/companies' && !isSuperuser) return false
+      // 3. Permission check (Generic)
+      if (item.permission && !hasPermission(item.permission)) return false
 
-        // Fallback for general admin access
-        return hasPermission('admin.view_dashboard')
-      }
-
-      if (item.href === '/artigos/comentarios' && !hasPermission('articles.comment_moderate')) return false
+      // 4. Specific route overrides (Legacy/Hardcoded)
+      if (item.href.startsWith('/admin') && !hasPermission('admin.view_dashboard')) return false
 
       return true
     })
@@ -245,7 +236,7 @@ export function Sidebar() {
                 )}
               </div>
               <div>
-                <p className="text-xs font-bold text-foreground">Atlas ITIL v5</p>
+                <p className="text-xs font-bold text-foreground">Atlas ITIL Version 5</p>
                 <p className="text-[10px] text-muted-foreground">v1.0.0 Stable</p>
               </div>
             </div>

@@ -112,14 +112,18 @@ export function Header() {
                   />
                 ) : (
                   <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                    <span className="text-xl">🦴</span>
+                    <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-primary to-blue-400 rotate-12 shadow-[0_0_15px_rgba(var(--primary),0.3)] flex items-center justify-center">
+                      <div className="w-3 h-3 rounded-full bg-white/40 animate-pulse" />
+                    </div>
                   </div>
                 )}
               </div>
             ) : (
               <div className="h-10 w-10 relative flex items-center justify-center overflow-hidden rounded-xl bg-primary/10 shadow-inner">
                 <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                  <span className="text-xl">🦴</span>
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-primary to-blue-400 rotate-12 shadow-[0_0_15px_rgba(var(--primary),0.3)] flex items-center justify-center">
+                    <div className="w-3 h-3 rounded-full bg-white/40 animate-pulse" />
+                  </div>
                 </div>
               </div>
             )}
@@ -171,11 +175,9 @@ export function Header() {
 
       <div className="flex items-center gap-2 sm:gap-4 animate-in fade-in duration-300">
         {/* Mobile Navigation Trigger */}
-        {me && (
-          <div className="md:hidden">
-            <MobileNav />
-          </div>
-        )}
+        <div className="md:hidden">
+          <MobileNav />
+        </div>
 
         {/* Theme Toggle Premium */}
         <div className="hidden sm:block">

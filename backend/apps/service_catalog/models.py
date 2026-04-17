@@ -42,7 +42,7 @@ class ServiceItem(BaseTenantModel):
     estimated_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     is_active = models.BooleanField(default=True)
 
-    # ITIL v5 governance
+    # ITIL Version 5 governance
     approval_required = models.BooleanField(default=False)
     knowledge_base_url = models.URLField(blank=True, null=True)
 

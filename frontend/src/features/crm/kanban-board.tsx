@@ -532,7 +532,7 @@ function DealCard({
           className={cn(
             "p-4 shadow-sm hover:shadow-xl transition-all border-primary/5 hover:border-primary/20 group relative overflow-hidden glass-card",
             isCompleted && "bg-slate-50/50",
-            isCritical && "border-rose-300 bg-rose-50/40 shadow-lg shadow-rose-500/10"
+            isCritical && "border-rose-300 bg-rose-50/40 shadow-lg shadow-rose-500/10 shimmer-mask"
           )}
         >
           {/* Prioridade em destaque lateral */}
@@ -583,7 +583,7 @@ function DealCard({
                     Crítico
                   </Badge>
                 )}
-                {/* Sentiment (XLA) - ITIL v5 Focus */}
+                {/* Sentiment (XLA) - ITIL Version 5 Focus */}
                 <div className="flex items-center gap-1 mt-1 bg-muted/50 px-1.5 py-0.5 rounded-full border border-primary/5">
                   <span className="text-[12px]">
                     {deal.xla_score && deal.xla_score >= 8 ? "😊" : deal.xla_score && deal.xla_score >= 5 ? "😐" : "😟"}

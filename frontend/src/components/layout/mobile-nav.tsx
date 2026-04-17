@@ -17,9 +17,9 @@ import Image from "next/image"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useMobileNavStore } from "@/hooks/use-mobile-nav-store"
 
-import { SIDEBAR_CONFIG } from "@/config/navigation"
+import { SIDEBAR_CONFIG, HEADER_NAV_ITEMS } from "@/config/navigation"
 
-const navItems = SIDEBAR_CONFIG.flatMap(section => section.items)
+
 
 export function MobileNav() {
     const [mounted, setMounted] = React.useState(false)
@@ -39,6 +39,10 @@ export function MobileNav() {
     React.useEffect(() => {
         ensureHasSessionCookie()
     }, [])
+
+    const navItems = user 
+        ? SIDEBAR_CONFIG.flatMap(section => section.items)
+        : HEADER_NAV_ITEMS
 
     const handleLogout = async () => {
         setIsLoggingOut(true)
@@ -116,8 +120,10 @@ export function MobileNav() {
                                             logo ? (
                                                 <Image src={fixImageUrl(logo)} alt={companyName || "Logo"} width={32} height={32} className="object-contain" />
                                             ) : (
-                                                <div className="h-full w-full rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden ring-1 ring-border">
-                                                    <img src="/logo.svg" alt={companyName || "Atlas"} className="object-cover w-full h-full p-1.5" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<span class="text-xl">${(companyName || "A")[0]}</span>`; }} />
+                                                <div className="h-full w-full rounded-lg bg-primary/20 flex items-center justify-center overflow-hidden ring-1 ring-border">
+                                                    <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-primary to-blue-400 rotate-12 shadow-[0_0_15px_rgba(var(--primary),0.3)] flex items-center justify-center">
+                                                        <div className="w-2 h-2 rounded-full bg-white/40 animate-pulse" />
+                                                    </div>
                                                 </div>
                                             )
                                         )}
@@ -152,13 +158,13 @@ export function MobileNav() {
                                             href={item.href}
                                             aria-current={isActive ? "page" : undefined}
                                             className={cn(
-                                                "flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                                                "flex items-center gap-4 px-5 py-4 min-h-[52px] rounded-2xl text-base font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                                                 isActive
-                                                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                                                    : "text-foreground bg-muted/30 hover:bg-muted/60 border border-border/60"
+                                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                                                    : "text-foreground bg-muted/40 hover:bg-muted/80 border border-border/50"
                                             )}
                                         >
-                                            <Icon className="h-5 w-5" aria-hidden="true" />
+                                            <Icon className="h-6 w-6" aria-hidden="true" />
                                             {item.title}
                                         </Link>
                                     )

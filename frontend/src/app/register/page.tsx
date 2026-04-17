@@ -38,8 +38,8 @@ export default function RegisterPage() {
             {logo ? (
               <Image src={logo} alt={companyName || 'Logo'} width={64} height={64} priority className="object-contain" />
             ) : (
-              <div className="h-16 w-16 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground font-bold text-2xl">
-                B
+              <div className="h-20 w-20 bg-gradient-to-tr from-primary/20 to-primary/10 rounded-3xl flex items-center justify-center text-primary font-black text-4x shadow-xl border border-primary/20 backdrop-blur-2xl">
+                A
               </div>
             )}
           </div>

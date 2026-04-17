@@ -81,7 +81,7 @@ function matchesActivityFilter(
 }
 
 export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalProps) {
-  const { deals, pipelines, updateDeal, addDealNote, addDealAttachment, deleteDealAttachment } = useCRM()
+  const { deals, pipelines, updateDeal, addDealNote, addDealAttachment, deleteDealAttachment, startSwarm, endSwarm } = useCRM()
   const { categories, items } = useServiceCatalog()
   const { cis } = useCMDB()
   const queryClient = useQueryClient()
@@ -601,6 +601,31 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
           activeTab === "images" ? "sm:max-w-[1440px]" : "sm:max-w-[1120px]"
         )}
       >
+        {currentDeal.swarm?.is_active && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-3 sm:px-6 flex items-center justify-between animate-pulse">
+            <div className="flex items-center gap-3">
+              <div className="bg-amber-500 p-2 rounded-lg shadow-lg shadow-amber-500/20">
+                <Zap className="h-4 w-4 text-white fill-white" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-amber-700 uppercase tracking-tighter sm:tracking-wider">War Room Ativa (Swarming)</p>
+                <p className="text-[10px] sm:text-xs text-amber-600/80 font-medium">Equipe colaborativa focada na resolução estratégica.</p>
+              </div>
+            </div>
+            <div className="flex -space-x-2">
+              {currentDeal.swarm.participant_names.slice(0, 5).map((name, i) => (
+                <Avatar key={i} className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-white shadow-sm">
+                  <AvatarFallback className="text-[8px] sm:text-[10px] bg-amber-100 text-amber-900 font-bold">{getUserInitials(name)}</AvatarFallback>
+                </Avatar>
+              ))}
+              {currentDeal.swarm.participant_names.length > 5 && (
+                <div className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-white bg-amber-200 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold text-amber-900 z-10">
+                  +{currentDeal.swarm.participant_names.length - 5}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <DialogHeader className="border-b bg-muted/30 px-4 py-4 text-left sm:px-6 sm:py-5">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
@@ -671,13 +696,32 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
               </div>
 
               <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
-                {canOpenMessenger ? (
-                  <Button asChild variant="outline">
+                 {canOpenMessenger ? (
+                  <Button asChild variant="outline" className="gap-1.5 h-10 rounded-xl px-4 font-bold text-xs">
                     <Link href={`/messenger?conversation=${currentDeal.messenger_conversation}`} target="_blank" rel="noreferrer">
-                      Abrir chat
+                      ABRIR CHAT
                     </Link>
                   </Button>
                 ) : null}
+
+                {currentDeal.swarm?.is_active ? (
+                  <Button 
+                    variant="destructive"
+                    onClick={() => endSwarm(currentDeal.id)}
+                    className="gap-2 h-10 rounded-xl px-4 font-bold text-xs bg-red-600 hover:bg-red-700 border-none shadow-lg shadow-red-500/20"
+                  >
+                    <X className="h-4 w-4" />
+                    ENCERRAR SWARM
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => startSwarm(currentDeal.id)}
+                    className="gap-2 h-10 rounded-xl px-4 font-bold text-xs bg-amber-500 hover:bg-amber-600 border-none text-white shadow-lg shadow-amber-500/20"
+                  >
+                    <Zap className="h-4 w-4 fill-white" />
+                    INICIAR SWARM
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={resetDraft}
@@ -931,7 +975,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 </div>
 
                 <div className="space-y-6">
-                  {/* Atlas AI Advisor - ITIL v5 Autonomic Intelligence */}
+                  {/* Atlas AI Advisor - ITIL Version 5 Autonomic Intelligence */}
                   <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 space-y-3 relative overflow-hidden group shadow-lg shadow-primary/5">
                     <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-20 transition-opacity">
                       <Sparkles className="h-16 w-16 text-primary" />

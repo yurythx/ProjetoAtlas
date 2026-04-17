@@ -18,4 +18,5 @@ class CrmConfig(AppConfig):
         post_save.connect(signals.ensure_column_for_stage, sender=Stage)
         post_save.connect(signals.sync_deal_with_calendar, sender=Deal)
         post_save.connect(signals.trigger_xla_survey, sender=Deal)
+        post_save.connect(signals.check_wip_and_sla_risks, sender=Deal)
         post_delete.connect(signals.delete_calendar_event, sender=Deal)

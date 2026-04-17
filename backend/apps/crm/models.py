@@ -159,7 +159,7 @@ class Column(BaseTenantModel):
         ("active", "Em andamento"),
         ("done", "Concluída"),
         ("custom", "Customizada"),
-        # ITIL v5 lifecycle
+        # ITIL Version 5 lifecycle
         ("discover", "Descoberta"),
         ("design", "Design"),
         ("acquire", "Aquisição"),
@@ -244,7 +244,7 @@ class CRMSavedView(BaseTenantModel):
 
 
 class SLAPolicy(BaseTenantModel):
-    """Política de SLA conforme ITIL v5."""
+    """Política de SLA conforme ITIL Version 5."""
 
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -296,7 +296,7 @@ class Deal(BaseTenantModel):
     )
     affected_cis = models.ManyToManyField("cmdb.CI", blank=True, related_name="deals")
     
-    # ITIL v5 Change Management Fields
+    # ITIL Version 5 Change Management Fields
     RISK_LEVEL_CHOICES = [
         ("low", "Baixo"),
         ("medium", "Médio"),
@@ -309,7 +309,7 @@ class Deal(BaseTenantModel):
     backout_plan = models.TextField(blank=True, null=True)
     test_plan = models.TextField(blank=True, null=True)
     
-    # ITIL v5 Problem Management Fields
+    # ITIL Version 5 Problem Management Fields
     root_cause = models.TextField(blank=True, null=True)
     resolution_steps = models.TextField(blank=True, null=True)
     is_known_error = models.BooleanField(default=False)
@@ -334,7 +334,7 @@ class Deal(BaseTenantModel):
     is_closed = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
 
-    # SLA ITIL v5
+    # SLA ITIL Version 5
     sla_policy = models.ForeignKey(SLAPolicy, on_delete=models.SET_NULL, null=True, blank=True, related_name="deals")
     sla_response_deadline = models.DateTimeField(blank=True, null=True)
     sla_resolution_deadline = models.DateTimeField(blank=True, null=True)
@@ -545,3 +545,21 @@ class EvolutionConfig(BaseTenantModel):
 
     def __str__(self):
         return f"WPP: {self.instance_name} ({self.company.name})"
+
+class Swarm(BaseTenantModel):
+    """War Room colaborativa para resolução de incidentes críticos (ITIL Version 5 Swarming)."""
+    deal = models.OneToOneField(Deal, on_delete=models.CASCADE, related_name="swarm")
+    conversation = models.ForeignKey("messenger.Conversation", on_delete=models.SET_NULL, null=True, blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    # Participantes (Swarmer Team)
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="swarms")
+
+    class Meta:
+        verbose_name = "Swarm Session"
+        verbose_name_plural = "Swarm Sessions"
+
+    def __str__(self):
+        return f"Swarm: {self.deal.title} ({'Ativo' if self.is_active else 'Encerrado'})"

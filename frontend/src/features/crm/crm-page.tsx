@@ -533,7 +533,7 @@ export default function CRMPage() {
                     className="h-8 gap-2 rounded-xl text-xs font-semibold text-primary/70 hover:text-primary hover:bg-primary/10"
                     asChild
                   >
-                    <Link href="/itil-v5">
+                    <Link href="/itil-version-5">
                       <BookOpen className="h-4 w-4" />
                       <span className="hidden lg:inline">Atlas Academy</span>
                     </Link>

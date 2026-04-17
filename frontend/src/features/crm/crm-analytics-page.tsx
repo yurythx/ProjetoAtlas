@@ -11,7 +11,8 @@ import {
   CheckCircle2, 
   Users, 
   Activity,
-  ArrowRight
+  ArrowRight,
+  FileDown
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +25,7 @@ import { api } from "@/lib/axios"
 export default function CRMAnalyticsPage() {
   const { pipelines } = useCRM()
   const [selectedPipeline, setSelectedPipeline] = useState<string>(pipelines[0]?.id?.toString() || "")
+  const [isExporting, setIsExporting] = useState(false)
 
   // Fetch VSM Data
   const { data: vsmData, isLoading: isLoadingVSM } = useQuery({
@@ -44,12 +46,32 @@ export default function CRMAnalyticsPage() {
     }
   })
 
+  const handleDownloadReport = async () => {
+    setIsExporting(true)
+    try {
+      const response = await api.get(`/api/crm/dpsm-dashboard/generate_executive_report/?pipeline_id=${selectedPipeline}`, {
+        responseType: 'blob'
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `Executive_Report_${new Date().toISOString().split('T')[0]}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-8 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight italic">MANAGER ANALYTICS</h1>
-          <p className="text-muted-foreground">Governança de Fluxo e Experiência ITIL v5</p>
+          <p className="text-muted-foreground">Governança de Fluxo e Experiência ITIL Version 5</p>
         </div>
         
         <div className="flex items-center gap-2">
@@ -63,6 +85,19 @@ export default function CRMAnalyticsPage() {
               ))}
             </SelectContent>
           </Select>
+
+          <button 
+            disabled={isExporting || !selectedPipeline}
+            onClick={handleDownloadReport}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl font-bold text-xs hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed h-10"
+          >
+            {isExporting ? (
+              <Activity className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="h-4 w-4" />
+            )}
+            GERAR REPORT EXECUTIVO
+          </button>
         </div>
       </div>
 

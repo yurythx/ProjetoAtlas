@@ -7,7 +7,7 @@ class CIType(BaseTenantModel):
     description = models.TextField(blank=True, null=True)
     icon = models.CharField(max_length=50, blank=True, null=True, help_text="Lucide icon name")
     
-    # ITIL v5 specific metadata
+    # ITIL Version 5 specific metadata
     criticality_level = models.IntegerField(default=1, help_text="Impact severity (1-5)")
 
     class Meta:

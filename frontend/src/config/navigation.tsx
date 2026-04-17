@@ -67,6 +67,17 @@ export const SIDEBAR_CONFIG: NavSection[] = [
         exact: true,
       },
       {
+        title: "Analytics VSM",
+        href: "/crm/analytics",
+        icon: TrendingUp,
+        module: "crm",
+      },
+      {
+        title: "Atlas Academy",
+        href: "/itil-version-5",
+        icon: FileText,
+      },
+      {
         title: "Processos",
         href: "/crm/pipelines",
         icon: BarChart3,
@@ -128,7 +139,7 @@ export const SIDEBAR_CONFIG: NavSection[] = [
       {
         title: "Empresas",
         href: "/admin/companies",
-        icon: LayoutDashboard,
+        icon: ClipboardList,
         requireSuperuser: true,
       },
       {
@@ -146,9 +157,9 @@ export const SIDEBAR_CONFIG: NavSection[] = [
 ]
 
 export const HEADER_NAV_ITEMS: NavItem[] = [
-  { title: "Painel Admin", href: "/admin", icon: LayoutDashboard },
-  { title: "Páginas", href: "/cms", icon: Globe, module: "pages" },
-  { title: "Artigos", href: "/artigos", icon: FileText, module: "articles" },
+  { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { title: "Service Desk", href: "/crm", icon: Headset, module: "crm" },
-  { title: "Agenda", href: "/calendar", icon: Calendar, module: "calendar" },
+  { title: "Academy", href: "/itil-version-5", icon: FileText },
+  { title: "Analytics", href: "/crm/analytics", icon: TrendingUp, module: "crm" },
+  { title: "Artigos", href: "/artigos", icon: FileText, module: "articles" },
 ]

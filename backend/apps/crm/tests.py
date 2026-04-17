@@ -376,6 +376,7 @@ class CRMDealApiUpdateTest(APITestCase):
                 "allowed_source_columns": [],
                 "wip_limit": None,
                 "legacy_stage": self.in_progress.id,
+                "value_stream_phase": "demand",
             },
         )
         self.assertNotIn("X-Atlas-Deprecated", response)
@@ -989,7 +990,7 @@ class CRMIntegrationOptionsApiTest(APITestCase):
         Contact.objects.create(company=self.company, name="Contato", email="contato@example.com")
 
     def test_integration_options_returns_lists(self):
-        response = self.client.get("/api/crm/integration/options/")
+        response = self.client.get("/api/crm/integrations/options/")
         self.assertEqual(response.status_code, 200)
         self.assertIn("pipelines", response.data)
         self.assertIn("columns", response.data)
@@ -1025,7 +1026,7 @@ class CRMIntegrationInboundEventsApiTest(APITestCase):
             response_status_code=201,
         )
 
-        response = self.client.get("/api/crm/integration/inbound-events/?source=glpi")
+        response = self.client.get("/api/crm/integrations/inbound/?source=glpi")
         self.assertEqual(response.status_code, 200)
         self.assertGreaterEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["external_id"], "glpi:123")
@@ -1065,7 +1066,7 @@ class CRMIntegrationInboundEventReplayApiTest(APITestCase):
             error="Falha simulada",
         )
 
-        response = self.client.post(f"/api/crm/integration/inbound-events/{original.id}/replay/")
+        response = self.client.post(f"/api/crm/integrations/inbound/{original.id}/replay/")
         self.assertIn(response.status_code, (200, 201))
         self.assertEqual(response.data["external_id"], "glpi:777")
         self.assertEqual(response.data["column_id"], self.first_column.id)

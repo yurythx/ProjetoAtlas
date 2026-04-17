@@ -102,7 +102,7 @@ export default function LoginPage() {
             {previewCompany ? (
               "Seu portal inteligente para gestão de serviços e valor operacional."
             ) : (
-              "Plataforma Enterprise de Gerenciamento de Serviços alinhada ao ITIL v5."
+              "Plataforma Enterprise de Gerenciamento de Serviços alinhada ao ITIL Version 5."
             )}
           </P>
         </div>

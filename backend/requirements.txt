@@ -30,3 +30,5 @@ pywebpush>=1.14.0
 cryptography>=41.0.0
 ldap3>=2.9.1
 beautifulsoup4>=4.12.0
+reportlab>=4.0.0
+svglib>=1.5.1

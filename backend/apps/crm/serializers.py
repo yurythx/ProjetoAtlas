@@ -14,6 +14,7 @@ from .models import (
     Pipeline,
     SLAPolicy,
     Stage,
+    Swarm,
     XLAFeedback,
     get_column_semantic_defaults,
 )
@@ -98,6 +99,17 @@ class ContactSerializer(serializers.ModelSerializer):
         model = Contact
         fields = "__all__"
         read_only_fields = ["id", "uuid", "company", "created_at", "updated_at"]
+
+class SwarmSerializer(serializers.ModelSerializer):
+    participant_names = serializers.SerializerMethodField()
+    conversation_id = serializers.IntegerField(source="conversation.id", read_only=True)
+
+    class Meta:
+        model = Swarm
+        fields = ["id", "started_at", "ended_at", "is_active", "conversation_id", "participants", "participant_names"]
+
+    def get_participant_names(self, obj):
+        return [u.get_full_name() or u.username for u in obj.participants.all()]
 
 
 class StageSerializer(serializers.ModelSerializer):
@@ -327,6 +339,7 @@ class DealSerializer(serializers.ModelSerializer):
     owner = serializers.PrimaryKeyRelatedField(queryset=User.all_objects.none(), required=False)
     tecnico_responsavel = serializers.PrimaryKeyRelatedField(queryset=User.all_objects.none(), required=False, allow_null=True)
     sla_policy_data = SLAPolicySerializer(source="sla_policy", read_only=True)
+    swarm = SwarmSerializer(read_only=True)
 
     class Meta:
         model = Deal
@@ -376,6 +389,7 @@ class DealSerializer(serializers.ModelSerializer):
             "sla_resolution_deadline",
             "first_response_at",
             "sla_status",
+            "swarm",
             "created_at",
             "updated_at",
         ]
@@ -629,7 +643,7 @@ class IntegrationGLPITicketWebhookSerializer(serializers.Serializer):
             custom_fields.setdefault("requester", requester)
         attrs["custom_fields"] = custom_fields
 
-        # Mapeamento ITIL v5 (Type GLPI -> record_type)
+        # Mapeamento ITIL Version 5 (Type GLPI -> record_type)
         glpi_type = ticket.get("type")
         if glpi_type == 1:  # Incident
             attrs["record_type"] = "incident"
