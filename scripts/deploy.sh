@@ -169,15 +169,19 @@ if [ "${1:-}" = "--pull" ]; then
     progress "PULL IMAGES" 2
 else
     info "Construindo imagens (BuildKit)..."
-    BUILD_STATUS_FILE=$(mktemp /tmp/atlas_build_XXXXXX)
-    COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 \
-        $DC build > logs/build.log 2>&1
-    echo "$?" > "$BUILD_STATUS_FILE"
-    BUILD_EXIT=$(cat "$BUILD_STATUS_FILE")
-    rm -f "$BUILD_STATUS_FILE"
+    # Desabilita set -e temporariamente para capturar o exit code manualmente
+    set +e
+    COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 $DC build > logs/build.log 2>&1
+    BUILD_EXIT=$?
+    set -e
+    
     if [ "$BUILD_EXIT" != "0" ]; then
-        err "Falha no build. Veja logs/build.log"
-        tail -n 30 logs/build.log || true
+        echo ""
+        err "Falha crítica no build das imagens!"
+        echo -e "${GRAY}--- Ultimas 40 linhas do logs/build.log ---${RESET}"
+        tail -n 40 logs/build.log || true
+        echo -e "${GRAY}------------------------------------------${RESET}"
+        err "Verifique o erro acima antes de tentar novamente."
         exit 1
     fi
     progress "BUILD IMAGES" 2
