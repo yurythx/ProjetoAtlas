@@ -169,19 +169,16 @@ if [ "${1:-}" = "--pull" ]; then
     progress "PULL IMAGES" 2
 else
     info "Construindo imagens (BuildKit)..."
-    # Desabilita set -e temporariamente para capturar o exit code manualmente
-    set +e
-    COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 $DC build > logs/build.log 2>&1
-    BUILD_EXIT=$?
-    set -e
+    BUILD_EXIT=0
+    COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 $DC build > logs/build.log 2>&1 || BUILD_EXIT=$?
     
     if [ "$BUILD_EXIT" != "0" ]; then
         echo ""
-        err "Falha crítica no build das imagens!"
-        echo -e "${GRAY}--- Ultimas 40 linhas do logs/build.log ---${RESET}"
-        tail -n 40 logs/build.log || true
+        err "Falha crítica no build das imagens (Exit Code: $BUILD_EXIT)!"
+        echo -e "${GRAY}--- Ultimas 50 linhas do logs/build.log ---${RESET}"
+        tail -n 50 logs/build.log || true
         echo -e "${GRAY}------------------------------------------${RESET}"
-        err "Verifique o erro acima antes de tentar novamente."
+        err "Acesse logs/build.log para o log completo."
         exit 1
     fi
     progress "BUILD IMAGES" 2
