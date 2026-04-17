@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { AnimatePresence, motion } from "framer-motion"
 import type { OnChangeFn, SortingState, VisibilityState } from "@tanstack/react-table"
 import { 
   isBefore, 
@@ -30,7 +31,7 @@ import { CRMPipelineOverview, PipelineOverviewData } from "./crm-pipeline-overvi
 import { PipelineManagerModal } from "./pipeline-manager-modal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { BarChart3, ChevronDown, ChevronUp, LayoutGrid, List, PanelsTopLeft } from "lucide-react"
+import { BarChart3, BookOpen, ChevronDown, ChevronUp, Inbox, LayoutGrid, List, PanelsTopLeft, TrendingUp } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
