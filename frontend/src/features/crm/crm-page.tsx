@@ -15,6 +15,7 @@ import {
 import { PageHeader } from "@/components/ui/page-header"
 import { ModuleGuard } from "@/components/module-guard"
 import { CRMSavedView, CRMViewMode, getPipelineColumns, useCRM, CRMSavedViewFilters, useSLAMonitor } from "./use-crm"
+import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
 import { KanbanSkeleton } from "./kanban-skeleton"
 
