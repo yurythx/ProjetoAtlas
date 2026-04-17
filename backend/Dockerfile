@@ -12,6 +12,10 @@ FROM python:3.12-slim-bookworm AS builder
 # Build-time dependencies (gcc, headers) — not carried to runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
+    pkg-config \
+    libcairo2-dev \
+    libpango1.0-dev \
     libldap2-dev \
     libsasl2-dev \
     libpq-dev \
@@ -44,6 +48,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libldap-2.5-0 \
     libsasl2-2 \
     libmagic1 \
+    libcairo2 \
+    libpango-1.0-0 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
