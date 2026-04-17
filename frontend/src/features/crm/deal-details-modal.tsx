@@ -707,7 +707,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 {currentDeal.swarm?.is_active ? (
                   <Button 
                     variant="destructive"
-                    onClick={() => endSwarm(currentDeal.id)}
+                    onClick={() => endSwarm.mutate(currentDeal.id)}
                     className="gap-2 h-10 rounded-xl px-4 font-bold text-xs bg-red-600 hover:bg-red-700 border-none shadow-lg shadow-red-500/20"
                   >
                     <X className="h-4 w-4" />
@@ -715,7 +715,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   </Button>
                 ) : (
                   <Button 
-                    onClick={() => startSwarm(currentDeal.id)}
+                    onClick={() => startSwarm.mutate(currentDeal.id)}
                     className="gap-2 h-10 rounded-xl px-4 font-bold text-xs bg-amber-500 hover:bg-amber-600 border-none text-white shadow-lg shadow-amber-500/20"
                   >
                     <Zap className="h-4 w-4 fill-white" />

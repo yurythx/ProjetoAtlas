@@ -578,6 +578,11 @@ function DealCard({
                 <Badge className={`text-[10px] uppercase font-bold shrink-0 ${priorityColors[deal.priority]}`}>
                   {deal.priority}
                 </Badge>
+                {deal.swarm && deal.swarm.is_active && (
+                  <Badge className="text-[10px] uppercase font-bold shrink-0 bg-amber-500 text-white border-amber-600 animate-pulse">
+                    🔥 Swarm
+                  </Badge>
+                )}
                 {isCritical && (
                   <Badge className="text-[10px] uppercase font-bold shrink-0 border-rose-300 bg-rose-100 text-rose-800">
                     Crítico

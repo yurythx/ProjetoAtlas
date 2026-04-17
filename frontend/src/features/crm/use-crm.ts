@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/axios"
 import { toast } from "sonner"
@@ -967,6 +968,28 @@ export function useCRM() {
     }
   })
 
+  const startSwarm = useMutation({
+    mutationFn: async (dealId: number) => {
+      const { data } = await api.post<Deal>(`/api/crm/deals/${dealId}/start_swarm/`)
+      return data
+    },
+    onSuccess: (updatedDeal) => {
+      queryClient.setQueryData<Deal[]>(['crm-deals'], (old) => mergeDealCache(old, updatedDeal))
+      toast.success("Swarm (War Room) iniciado!")
+    }
+  })
+
+  const endSwarm = useMutation({
+    mutationFn: async (dealId: number) => {
+      const { data } = await api.post<Deal>(`/api/crm/deals/${dealId}/end-swarm/`)
+      return data
+    },
+    onSuccess: (updatedDeal) => {
+      queryClient.setQueryData<Deal[]>(['crm-deals'], (old) => mergeDealCache(old, updatedDeal))
+      toast.success("Swarm finalizado.")
+    }
+  })
+
   return {
     pipelines,
     deals,
@@ -977,26 +1000,8 @@ export function useCRM() {
     addDealNote,
     addDealAttachment,
     deleteDealAttachment,
-    startSwarm: useMutation({
-      mutationFn: async (dealId: number) => {
-        const { data } = await api.post<Deal>(`/api/crm/deals/${dealId}/start_swarm/`)
-        return data
-      },
-      onSuccess: (updatedDeal) => {
-        queryClient.setQueryData<Deal[]>(['crm-deals'], (old) => mergeDealCache(old, updatedDeal))
-        toast.success("Swarm (War Room) iniciado!")
-      }
-    }),
-    endSwarm: useMutation({
-      mutationFn: async (dealId: number) => {
-        const { data } = await api.post<Deal>(`/api/crm/deals/${dealId}/end-swarm/`)
-        return data
-      },
-      onSuccess: (updatedDeal) => {
-        queryClient.setQueryData<Deal[]>(['crm-deals'], (old) => mergeDealCache(old, updatedDeal))
-        toast.success("Swarm finalizado.")
-      }
-    })
+    startSwarm,
+    endSwarm
   }
 }
 
@@ -1098,4 +1103,36 @@ export function useEvolutionConfig() {
   })
 
   return { configs, isLoading, createConfig, updateConfig, deleteConfig }
+}
+
+/**
+ * Monitor inteligente de SLAs para notificações em tempo real.
+ * Utilizado no layout principal do CRM para alertar sobre cards em risco ou rompidos.
+ */
+export function useSLAMonitor() {
+  const { deals } = useCRM()
+  const [notifiedIds, setNotifiedIds] = useState<Set<number>>(new Set())
+
+  useEffect(() => {
+    const criticalDeals = (deals || []).filter(
+      (d) => d.sla_status === "at_risk" || d.sla_status === "breached"
+    )
+
+    criticalDeals.forEach((deal) => {
+      if (!notifiedIds.has(deal.id)) {
+        if (deal.sla_status === "breached") {
+          toast.error(`SLA ROMPIDO: Card #${deal.id}`, {
+            description: deal.title,
+            duration: 8000,
+          })
+        } else {
+          toast.warning(`RISCO DE SLA: Card #${deal.id} em estado crítico!`, {
+            description: deal.title,
+            duration: 5000,
+          })
+        }
+        setNotifiedIds((prev) => new Set(prev).add(deal.id))
+      }
+    })
+  }, [deals, notifiedIds])
 }

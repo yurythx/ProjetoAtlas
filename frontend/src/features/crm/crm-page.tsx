@@ -13,7 +13,7 @@ import {
 } from "date-fns"
 import { PageHeader } from "@/components/ui/page-header"
 import { ModuleGuard } from "@/components/module-guard"
-import { CRMSavedView, CRMViewMode, getPipelineColumns, useCRM, CRMSavedViewFilters } from "./use-crm"
+import { CRMSavedView, CRMViewMode, getPipelineColumns, useCRM, CRMSavedViewFilters, useSLAMonitor } from "./use-crm"
 import dynamic from "next/dynamic"
 import { KanbanSkeleton } from "./kanban-skeleton"
 
@@ -79,6 +79,7 @@ function isCRMViewMode(value: unknown): value is CRMViewMode {
 
 export default function CRMPage() {
   const { pipelines, deals, isLoading } = useCRM()
+  useSLAMonitor()
   const queryClient = useQueryClient()
   const { hasPermission } = usePermission()
   const canManagePipelines = hasPermission("crm.pipeline_manage")
