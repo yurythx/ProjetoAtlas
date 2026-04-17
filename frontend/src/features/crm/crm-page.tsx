@@ -131,6 +131,9 @@ export default function CRMPage() {
     return count
   }, [titleSearch, stageFilter, priorityFilter, ownerFilter, dueFilter])
 
+  const [showTriage, setShowTriage] = useState(false)
+  const [showStats, setShowStats] = useState(false)
+
   useEffect(() => {
     const fromUrl = searchParams.get("pipeline")
     if (!fromUrl) return
@@ -138,11 +141,6 @@ export default function CRMPage() {
     if (!Number.isFinite(numericId)) return
     setSelectedPipelineId(numericId)
   }, [searchParams])
-
-  useEffect(() => {
-    if (!currentPipeline?.id) return
-    setControlsOpen(false)
-  }, [currentPipeline?.id])
   const [tableSorting, setTableSorting] = useState<SortingState>([])
   const [tableColumnVisibility, setTableColumnVisibility] = useState<VisibilityState>({})
   const isRestoringUiStateRef = useRef(false)
@@ -487,43 +485,102 @@ export default function CRMPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <PageHeader
-              title="CRM & Atendimento"
-              description="Gerencie seus leads e chamados de TI em tempo real."
-            />
-            
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-card/60 backdrop-blur-sm p-4 rounded-3xl border shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <PageHeader
+                title="CRM"
+                description=""
+                className="p-0 border-none bg-transparent"
+              />
+
+              <div className="h-4 w-[1px] bg-border hidden sm:block mx-1" />
+
               {pipelines && pipelines.length > 0 ? (
                 <Select 
                   value={selectedPipelineId?.toString() || pipelines[0]?.id?.toString() || ""} 
                   onValueChange={(val) => setSelectedPipelineId(parseInt(val))}
                 >
-                  <SelectTrigger className="w-full sm:w-[240px] glass">
-                    <SelectValue placeholder="Selecione o Fluxo" />
+                  <SelectTrigger className="w-full sm:w-[220px] h-9 rounded-xl border-none bg-muted/50 hover:bg-muted transition-colors px-3 font-semibold">
+                    <SelectValue placeholder="Fluxo" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-2xl">
                     {pipelines.map(p => (
-                      <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                      <SelectItem key={p.id} value={p.id.toString()} className="rounded-lg">{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              ) : (
-                  <div className="text-sm text-muted-foreground bg-muted/20 px-4 py-2 rounded-xl border">
-                    Nenhum pipeline disponível.
-                  </div>
-              )}
+              ) : null}
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              <Tabs value={view} onValueChange={(v) => setView(v as CRMViewMode)} className="h-9">
+                <TabsList className="h-9 bg-muted/50 p-1 rounded-xl">
+                  <TabsTrigger value="kanban" className="h-7 text-xs rounded-lg px-3">
+                    <LayoutGrid className="mr-2 h-3.5 w-3.5" /> Kanban
+                  </TabsTrigger>
+                  <TabsTrigger value="list" className="h-7 text-xs rounded-lg px-3">
+                    <List className="mr-2 h-3.5 w-3.5" /> Tabela
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
 
-              <Link href="/crm/pipelines" className="w-full sm:w-auto">
-                <Button variant="outline" className="glass w-full sm:w-auto">
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Visão Geral
-                </Button>
-              </Link>
+              <div className="h-4 w-[1px] bg-border mx-1" />
 
-              {canManagePipelines ? <PipelineManagerModal /> : null}
-              {currentPipeline ? <ColumnGovernanceSheet pipeline={currentPipeline} deals={deals} /> : null}
-              {canDealEdit ? <CreateDealModal pipeline={currentPipeline} /> : null}
+              <div className="flex items-center gap-1 sm:gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-2 rounded-xl text-xs font-semibold text-primary/70 hover:text-primary hover:bg-primary/10"
+                    asChild
+                  >
+                    <Link href="/itil-v5">
+                      <BookOpen className="h-4 w-4" />
+                      <span className="hidden lg:inline">Atlas Academy</span>
+                    </Link>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-2 rounded-xl text-xs font-semibold text-primary/70 hover:text-primary hover:bg-primary/10"
+                    asChild
+                  >
+                    <Link href="/crm/analytics">
+                      <BarChart3 className="h-4 w-4" />
+                      <span className="hidden lg:inline">Analytics</span>
+                    </Link>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-8 gap-2 rounded-xl text-xs font-semibold transition-all",
+                      showStats ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                    )}
+                    onClick={() => setShowStats(!showStats)}
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="hidden sm:inline">Métricas</span>
+                  </Button>
+              </div>
+
+              <Button 
+                variant={showTriage ? "secondary" : "ghost"} 
+                size="sm" 
+                onClick={() => setShowTriage(!showTriage)}
+                className={cn("h-9 rounded-xl gap-2 relative", showTriage && "bg-primary/10 text-primary")}
+              >
+                <Inbox className="h-4 w-4" />
+                <span className="hidden sm:inline">Triagem</span>
+                {deals.filter(d => !d.column && !d.is_closed).length > 0 && (
+                   <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                )}
+              </Button>
+
+              {canManagePipelines && <PipelineManagerModal />}
+              {currentPipeline && <ColumnGovernanceSheet pipeline={currentPipeline} deals={deals} />}
+              {canDealEdit && <CreateDealModal pipeline={currentPipeline} />}
             </div>
           </div>
 
@@ -731,39 +788,41 @@ export default function CRMPage() {
             </div>
           )}
 
-          <CRMTriageInbox />
+          <AnimatePresence>
+            {showStats && currentPipeline && (
+               <motion.div
+                 initial={{ height: 0, opacity: 0 }}
+                 animate={{ height: "auto", opacity: 1 }}
+                 exit={{ height: 0, opacity: 0 }}
+                 className="overflow-hidden"
+               >
+                 <CRMPipelineOverview
+                   pipeline={currentPipeline}
+                   deals={deals}
+                   overview={pipelineOverview || undefined}
+                   isLoading={isLoadingOverview}
+                 />
+                 <div className="h-6" />
+               </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showTriage && (
+               <motion.div
+                 initial={{ height: 0, opacity: 0 }}
+                 animate={{ height: "auto", opacity: 1 }}
+                 exit={{ height: 0, opacity: 0 }}
+                 className="overflow-hidden"
+               >
+                 <CRMTriageInbox />
+                 <div className="h-6" />
+               </motion.div>
+            )}
+          </AnimatePresence>
 
           <Tabs value={view} onValueChange={(v) => setView(v as CRMViewMode)} className="w-full">
-            <div className="flex items-center justify-between mb-4">
-              <TabsList className="glass p-1">
-                <TabsTrigger value="kanban" className="flex items-center gap-2">
-                  <LayoutGrid className="h-4 w-4" /> Kanban
-                </TabsTrigger>
-                <TabsTrigger value="list" className="flex items-center gap-2">
-                  <List className="h-4 w-4" /> Tabela
-                </TabsTrigger>
-                <TabsTrigger value="overview" className="flex items-center gap-2">
-                  <PanelsTopLeft className="h-4 w-4" /> Visão Geral
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="overview" className="m-0">
-              {currentPipeline ? (
-                <CRMPipelineOverview
-                  pipeline={currentPipeline}
-                  deals={deals}
-                  overview={pipelineOverview}
-                  isLoading={isLoadingOverview}
-                />
-              ) : (
-                <div className="h-[320px] flex items-center justify-center border-2 border-dashed rounded-3xl opacity-50">
-                  Nenhum pipeline configurado.
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="kanban" className="m-0">
+            <TabsContent value="kanban" className="m-0 outline-none">
               {currentPipeline ? (
                 <KanbanBoard pipeline={currentPipeline} deals={filteredDeals} />
               ) : (
@@ -773,7 +832,7 @@ export default function CRMPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="list" className="m-0">
+            <TabsContent value="list" className="m-0 outline-none">
               {currentPipeline ? (
                 <CRMTableView
                   pipeline={currentPipeline}

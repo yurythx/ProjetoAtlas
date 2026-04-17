@@ -33,69 +33,76 @@ export default function LoginPage() {
 
   useEffect(() => {
     const loggedOut = searchParams.get("logged_out") === "1"
-    if (!loggedOut) return
-    notify.success("Logout realizado", "Você saiu da sua conta com segurança.")
-    router.replace("/")
+    const expired = searchParams.get("expired") === "true"
+    
+    if (expired) {
+      notify.warning("Sessão expirada", "Sua sessão expirou por segurança. Por favor, entre novamente.")
+    } else if (loggedOut) {
+      notify.success("Logout realizado", "Você saiu da sua conta com segurança.")
+    }
+    
+    if (loggedOut || expired) {
+      router.replace("/login")
+    }
   }, [router, searchParams])
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-background" role="main" aria-labelledby="login-title">
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-background/50 backdrop-blur-3xl" role="main" aria-labelledby="login-title">
       <div className="fixed top-4 right-4 z-50">
-        <Button asChild type="button" variant="outline" size="sm" className="rounded-xl gap-2">
+        <Button asChild type="button" variant="outline" size="sm" className="rounded-xl gap-2 backdrop-blur-md bg-background/50 border-primary/20">
           <Link href="/" aria-label="Acessar área pública">
             <BookOpen className="h-4 w-4" aria-hidden="true" />
-            Público
+            Portal Público
           </Link>
         </Button>
       </div>
       {/* Visual Side - Hidden on mobile */}
-      <div className="hidden md:flex md:w-1/2 bg-primary/5 items-center justify-center p-12 relative overflow-hidden">
+      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-primary/10 via-background to-primary/5 items-center justify-center p-12 relative overflow-hidden border-r">
         {/* Abstract background elements */}
-        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[100px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[80px]" />
+        <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-primary/20 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[100px]" />
 
-        <div className="max-w-md space-y-6 relative z-10 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="max-w-md space-y-6 relative z-10 text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
           <div className="flex justify-center mb-8">
             {previewCompany ? (
               // Case 1: Company Selected
               previewCompany.logo ? (
-                <div className="relative h-24 w-24">
+                <div className="relative h-28 w-28 group">
+                  <div className="absolute -inset-4 bg-primary/20 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                   <Image
                     src={previewCompany.logo}
                     alt={previewCompany.name}
                     fill
                     priority
-                    className="object-contain transition-all duration-500 hover:scale-105"
-                    sizes="96px"
+                    className="object-contain transition-all duration-500 hover:scale-110 relative z-10"
+                    sizes="112px"
                   />
                 </div>
               ) : (
-                <div className="h-20 w-20 bg-primary/20 rounded-2xl flex items-center justify-center text-primary font-bold text-3xl shadow-sm">
+                <div className="h-24 w-24 bg-primary/20 rounded-3xl flex items-center justify-center text-primary font-black text-4xl shadow-2xl border border-primary/30 backdrop-blur-xl">
                   {previewCompany.name.charAt(0)}
                 </div>
               )
             ) : (
-              // Case 2: No Company Selected (Default generic branding or Logo if globally set?)
-              // Ideally for SaaS login page with no tenant context, we show generic app logo or nothing specific
-              <div className="h-20 w-20 bg-primary/10 rounded-2xl flex items-center justify-center text-primary font-bold text-3xl">
-                B
+              <div className="h-24 w-24 bg-gradient-to-tr from-primary/20 to-primary/10 rounded-3xl flex items-center justify-center text-primary font-black text-5xl shadow-xl border border-primary/20 backdrop-blur-2xl">
+                A
               </div>
             )}
           </div>
 
-          <H2 className="text-4xl lg:text-5xl border-none font-extrabold tracking-tight">
+          <H2 className="text-5xl lg:text-6xl border-none font-black tracking-tighter leading-none">
             {previewCompany ? (
-              <>Bem-vindo ao <span className="text-primary">{previewCompany.name}</span></>
+              <>Bem-vindo ao <span className="text-primary italic">{previewCompany.name}</span></>
             ) : (
-              "Bem-vindo"
+              <>Sistema <span className="text-primary tracking-[0.2em] font-light">ATLAS</span></>
             )}
           </H2>
 
-          <P className="text-xl text-muted-foreground leading-relaxed">
+          <P className="text-xl text-muted-foreground leading-relaxed max-w-sm mx-auto">
             {previewCompany ? (
-              "Acesse seu portal exclusivo e gerencie tudo em um só lugar."
+              "Seu portal inteligente para gestão de serviços e valor operacional."
             ) : (
-              "Sua plataforma centralizada de gestão modular. Selecione sua empresa para começar."
+              "Plataforma Enterprise de Gerenciamento de Serviços alinhada ao ITIL v5."
             )}
           </P>
         </div>

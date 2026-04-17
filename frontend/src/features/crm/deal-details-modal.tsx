@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { format, formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Camera, Loader2, Search, Trash2, X } from "lucide-react"
+import { Box, Camera, Loader2, Search, Trash2, X, Zap, TrendingUp, BookOpen, Layers } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -111,8 +111,9 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
   const [draftUpdateNote, setDraftUpdateNote] = useState("")
   const [activityFilter, setActivityFilter] = useState<ActivityFilterId>("all")
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
-  const [activeTab, setActiveTab] = useState<"overview" | "details" | "images" | "history" | "cis" | "governance" | "xla">("details")
+  const [activeTab, setActiveTab] = useState<"overview" | "details" | "images" | "history" | "cis" | "governance" | "xla" | "topology">("details")
   const { data: xlaFeedbacks = [], createFeedback: submitXla } = useXLA(currentDeal.id)
+  const { data: topologyData, isLoading: isLoadingTopology } = useDealTopology(currentDeal.id)
   const [imagesFilter, setImagesFilter] = useState<"all" | "before" | "during" | "after">("all")
   const updateTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [mentionQuery, setMentionQuery] = useState("")
@@ -717,6 +718,12 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                         {draftAffectedCis.length}
                       </Badge>
                     </TabsTrigger>
+                    <TabsTrigger value="topology" className="gap-2 group">
+                      <div className="flex items-center gap-1.5">
+                        <span className="group-data-[state=active]:animate-pulse text-primary block w-1.5 h-1.5 rounded-full bg-primary" />
+                        Topologia 360°
+                      </div>
+                    </TabsTrigger>
                     {draftRecordType === 'change' && (
                       <TabsTrigger value="governance" className="gap-2">
                         Governança
@@ -924,6 +931,67 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 </div>
 
                 <div className="space-y-6">
+                  {/* Atlas AI Advisor - ITIL v5 Autonomic Intelligence */}
+                  <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 space-y-3 relative overflow-hidden group shadow-lg shadow-primary/5">
+                    <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-20 transition-opacity">
+                      <Sparkles className="h-16 w-16 text-primary" />
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center animate-pulse">
+                        <Zap className="h-3 w-3 text-primary-foreground fill-current" />
+                      </div>
+                      <Badge className="bg-primary hover:bg-primary/90 text-[10px] h-5 font-black uppercase tracking-wider">Atlas AI Advisor</Badge>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="p-3 rounded-xl bg-background/60 border border-primary/10 shadow-inner">
+                        <h4 className="text-[10px] font-black uppercase text-primary/80 mb-2 flex items-center gap-2 tracking-widest">
+                          Diagnóstico Sugerido
+                        </h4>
+                        <p className="text-sm text-foreground font-medium leading-relaxed italic">
+                          "{currentDeal.ai_metadata?.suggested_diagnosis || "Analisando padrões históricos e fluxos VSM para este chamado..."}"
+                        </p>
+                      </div>
+
+                      {currentDeal.ai_metadata?.resolution_steps && (
+                        <div className="space-y-2">
+                           <h4 className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2 tracking-widest">
+                             <ShieldCheck className="h-3 w-3 text-emerald-500" /> Resolution Logic
+                           </h4>
+                           <div className="space-y-1">
+                             {Array.isArray(currentDeal.ai_metadata.resolution_steps) ? currentDeal.ai_metadata.resolution_steps.map((step: string, idx: number) => (
+                               <div key={idx} className="flex gap-2 items-start text-xs text-muted-foreground group/step">
+                                 <span className="text-primary font-bold">0{idx + 1}.</span>
+                                 <span className="group-hover/step:text-foreground transition-colors">{step}</span>
+                               </div>
+                             )) : (
+                               <p className="text-xs text-muted-foreground">{currentDeal.ai_metadata.resolution_steps}</p>
+                             )}
+                           </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div className="p-2 rounded-xl bg-background/50 border border-primary/5 text-center">
+                          <p className="text-[9px] uppercase font-black text-muted-foreground tracking-tighter">SLA Breach Risk</p>
+                          <p className={cn(
+                            "text-xl font-black tracking-tighter",
+                            (currentDeal.ai_metadata?.risk_score || 0) > 70 ? "text-rose-500" : "text-emerald-500"
+                          )}>
+                            {currentDeal.ai_metadata?.risk_score || "12"}%
+                          </p>
+                        </div>
+                        <div className="p-2 rounded-xl bg-background/50 border border-primary/5 text-center">
+                          <p className="text-[9px] uppercase font-black text-muted-foreground tracking-tighter">Market Value XLA</p>
+                          <p className="text-xl font-black text-primary tracking-tighter">
+                            {currentDeal.ai_metadata?.xla_impact || "HIGH"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <section className="rounded-2xl border bg-card p-5 shadow-sm">
                     <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Campos principais</h3>
 
@@ -1865,6 +1933,96 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                       </div>
                     )}
                   </div>
+                </div>
+              </section>
+            </TabsContent>
+
+            <TabsContent value="topology" className="mt-0 p-4 sm:p-6">
+              <section className="rounded-3xl border bg-slate-950 p-8 shadow-2xl relative overflow-hidden min-h-[500px] flex flex-col items-center justify-center">
+                {/* Background Grid for Tech look */}
+                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+                
+                <div className="relative z-10 w-full max-w-4xl space-y-8">
+                   <div className="text-center space-y-2">
+                     <h3 className="text-xl font-black text-white tracking-widest uppercase">Análise de Impacto 360°</h3>
+                     <p className="text-blue-400/70 text-xs font-semibold tracking-tight uppercase">CMDB Topology Analytics Engine</p>
+                   </div>
+
+                   {isLoadingTopology ? (
+                     <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                        <p className="text-white/50 text-xs animate-pulse">Rastreando dependências em cascata...</p>
+                     </div>
+                   ) : (
+                     <div className="relative border border-white/10 rounded-3xl bg-black/40 backdrop-blur-xl p-10 min-h-[400px]">
+                        {topologyData?.nodes && topologyData.nodes.length > 0 ? (
+                          <div className="flex flex-col items-center gap-12">
+                             {/* Central Node: The Deal */}
+                             {topologyData.nodes.filter(n => n.type === 'deal').map(node => (
+                               <motion.div 
+                                 key={node.id}
+                                 initial={{ scale: 0.8, opacity: 0 }}
+                                 animate={{ scale: 1, opacity: 1 }}
+                                 className="relative"
+                               >
+                                 <div className="h-20 w-20 rounded-2xl bg-primary flex items-center justify-center shadow-[0_0_30px_rgba(59,130,246,0.5)] border-2 border-primary-foreground/20">
+                                   <Zap className="h-10 w-10 text-white fill-current" />
+                                 </div>
+                                 <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 text-white font-black text-sm whitespace-nowrap bg-primary px-3 py-1 rounded-full uppercase tracking-tighter">
+                                   ITEM CENTRAL: {node.label}
+                                 </div>
+                               </motion.div>
+                             ))}
+
+                             {/* Branches: Directly Affected CIs */}
+                             <div className="flex flex-wrap justify-center gap-8 w-full mt-12 px-4">
+                                {topologyData.nodes.filter(n => n.type === 'ci').map(node => (
+                                  <motion.div 
+                                    key={node.id}
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    className="flex flex-col items-center space-y-4"
+                                  >
+                                    <div className="h-[2px] w-12 bg-gradient-to-t from-primary to-transparent" />
+                                    <div className={cn(
+                                       "h-16 w-16 rounded-xl border-2 flex items-center justify-center transition-all",
+                                       node.status === 'broken' ? "bg-rose-500/20 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.3)]" : "bg-blue-500/10 border-blue-500/50"
+                                    )}>
+                                       <Box className={cn("h-8 w-8", node.status === 'broken' ? "text-rose-500" : "text-blue-400")} />
+                                    </div>
+                                    <div className="text-center">
+                                       <p className="text-[10px] font-black text-white/90 uppercase tracking-tighter">{node.label}</p>
+                                       <Badge variant="outline" className="text-[8px] h-4 mt-1 border-white/10 text-white/50">{node.kind}</Badge>
+                                    </div>
+                                  </motion.div>
+                                ))}
+                             </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                             <div className="h-16 w-16 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center opacity-30">
+                                <Search className="h-8 w-8 text-white" />
+                             </div>
+                             <p className="text-white/40 text-sm max-w-[250px]">Nenhum IC (Item de Configuração) vinculado a este card para análise de topologia.</p>
+                          </div>
+                        )}
+                     </div>
+                   )}
+
+                   <div className="flex justify-center gap-10">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-primary" />
+                        <span className="text-[10px] font-bold text-white/50 uppercase">Ponto de Falha</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-rose-500" />
+                        <span className="text-[10px] font-bold text-white/50 uppercase">Impacto Crítico</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-blue-500/30 border border-blue-500/50" />
+                        <span className="text-[10px] font-bold text-white/50 uppercase">Dependência Ativa</span>
+                      </div>
+                   </div>
                 </div>
               </section>
             </TabsContent>

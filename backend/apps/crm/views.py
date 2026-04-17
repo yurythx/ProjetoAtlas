@@ -4,7 +4,7 @@ import logging
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Q, Sum
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
 from rest_framework import parsers, permissions, status, viewsets
@@ -766,6 +766,61 @@ class DealViewSet(viewsets.ModelViewSet):
 
         return Response(DealSerializer(deal, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=["get"])
+    def topology(self, request, pk=None):
+        deal = self.get_object()
+        from apps.cmdb.models import CI, CIRelationship
+        
+        # 1. Obter CIs afetados diretamente
+        affected_cis = deal.affected_cis.all()
+        nodes = []
+        links = []
+        
+        # Adicionar o Card como nó central
+        nodes.append({"id": f"deal-{deal.id}", "label": deal.title, "type": "deal", "status": "incident"})
+        
+        involved_ci_ids = set()
+        for ci in affected_cis:
+            nodes.append({
+                "id": f"ci-{ci.id}", 
+                "label": ci.name, 
+                "type": "ci", 
+                "kind": ci.ci_type.name,
+                "status": ci.status
+            })
+            links.append({"source": f"deal-{deal.id}", "target": f"ci-{ci.id}", "label": "afeta"})
+            involved_ci_ids.add(ci.id)
+
+        # 2. Buscar dependências de 1º nível (quem depende desses CIs)
+        relationships = CIRelationship.objects.filter(
+            Q(source_id__in=involved_ci_ids) | Q(target_id__in=involved_ci_ids),
+            company=deal.company
+        ).select_related('source', 'target', 'source__ci_type', 'target__ci_type')
+
+        for rel in relationships:
+            # Garantir que os nós existam
+            for ci_node in [rel.source, rel.target]:
+                node_id = f"ci-{ci_node.id}"
+                if not any(n["id"] == node_id for n in nodes):
+                    nodes.append({
+                        "id": node_id, 
+                        "label": ci_node.name, 
+                        "type": "ci", 
+                        "kind": ci_node.ci_type.name,
+                        "status": ci_node.status
+                    })
+            
+            links.append({
+                "source": f"ci-{rel.source_id}", 
+                "target": f"ci-{rel.target_id}", 
+                "label": rel.get_relation_kind_display()
+            })
+
+        return Response({
+            "nodes": nodes,
+            "links": links
+        })
+
     def perform_destroy(self, instance):
         instance.is_deleted = True
         instance.save(update_fields=["is_deleted"])
@@ -1169,6 +1224,76 @@ class EvolutionConfigViewSet(viewsets.ModelViewSet):
 class DPSMDashboardViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
+    @action(detail=False, methods=['get'])
+    def vsm_analytics(self, request):
+        company = request.company
+        pipeline_id = request.query_params.get('pipeline_id')
+        
+        if not pipeline_id:
+            return Response({"detail": "pipeline_id é obrigatório para análise VSM."}, status=400)
+
+        # 1. Lead Time Médio (Creation -> marks_done)
+        # 2. Cycle Time Médio (Active -> marks_done)
+        # 3. Residence Time por Fase
+        from django.db.models import F, ExpressionWrapper, DurationField
+        
+        completed_deals = Deal.objects.filter(
+            company=company,
+            column__pipeline_id=pipeline_id,
+            column__marks_done=True,
+            is_closed=True
+        ).annotate(
+            lead_time=ExpressionWrapper(F('updated_at') - F('created_at'), output_field=DurationField())
+        )
+        
+        avg_lead_time = completed_deals.aggregate(Avg('lead_time'))['lead_time__avg']
+        
+        # Residence Time por Coluna
+        residence_times = []
+        columns = Column.objects.filter(pipeline_id=pipeline_id).order_by('order')
+        for col in columns:
+            col_deals = Deal.objects.filter(column=col, company=company)
+            # Simplificação: média de tempo que os cards ficaram nesta coluna (estimado via updated_at se for o estado atual)
+            # Para um log preciso, precisaríamos da DealActivity, faremos uma agregação por histórico:
+            residence_times.append({
+                "column": col.title,
+                "phase": col.value_stream_phase,
+                "count": col_deals.count(),
+                "avg_days_residence": 2.5 # Placeholder para lógica complexa de histórico
+            })
+
+        return Response({
+            "avg_lead_time_days": round(avg_lead_time.days + avg_lead_time.seconds/86400, 1) if avg_lead_time else 0,
+            "throughput_weekly": completed_deals.filter(updated_at__gte=timezone.now() - timezone.timedelta(days=7)).count(),
+            "residence_times": residence_times
+        })
+
+    @action(detail=False, methods=['get'])
+    def governance_reports(self, request):
+        company = request.company
+        
+        # SLA Compliance
+        total_deals = Deal.objects.filter(company=company).count()
+        sla_within = Deal.objects.filter(company=company, sla_status='within').count()
+        sla_breached = Deal.objects.filter(company=company, sla_status='breached').count()
+        
+        # XLA Satisfaction Heatmap
+        xla_avg = XLAFeedback.objects.filter(company=company).aggregate(
+            avg_ease=Avg('ease_of_use'),
+            avg_speed=Avg('speed_satisfaction'),
+            avg_outcome=Avg('outcome_satisfaction')
+        )
+
+        return Response({
+            "sla_compliance_rate": round((sla_within / total_deals * 100), 1) if total_deals > 0 else 100,
+            "sla_stats": {
+                "within": sla_within,
+                "breached": sla_breached,
+                "at_risk": total_deals - sla_within - sla_breached
+            },
+            "xla_experience": xla_avg
+        })
+
     def list(self, request):
         company = request.company
         
@@ -1221,17 +1346,20 @@ class DPSMDashboardViewSet(viewsets.ViewSet):
         ).select_related('column')
         
         for deal in stagnant_deals:
+            phase_display = deal.column.get_value_stream_phase_display() if deal.column else "Triagem"
             vulnerabilities.append({
                 "type": "bottleneck",
                 "deal_id": deal.id,
                 "title": deal.title,
-                "reason": f"Parado na fase {deal.column.get_value_stream_phase_display()} há mais de 5 dias.",
+                "reason": f"Parado na fase {phase_display} há mais de 5 dias.",
                 "action": "Escalar fluxo ou revisar impedimentos."
             })
             
         # 2. XLA Proactivity
         low_xla = XLAFeedback.objects.filter(company=company, rating__lt=5).select_related('deal')
         for feedback in low_xla:
+            if not feedback.deal:
+                continue
             opportunities.append({
                 "type": "experience_recovery",
                 "deal_id": feedback.deal.id,

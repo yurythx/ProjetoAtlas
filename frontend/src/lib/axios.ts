@@ -45,50 +45,18 @@ const processQueue = (error: unknown, token: string | null = null) => {
 
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    const url = config.url || ''
+    const url = config.url || '';
     const isPublicApiRequest =
       url.includes('/api/articles/public/') ||
       url.includes('/api/pages/public/') ||
-      url.includes('/api/core/companies/public_list/')
+      url.includes('/api/core/companies/public_list/');
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     const companySlug = typeof window !== 'undefined' ? localStorage.getItem('companySlug') : null;
     const envCompany = process.env.NEXT_PUBLIC_COMPANY_SLUG;
     const effectiveCompany = companySlug || envCompany || null;
 
-    const isAuthEndpoint = Boolean(config.url?.includes('/api/accounts/token/'));
-    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
-
-    if (!isPublicApiRequest && !isAuthEndpoint && token && isJwtExpired(token) && refreshToken) {
-      if (isRefreshing) {
-        const newToken = await new Promise<string>((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        });
-        config.headers.Authorization = `Bearer ${newToken}`;
-      } else {
-        isRefreshing = true;
-        try {
-          const response = await axios.post(`${API_URL}/api/accounts/token/refresh/`, {
-            refresh: refreshToken,
-          }, {
-            headers: effectiveCompany ? { 'X-Company-Slug': effectiveCompany } : {}
-          });
-
-          const { access, refresh: newRefresh } = response.data as { access: string; refresh?: string };
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('accessToken', access);
-            if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
-          }
-          api.defaults.headers.common['Authorization'] = `Bearer ${access}`;
-          processQueue(null, access);
-          config.headers.Authorization = `Bearer ${access}`;
-        } catch (err) {
-          processQueue(err, null);
-        } finally {
-          isRefreshing = false;
-        }
-      }
-    } else if (!isPublicApiRequest && token && !config.headers.Authorization) {
+    if (!isPublicApiRequest && token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -175,7 +143,6 @@ api.interceptors.response.use(
       }
 
       try {
-        // Use a separate axios instance or manual headers to avoid interceptor recursion
         const companySlug = typeof window !== 'undefined' ? localStorage.getItem('companySlug') : null;
         const envCompany = process.env.NEXT_PUBLIC_COMPANY_SLUG;
         const effectiveCompany = companySlug || envCompany || null;
@@ -186,8 +153,6 @@ api.interceptors.response.use(
           headers: effectiveCompany ? { 'X-Company-Slug': effectiveCompany } : {}
         });
 
-        // ROTATE_REFRESH_TOKENS=True: backend returns both new access AND new refresh token.
-        // We MUST save both — the old refresh is blacklisted after rotation.
         const { access, refresh: newRefresh } = response.data;
 
         if (typeof window !== 'undefined') {
@@ -205,16 +170,19 @@ api.interceptors.response.use(
       } catch (err) {
         processQueue(err, null);
 
-        // Logout on refresh fail - Only if it's REALLY a 401/403 (invalid refresh token)
+        // Logout on refresh fail or 429 Too Many Requests
         if (typeof window !== 'undefined') {
+          const isRateLimited = axios.isAxiosError(err) && err.response?.status === 429;
           const isAuthError = axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403);
 
-          if (isAuthError) {
+          if (isAuthError || isRateLimited) {
             clearClientSession();
-            // Only redirect once and never from public routes
+            // Force reset of state so next login works
+            resetAuthState();
+            
             if (!isRedirectingToLogin && !isPublicRoute(window.location.pathname)) {
               isRedirectingToLogin = true;
-              window.location.href = '/login';
+              window.location.href = '/login?expired=true';
             }
           }
         }
@@ -222,6 +190,13 @@ api.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    // Explicitly handle 429 for non-token-refresh requests as well
+    if (error.response?.status === 429 && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('app-rate-limited', { 
+        detail: { message: 'Muitas requisições. Por favor, aguarde um momento.' } 
+      }));
     }
 
     return Promise.reject(error);

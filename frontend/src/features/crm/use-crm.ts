@@ -255,6 +255,17 @@ export interface DPSMDashboardData {
   vsm_distribution: Array<{ value_stream_phase: string; count: number }>
 }
 
+export function useDealTopology(dealId?: number) {
+  return useQuery<{ nodes: any[]; links: any[] }>({
+    queryKey: ["deal-topology", dealId],
+    queryFn: async () => {
+      const { data } = await api.get(`/api/crm/deals/${dealId}/topology/`)
+      return data
+    },
+    enabled: !!dealId,
+  })
+}
+
 export function useDPSMDashboard() {
   return useQuery<DPSMDashboardData>({
     queryKey: ["dpsm-dashboard"],
