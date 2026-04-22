@@ -31,7 +31,7 @@ export function ThemeInitScript() {
           root.setAttribute('data-palette', palette);
 
           // Only apply colors if NOT in dark mode (let tailwind handle dark mode)
-          if (!darkTheme) {
+          if (!shouldBeDark) {
             const shouldUseTenantColors = !(userPreferences && userPreferences.use_tenant_theme === false);
             if (!shouldUseTenantColors) {
               root.style.removeProperty('--primary');

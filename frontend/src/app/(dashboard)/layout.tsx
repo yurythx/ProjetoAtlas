@@ -7,6 +7,8 @@ import * as React from "react"
 import { clearClientSession, ensureHasSessionCookie } from "@/lib/session"
 import { CRMAttachmentOfflineSync } from "@/features/crm/offline-attachment-sync"
 
+import { CommandPalette } from "@/components/layout/command-palette"
+
 /**
  * DashboardLayout — proteção primária feita via middleware.ts (server-side).
  * Este layout assume que o usuário já está autenticado.
@@ -32,6 +34,7 @@ export default function DashboardLayout({
       <DashboardShell>
         <PresenceHeartbeat />
         <CRMAttachmentOfflineSync />
+        <CommandPalette />
         {children}
       </DashboardShell>
     </PresenceProvider>

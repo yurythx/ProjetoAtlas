@@ -68,21 +68,16 @@ export function Header() {
     return <header className="h-20 border-b bg-background/50 animate-pulse" />
   }
 
-  const isDashboardArea = Boolean(pathname) && (
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/artigos') ||
-    pathname.startsWith('/calendar') ||
-    pathname.startsWith('/crm') ||
-    pathname.startsWith('/cms') ||
-    pathname.startsWith('/finance') ||
-    pathname.startsWith('/insights') ||
-    pathname.startsWith('/licensing') ||
-    pathname.startsWith('/messenger') ||
-    pathname.startsWith('/notificacoes') ||
-    pathname.startsWith('/perfil') ||
-    pathname.startsWith('/settings')
-  )
+  const isDashboardArea = React.useMemo(() => {
+    if (!pathname) return false
+    const publicPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/accept-invite', '/servicos', '/404', '/500']
+    const publicPrefixes = ['/p/', '/api/']
+    
+    if (publicPaths.includes(pathname)) return false
+    if (publicPrefixes.some(prefix => pathname.startsWith(prefix))) return false
+    
+    return true
+  }, [pathname])
   const hasDesktopSidebar = Boolean(me && isDashboardArea)
   const showDesktopNav = (!isDashboardArea && !me) || (Boolean(me) && !hasDesktopSidebar)
   const showGuestAuthCta = !isDashboardArea

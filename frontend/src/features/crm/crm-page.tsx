@@ -32,7 +32,7 @@ import { CRMPipelineOverview, PipelineOverviewData } from "./crm-pipeline-overvi
 import { PipelineManagerModal } from "./pipeline-manager-modal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { BarChart3, BookOpen, ChevronDown, ChevronUp, Inbox, LayoutGrid, List, PanelsTopLeft, TrendingUp } from "lucide-react"
+import { BarChart3, BookOpen, ChevronDown, ChevronUp, Inbox, LayoutGrid, List, Loader2, PanelsTopLeft, Search, TrendingUp } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -76,7 +76,7 @@ function normalizeSavedViewsResponse(data: CRMSavedView[] | { results?: CRMSaved
 }
 
 function isCRMViewMode(value: unknown): value is CRMViewMode {
-  return value === "kanban" || value === "table" || value === "overview"
+  return value === "kanban" || value === "list"
 }
 
 export default function CRMPage() {
@@ -476,90 +476,103 @@ export default function CRMPage() {
   return (
     <ModuleGuard moduleCode="crm">
       {isLoading ? (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-64 rounded-2xl" />
-              <Skeleton className="h-4 w-96 rounded-lg" />
+        <div className="space-y-8 animate-in fade-in duration-500">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between bg-white/5 backdrop-blur-xl p-8 rounded-[3rem] border border-white/10 shadow-2xl">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-8">
+              <div className="space-y-2">
+                <Skeleton className="h-14 w-72 rounded-2xl" />
+                <Skeleton className="h-5 w-[28rem] rounded-xl" />
+              </div>
             </div>
-            <Skeleton className="h-10 w-48 rounded-xl" />
+            <Skeleton className="h-12 w-56 rounded-2xl" />
           </div>
           <KanbanSkeleton />
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-card/60 backdrop-blur-sm p-4 rounded-3xl border shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <PageHeader
-                title="CRM"
-                description=""
-                className="p-0 border-none bg-transparent"
-              />
+        <div className="space-y-8 animate-in fade-in duration-700">
+          {/* Header Hero */}
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between bg-white/5 backdrop-blur-xl p-8 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12">
+               <PanelsTopLeft className="h-40 w-40 text-primary" />
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-8 relative z-10">
+              <div className="space-y-1">
+                <h1 className="text-5xl font-black tracking-tighter flex items-center gap-6">
+                    <div className="h-16 w-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/10">
+                        <PanelsTopLeft className="h-8 w-8 text-primary" />
+                    </div>
+                    Pipeline CRM
+                </h1>
+                <p className="text-muted-foreground text-lg font-medium ml-1 opacity-70">Gestão estratégica de oportunidades e fluxos de serviço.</p>
+              </div>
 
-              <div className="h-4 w-[1px] bg-border hidden sm:block mx-1" />
+              <div className="h-12 w-[1px] bg-white/10 hidden sm:block mx-2" />
 
               {pipelines && pipelines.length > 0 ? (
-                <Select 
-                  value={selectedPipelineId?.toString() || pipelines[0]?.id?.toString() || ""} 
-                  onValueChange={(val) => setSelectedPipelineId(parseInt(val))}
-                >
-                  <SelectTrigger className="w-full sm:w-[220px] h-9 rounded-xl border-none bg-muted/50 hover:bg-muted transition-colors px-3 font-semibold">
-                    <SelectValue placeholder="Fluxo" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl">
-                    {pipelines.map(p => (
-                      <SelectItem key={p.id} value={p.id.toString()} className="rounded-lg">{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Fluxo Ativo</p>
+                  <Select 
+                    value={selectedPipelineId?.toString() || pipelines[0]?.id?.toString() || ""} 
+                    onValueChange={(val) => setSelectedPipelineId(parseInt(val))}
+                  >
+                    <SelectTrigger className="w-full sm:w-[260px] h-12 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 transition-all px-4 font-black uppercase tracking-widest text-xs shadow-inner">
+                      <SelectValue placeholder="Fluxo" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl">
+                      {pipelines.map(p => (
+                        <SelectItem key={p.id} value={p.id.toString()} className="rounded-xl font-bold">{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               ) : null}
             </div>
-            
-            <div className="flex flex-wrap items-center gap-2">
-              <Tabs value={view} onValueChange={(v) => setView(v as CRMViewMode)} className="h-9">
-                <TabsList className="h-9 bg-muted/50 p-1 rounded-xl">
-                  <TabsTrigger value="kanban" className="h-7 text-xs rounded-lg px-3">
-                    <LayoutGrid className="mr-2 h-3.5 w-3.5" /> Kanban
+
+            <div className="flex flex-wrap items-center gap-4 relative z-10">
+              <Tabs value={view} onValueChange={(v) => setView(v as CRMViewMode)} className="h-12">
+                <TabsList className="h-12 bg-white/5 p-1.5 rounded-2xl border border-white/5 backdrop-blur-md">
+                  <TabsTrigger value="kanban" className="h-9 px-6 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300">
+                    <LayoutGrid className="mr-2 h-4 w-4" /> Kanban
                   </TabsTrigger>
-                  <TabsTrigger value="list" className="h-7 text-xs rounded-lg px-3">
-                    <List className="mr-2 h-3.5 w-3.5" /> Tabela
+                  <TabsTrigger value="list" className="h-9 px-6 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300">
+                    <List className="mr-2 h-4 w-4" /> Tabela
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
 
               <div className="h-4 w-[1px] bg-border mx-1" />
 
-              <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-3">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="h-8 gap-2 rounded-xl text-xs font-semibold text-primary/70 hover:text-primary hover:bg-primary/10"
+                    className="h-10 gap-3 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest text-primary/80 transition-all shadow-lg"
                     asChild
                   >
                     <Link href="/itil-version-5">
-                      <BookOpen className="h-4 w-4" />
-                      <span className="hidden lg:inline">Atlas Academy</span>
+                      <BookOpen className="h-4 w-4 text-primary" />
+                      <span className="hidden lg:inline">Academy</span>
                     </Link>
                   </Button>
 
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="h-8 gap-2 rounded-xl text-xs font-semibold text-primary/70 hover:text-primary hover:bg-primary/10"
+                    className="h-10 gap-3 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest text-primary/80 transition-all shadow-lg"
                     asChild
                   >
                     <Link href="/crm/analytics">
-                      <BarChart3 className="h-4 w-4" />
+                      <BarChart3 className="h-4 w-4 text-primary" />
                       <span className="hidden lg:inline">Analytics</span>
                     </Link>
                   </Button>
 
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     className={cn(
-                      "h-8 gap-2 rounded-xl text-xs font-semibold transition-all",
-                      showStats ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                      "h-10 gap-3 rounded-xl border-white/10 text-[10px] font-black uppercase tracking-widest transition-all shadow-lg",
+                      showStats ? "bg-primary text-primary-foreground border-primary shadow-primary/30" : "bg-white/5 text-muted-foreground hover:bg-white/10"
                     )}
                     onClick={() => setShowStats(!showStats)}
                   >
@@ -569,15 +582,16 @@ export default function CRMPage() {
               </div>
 
               <Button 
-                variant={showTriage ? "secondary" : "ghost"} 
+                variant="outline" 
                 size="sm" 
                 onClick={() => setShowTriage(!showTriage)}
-                className={cn("h-9 rounded-xl gap-2 relative", showTriage && "bg-primary/10 text-primary")}
+                className={cn("h-12 px-6 rounded-2xl gap-3 relative font-black uppercase tracking-widest text-[10px] border-white/10 shadow-lg transition-all", 
+                  showTriage ? "bg-primary/10 text-primary border-primary/20" : "bg-white/5 text-muted-foreground hover:bg-white/10")}
               >
-                <Inbox className="h-4 w-4" />
+                <Inbox className="h-5 w-5" />
                 <span className="hidden sm:inline">Triagem</span>
                 {deals.filter(d => !d.column && !d.is_closed).length > 0 && (
-                   <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                   <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-rose-500 shadow-lg shadow-rose-500/40 animate-pulse" />
                 )}
               </Button>
 
@@ -587,30 +601,34 @@ export default function CRMPage() {
             </div>
           </div>
 
+          {/* Filters & Actions */}
           {currentPipeline ? (
-            <div className="rounded-3xl border bg-card p-4 shadow-sm">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-1 items-center gap-2">
-                  <Input
-                    placeholder="Buscar por título..."
-                    value={titleSearch}
-                    onChange={(e) => setTitleSearch(e.target.value)}
-                    className="glass"
-                  />
+            <div className="rounded-[2.5rem] border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-2xl relative overflow-hidden group/filters">
+              <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover/filters:opacity-100 transition-opacity duration-700" />
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between relative z-10">
+                <div className="flex flex-1 items-center gap-3">
+                   <div className="relative flex-1">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Pesquisar oportunidades..."
+                        value={titleSearch}
+                        onChange={(e) => setTitleSearch(e.target.value)}
+                        className="h-12 pl-11 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 focus:ring-primary/20 transition-all shadow-inner font-medium"
+                      />
+                   </div>
                 </div>
 
                 <Button
                   type="button"
                   variant="outline"
-                  className="glass w-full sm:w-auto"
-                  aria-expanded={controlsOpen}
-                  aria-controls="crm-controls-panel"
+                  className={cn("h-12 rounded-2xl px-6 font-black uppercase tracking-widest text-[10px] border-white/10 shadow-lg transition-all", 
+                    controlsOpen ? "bg-primary text-primary-foreground border-primary shadow-primary/30" : "bg-white/5 text-muted-foreground hover:bg-white/10")}
                   onClick={() => setControlsOpen((current) => !current)}
                 >
                   {controlsOpen ? (
                     <>
                       <ChevronUp className="mr-2 h-4 w-4" />
-                      Minimizar
+                      Ocultar Painel
                     </>
                   ) : (
                     <>
@@ -619,7 +637,7 @@ export default function CRMPage() {
                     </>
                   )}
                   {activeFiltersCount > 0 ? (
-                    <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                    <span className="ml-3 inline-flex items-center rounded-full bg-primary/20 px-2.5 py-0.5 text-[9px] font-black text-primary shadow-sm border border-primary/20">
                       {activeFiltersCount}
                     </span>
                   ) : null}
@@ -627,156 +645,183 @@ export default function CRMPage() {
               </div>
 
               <div
-                className={`mt-4 grid transition-[grid-template-rows] duration-200 ${controlsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                className={`mt-6 grid transition-[grid-template-rows,margin-top] duration-500 ${controlsOpen ? "grid-rows-[1fr] mt-6" : "grid-rows-[0fr] mt-0"}`}
               >
                 <div className="overflow-hidden">
-                  <div id="crm-controls-panel" className="grid gap-6 xl:grid-cols-2">
-                    <section className="rounded-2xl border bg-background/60 p-4">
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Filtros</h3>
+                  <div id="crm-controls-panel" className="grid gap-8 xl:grid-cols-2 pt-4 border-t border-white/10">
+                    <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl relative overflow-hidden">
+                      <div className="mb-6 flex items-center justify-between gap-4">
+                        <div className="space-y-1">
+                           <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary">Refinar Resultados</h3>
+                           <p className="text-[10px] text-muted-foreground font-bold">Ajuste os parâmetros de visualização ITIL.</p>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={resetViewState}
-                          className="text-muted-foreground hover:text-primary"
+                          className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5"
                         >
-                          Limpar
+                          Resetar
                         </Button>
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Select value={stageFilter} onValueChange={setStageFilter}>
-                          <SelectTrigger className="w-full glass">
-                            <SelectValue placeholder="Coluna" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todas as colunas</SelectItem>
-                            {currentColumns.map((column) => (
-                              <SelectItem key={column.id} value={String(column.id)}>
-                                {column.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Estágio do Fluxo</label>
+                          <Select value={stageFilter} onValueChange={setStageFilter}>
+                            <SelectTrigger className="h-11 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 transition-all text-xs font-bold shadow-inner">
+                              <SelectValue placeholder="Coluna" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl">
+                              <SelectItem value="all" className="rounded-xl font-bold">Todas as colunas</SelectItem>
+                              {currentColumns.map((column) => (
+                                <SelectItem key={column.id} value={String(column.id)} className="rounded-xl font-bold">
+                                  {column.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                        <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as CRMSavedViewFilters["priorityFilter"])}>
-                          <SelectTrigger className="w-full glass">
-                            <SelectValue placeholder="Urgência" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todas Urgências</SelectItem>
-                            <SelectItem value="LOW">Baixa</SelectItem>
-                            <SelectItem value="MEDIUM">Média</SelectItem>
-                            <SelectItem value="HIGH">Alta</SelectItem>
-                            <SelectItem value="URGENT">Urgente</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Nível de Urgência</label>
+                          <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as CRMSavedViewFilters["priorityFilter"])}>
+                            <SelectTrigger className="h-11 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 transition-all text-xs font-bold shadow-inner">
+                              <SelectValue placeholder="Urgência" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl">
+                              <SelectItem value="all" className="rounded-xl font-bold">Todas Urgências</SelectItem>
+                              <SelectItem value="LOW" className="rounded-xl font-bold">Baixa</SelectItem>
+                              <SelectItem value="MEDIUM" className="rounded-xl font-bold">Média</SelectItem>
+                              <SelectItem value="HIGH" className="rounded-xl font-bold">Alta</SelectItem>
+                              <SelectItem value="URGENT" className="rounded-xl font-bold">Urgente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                        <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-                          <SelectTrigger className="w-full glass">
-                            <SelectValue placeholder="Responsável" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos responsáveis</SelectItem>
-                            {ownerOptions.map((user) => (
-                              <SelectItem key={user.id} value={String(user.id)}>
-                                {getUserDisplayName(user)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Proprietário</label>
+                          <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                            <SelectTrigger className="h-11 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 transition-all text-xs font-bold shadow-inner">
+                              <SelectValue placeholder="Responsável" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl">
+                              <SelectItem value="all" className="rounded-xl font-bold">Todos responsáveis</SelectItem>
+                              {ownerOptions.map((user) => (
+                                <SelectItem key={user.id} value={String(user.id)} className="rounded-xl font-bold">
+                                  {getUserDisplayName(user)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                        <Select value={dueFilter} onValueChange={(v) => setDueFilter(v as CRMSavedViewFilters["dueFilter"])}>
-                          <SelectTrigger className="w-full glass">
-                            <SelectValue placeholder="Vencimento" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos os prazos</SelectItem>
-                            <SelectItem value="overdue">Vencidos</SelectItem>
-                            <SelectItem value="today">Vence Hoje</SelectItem>
-                            <SelectItem value="this_week">Esta Semana</SelectItem>
-                            <SelectItem value="this_month">Este Mês</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Janela de Vencimento</label>
+                          <Select value={dueFilter} onValueChange={(v) => setDueFilter(v as CRMSavedViewFilters["dueFilter"])}>
+                            <SelectTrigger className="h-11 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 transition-all text-xs font-bold shadow-inner">
+                              <SelectValue placeholder="Vencimento" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl">
+                              <SelectItem value="all" className="rounded-xl font-bold">Todos os prazos</SelectItem>
+                              <SelectItem value="overdue" className="rounded-xl font-bold">Vencidos</SelectItem>
+                              <SelectItem value="today" className="rounded-xl font-bold">Vence Hoje</SelectItem>
+                              <SelectItem value="this_week" className="rounded-xl font-bold">Esta Semana</SelectItem>
+                              <SelectItem value="this_month" className="rounded-xl font-bold">Este Mês</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </section>
 
-                    <section className="rounded-2xl border bg-background/60 p-4">
-                      <div className="mb-3">
-                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Vistas salvas</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Salve combinações de aba, filtros, ordenação e colunas por pipeline.
+                    <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl relative overflow-hidden">
+                      <div className="mb-6">
+                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary">Persistência de Visão</h3>
+                        <p className="mt-1 text-[10px] text-muted-foreground font-bold">
+                          Armazene layouts, filtros e ordenações personalizadas.
                         </p>
                       </div>
 
-                      <div className="grid gap-3">
-                        <Select
-                          value={selectedSavedViewId ? selectedSavedViewId.toString() : "none"}
-                          onValueChange={(value) => {
-                            if (value === "none") {
-                              setSelectedSavedViewId(null)
-                              setSavedViewName("")
-                              resetViewState()
-                              return
-                            }
+                      <div className="grid gap-6">
+                        <div className="space-y-2">
+                           <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Vistas Disponíveis</label>
+                           <Select
+                             value={selectedSavedViewId ? selectedSavedViewId.toString() : "none"}
+                             onValueChange={(value) => {
+                               if (value === "none") {
+                                 setSelectedSavedViewId(null)
+                                 setSavedViewName("")
+                                 resetViewState()
+                                 return
+                               }
 
-                            const savedView = savedViews.find((item) => item.id.toString() === value)
-                            if (savedView) {
-                              applySavedView(savedView)
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="w-full glass">
-                            <SelectValue placeholder={isLoadingSavedViews ? "Carregando vistas..." : "Selecione uma vista"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Sem vista salva</SelectItem>
-                            {savedViews.map((savedView) => (
-                              <SelectItem key={savedView.id} value={savedView.id.toString()}>
-                                {savedView.is_default ? `${savedView.name} (padrão)` : savedView.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                               const savedView = savedViews.find((item) => item.id.toString() === value)
+                               if (savedView) {
+                                 applySavedView(savedView)
+                               }
+                             }}
+                           >
+                             <SelectTrigger className="h-11 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 transition-all text-xs font-bold shadow-inner">
+                               <SelectValue placeholder={isLoadingSavedViews ? "Carregando..." : "Selecionar vista..."} />
+                             </SelectTrigger>
+                             <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl">
+                               <SelectItem value="none" className="rounded-xl font-bold">Sem vista salva</SelectItem>
+                               {savedViews.map((savedView) => (
+                                 <SelectItem key={savedView.id} value={savedView.id.toString()} className="rounded-xl font-bold">
+                                   {savedView.is_default ? `${savedView.name} (padrão)` : savedView.name}
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                        </div>
 
-                        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                           <Input
-                             value={savedViewName}
-                             onChange={(event) => setSavedViewName(event.target.value)}
-                             placeholder="Nome da vista"
-                             className="w-full"
-                           />
+                        <div className="grid gap-3 sm:grid-cols-[1fr_auto] items-end">
+                           <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Novo Nome</label>
+                              <Input
+                                value={savedViewName}
+                                onChange={(event) => setSavedViewName(event.target.value)}
+                                placeholder="Ex: Leads Quentes"
+                                className="h-11 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 transition-all text-xs font-bold shadow-inner"
+                              />
+                           </div>
                            <Button
                              variant="outline"
                              onClick={() => createSavedView.mutate()}
                              disabled={!currentPipeline || !savedViewName.trim() || createSavedView.isPending}
-                             className="w-full sm:w-auto"
+                             className="h-11 px-6 rounded-xl font-black uppercase tracking-widest text-[10px] border-white/10 bg-primary/10 text-primary hover:bg-primary/20 shadow-lg transition-all"
                            >
-                             Salvar nova
+                             {createSavedView.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
                            </Button>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2 pt-2">
                            <Button
                              variant="outline"
+                             size="sm"
                              onClick={() => updateSavedView.mutate({})}
                              disabled={!selectedSavedViewId || !savedViewName.trim() || updateSavedView.isPending}
+                             className="h-9 rounded-lg px-4 text-[9px] font-black uppercase tracking-widest border-white/10 hover:bg-white/5 transition-all"
                            >
-                             Atualizar
+                             Atualizar Atual
                            </Button>
                            <Button
                              variant="outline"
+                             size="sm"
                              onClick={() => updateSavedView.mutate({ is_default: true })}
                              disabled={!selectedSavedViewId || updateSavedView.isPending}
+                             className="h-9 rounded-lg px-4 text-[9px] font-black uppercase tracking-widest border-white/10 hover:bg-white/5 transition-all"
                            >
-                             Definir padrão
+                             Definir como Padrão
                            </Button>
                            <Button
                              variant="ghost"
+                             size="sm"
                              onClick={() => deleteSavedView.mutate()}
                              disabled={!selectedSavedViewId || deleteSavedView.isPending}
+                             className="h-9 rounded-lg px-4 text-[9px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500/10 transition-all"
                            >
-                             Remover
+                             Excluir Vista
                            </Button>
                         </div>
                       </div>
@@ -786,8 +831,8 @@ export default function CRMPage() {
               </div>
             </div>
           ) : !isLoading && (
-            <div className="h-[200px] flex items-center justify-center border-2 border-dashed rounded-3xl opacity-50">
-              Nenhum pipeline configurado para este fluxo.
+            <div className="h-[200px] flex items-center justify-center border-2 border-dashed border-white/10 rounded-[2.5rem] opacity-50 bg-white/5 backdrop-blur-xl">
+              <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">Nenhum pipeline configurado para este fluxo.</p>
             </div>
           )}
 
@@ -829,8 +874,8 @@ export default function CRMPage() {
               {currentPipeline ? (
                 <KanbanBoard pipeline={currentPipeline} deals={filteredDeals} />
               ) : (
-                <div className="h-[400px] flex items-center justify-center border-2 border-dashed rounded-3xl opacity-50">
-                  Nenhum pipeline configurado.
+                <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-white/10 rounded-[2.5rem] opacity-50 bg-white/5 backdrop-blur-xl">
+                  <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">Nenhum pipeline configurado.</p>
                 </div>
               )}
             </TabsContent>
@@ -847,8 +892,8 @@ export default function CRMPage() {
                   onColumnVisibilityChange={handleTableVisibilityChange}
                 />
               ) : (
-                <div className="h-[320px] flex items-center justify-center border-2 border-dashed rounded-3xl opacity-50">
-                  Nenhum pipeline configurado.
+                <div className="h-[320px] flex items-center justify-center border-2 border-dashed border-white/10 rounded-[2.5rem] opacity-50 bg-white/5 backdrop-blur-xl">
+                  <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">Nenhum pipeline configurado.</p>
                 </div>
               )}
             </TabsContent>

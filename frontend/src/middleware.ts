@@ -2,29 +2,35 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 /**
- * Rotas que exigem autenticação (protegidas).
+ * Rotas que são explicitamente PÚBLICAS.
+ * Qualquer outra rota será tratada como protegida.
  */
-const PROTECTED_PREFIXES = [
-    '/dashboard',
-    '/admin',
-    '/artigos',
-    '/calendar',
-    '/cms',
-    '/crm',
-    '/finance',
-    '/insights',
-    '/itil-version-5',
-    '/licensing',
-    '/messenger',
-    '/notificacoes',
-    '/perfil',
-    '/settings',
+const PUBLIC_PATHS = [
+    '/',
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/accept-invite',
+    '/servicos',
+    '/404',
+    '/500',
+]
+
+const PUBLIC_PREFIXES = [
+    '/p/',      // Portal Público
+    '/api/',    // API Routes (handled by backend or specific logic)
 ]
 
 function isProtected(pathname: string): boolean {
-    return PROTECTED_PREFIXES.some(
-        (prefix) => pathname === prefix || pathname.startsWith(prefix + '/')
-    )
+    // Se for um caminho público exato
+    if (PUBLIC_PATHS.includes(pathname)) return false
+    
+    // Se começar com um prefixo público
+    if (PUBLIC_PREFIXES.some(prefix => pathname.startsWith(prefix))) return false
+    
+    // Por padrão, rotas são protegidas
+    return true
 }
 
 /**
@@ -42,6 +48,15 @@ export function middleware(request: NextRequest) {
     // LOG PARA DEBUG (visível no terminal do dev server)
     if (debug) {
         console.log(`[Middleware] ${request.method} ${pathname} | hasSession: ${hasSession}`)
+    }
+
+    // ── Redirecionar se já estiver logado e tentar acessar fluxos de auth ────────
+    const AUTH_FLOW_PATHS = ['/login', '/register', '/forgot-password', '/reset-password']
+    if (AUTH_FLOW_PATHS.includes(pathname) && hasSession) {
+        if (debug) {
+            console.log(`[Middleware] ALREADY LOGGED IN ${pathname} -> /dashboard`)
+        }
+        return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
     // ── Bloqueio de rotas protegidas sem sessão ──────────────────────────────

@@ -99,13 +99,20 @@ export function CRMPipelineOverview({ pipeline, deals, overview, isLoading = fal
           if (risk === "overdue") acc.overdue += 1
           if (risk === "risk") acc.atRisk += 1
           if (isDealDone(deal)) acc.done += 1
+          
+          if (deal.xla_score) {
+            acc.xlaSum += deal.xla_score
+            acc.xlaCount += 1
+          }
 
           return acc
         },
-        { total: 0, totalValue: 0, overdue: 0, atRisk: 0, done: 0, averageProgress: 0 }
+        { total: 0, totalValue: 0, overdue: 0, atRisk: 0, done: 0, averageProgress: 0, xlaSum: 0, xlaCount: 0 }
       )
 
       const averageProgress = summary.total > 0 ? Math.round(summary.averageProgress / summary.total) : 0
+      const averageXla = summary.xlaCount > 0 ? (summary.xlaSum / summary.xlaCount).toFixed(1) : "---"
+      const flowHealth = summary.overdue > (summary.total * 0.2) ? "C" : summary.overdue > 0 ? "B+" : "A+"
       const totalValue = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(summary.totalValue)
 
       return {
@@ -116,6 +123,8 @@ export function CRMPipelineOverview({ pipeline, deals, overview, isLoading = fal
           at_risk: summary.atRisk,
           done: summary.done,
           average_progress: averageProgress,
+          average_xla: averageXla,
+          flow_health: flowHealth,
         },
         columns: pipelineColumns.map((column) => {
           const stageDeals = pipelineDeals.filter((deal) => isDealInColumn(deal, column))
@@ -183,8 +192,10 @@ export function CRMPipelineOverview({ pipeline, deals, overview, isLoading = fal
           <div className="rounded-2xl border bg-background p-4 shadow-sm border-primary/10">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">XLA (Exp)</p>
             <div className="mt-2 flex items-center gap-2">
-               <span className="text-2xl font-black text-violet-700">9.2</span>
-               <span className="text-[18px]">😊</span>
+               <span className="text-2xl font-black text-violet-700">{isLoading ? "..." : resolvedOverview.summary.average_xla}</span>
+               <span className="text-[18px]">
+                 {Number(resolvedOverview.summary.average_xla) >= 8 ? "😊" : Number(resolvedOverview.summary.average_xla) >= 5 ? "😐" : "😟"}
+               </span>
             </div>
           </div>
           <div className="rounded-2xl border bg-background p-4 shadow-sm border-emerald-100">
@@ -195,8 +206,11 @@ export function CRMPipelineOverview({ pipeline, deals, overview, isLoading = fal
           </div>
           <div className="rounded-2xl border bg-background p-4 shadow-sm border-primary/10 overflow-hidden relative">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Flow Health</p>
-            <div className="mt-2 text-2xl font-black text-primary">A+</div>
-            <div className="absolute bottom-0 left-0 h-1 w-full bg-emerald-500" />
+            <div className="mt-2 text-2xl font-black text-primary">{isLoading ? "..." : resolvedOverview.summary.flow_health}</div>
+            <div className={cn(
+              "absolute bottom-0 left-0 h-1 w-full",
+              resolvedOverview.summary.flow_health === "A+" ? "bg-emerald-500" : "bg-amber-500"
+            )} />
           </div>
         </div>
       </div>

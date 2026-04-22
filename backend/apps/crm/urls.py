@@ -16,6 +16,7 @@ from .views import (
     PipelineViewSet,
     SLAPolicyViewSet,
     XLAFeedbackViewSet,
+    CSIEntryViewSet,
 )
 
 router = DefaultRouter()
@@ -27,6 +28,7 @@ router.register(r"columns", ColumnViewSet, basename="crm-column")
 router.register(r"deals", DealViewSet, basename="crm-deal")
 router.register(r"sla-policies", SLAPolicyViewSet, basename="crm-sla-policy")
 router.register(r"xla-feedbacks", XLAFeedbackViewSet, basename="crm-xla-feedback")
+router.register(r"csi-register", CSIEntryViewSet, basename="crm-csi-entry")
 router.register(r"dpsm-dashboard", DPSMDashboardViewSet, basename="crm-dpsm-dashboard")
 router.register(r"evolution-config", EvolutionConfigViewSet, basename="crm-evolution-config")
 

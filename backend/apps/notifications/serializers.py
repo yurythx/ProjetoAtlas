@@ -9,6 +9,9 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "notification_type",
+            "priority",
+            "module",
+            "icon",
             "title",
             "message",
             "link",

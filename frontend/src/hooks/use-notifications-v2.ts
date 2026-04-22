@@ -20,6 +20,9 @@ const WS_BASE_DELAY_MS = 3_000
 export interface Notification {
     id: string
     notification_type: 'message' | 'system' | 'approval'
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    module?: string | null
+    icon?: string | null
     title: string
     message: string
     link?: string

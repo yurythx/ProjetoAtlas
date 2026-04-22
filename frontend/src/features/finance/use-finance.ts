@@ -20,6 +20,8 @@ export interface Transaction {
   competence_date: string
   linked_event?: string
   created_by?: number
+  is_recurring?: boolean
+  recurrence_rule?: string | null
 }
 
 export interface FinanceCategory {

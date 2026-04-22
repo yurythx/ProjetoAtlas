@@ -82,6 +82,15 @@ class Transaction(BaseTenantModel):
         Event, on_delete=models.SET_NULL, null=True, blank=True, related_name="transactions"
     )
 
+    # Recorrência
+    is_recurring = models.BooleanField(default=False)
+    recurrence_rule = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        help_text="Regra de recorrência (ex: FREQ=MONTHLY;INTERVAL=1)"
+    )
+
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="created_transactions"
     )

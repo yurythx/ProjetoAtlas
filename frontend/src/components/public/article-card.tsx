@@ -38,42 +38,42 @@ export function PublicArticleCard({ article, showVisibilityBadge = false, useDas
         <Link
             href={href}
             aria-label={`Ver artigo: ${article.title}`}
-            className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
+            className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-3xl"
         >
-            <Card className="h-full overflow-hidden hover:shadow-xl transition-all border border-primary/10 bg-background/95 backdrop-blur rounded-2xl relative">
-                <div className="aspect-video relative overflow-hidden bg-muted rounded-t-2xl">
+            <Card className="h-full overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 border border-white/10 bg-background/20 backdrop-blur-xl rounded-[2rem] relative group/card">
+                <div className="aspect-video relative overflow-hidden bg-muted rounded-t-[2rem]">
                     {imageUrl ? (
                         <Image
                             src={fixImageUrl(imageUrl) || ""}
                             alt={article.title || "Imagem do artigo"}
                             fill
-                            className="object-cover hover:scale-105 transition-transform duration-300"
+                            className="object-cover group-hover/card:scale-105 transition-transform duration-700"
                             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             priority={priority}
                         />
                     ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/50">
-                            Sem Imagem
+                        <div className="flex items-center justify-center h-full text-muted-foreground/30 bg-muted/20">
+                            <BookOpen className="h-10 w-10 opacity-20" />
                         </div>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
                 </div>
                 {showVisibilityBadge && article.is_public === false && (
-                    <div className="absolute top-3 left-3 z-10">
-                        <Badge variant="outline" className="bg-background/80 backdrop-blur text-[10px] font-bold">Privado</Badge>
+                    <div className="absolute top-4 left-4 z-10">
+                        <Badge variant="outline" className="bg-background/40 backdrop-blur-md border-white/10 text-[10px] font-black uppercase tracking-widest text-white shadow-lg">Privado</Badge>
                     </div>
                 )}
                 {showStatusBadge && article.status && (
-                    <div className="absolute top-3 right-3 z-10">
+                    <div className="absolute top-4 right-4 z-10">
                         <Badge
                             variant="secondary"
                             className={
-                                `text-[10px] font-bold ${
-                                  article.status === 'published' ? 'bg-emerald-600/20 text-emerald-700 dark:text-emerald-300' :
-                                  article.status === 'scheduled' ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300' :
-                                  article.status === 'pending' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' :
-                                  article.status === 'draft' ? 'bg-slate-500/20 text-slate-700 dark:text-slate-300' :
-                                  'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                                `text-[10px] font-black uppercase tracking-widest px-3 py-1 shadow-lg ${
+                                  article.status === 'published' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' :
+                                  article.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400 border-blue-500/20' :
+                                  article.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/20' :
+                                  article.status === 'draft' ? 'bg-slate-500/20 text-slate-400 border-slate-500/20' :
+                                  'bg-rose-500/20 text-rose-400 border-rose-500/20'
                                 }`
                             }
                         >
@@ -84,35 +84,35 @@ export function PublicArticleCard({ article, showVisibilityBadge = false, useDas
                         </Badge>
                     </div>
                 )}
-                <CardHeader className="p-5 space-y-2">
+                <CardHeader className="p-6 space-y-3">
                     {article.category_name && (
-                        <Badge variant="secondary" className="w-fit rounded-full px-3 py-1 text-[10px]">
+                        <Badge variant="secondary" className="w-fit rounded-full px-4 py-1 text-[10px] font-bold bg-primary/5 text-primary border-primary/10">
                             {article.category_name}
                         </Badge>
                     )}
-                    <h3 className="text-xl font-bold leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                    <h3 className="text-2xl font-black tracking-tighter leading-[1.1] group-hover/card:text-primary transition-colors line-clamp-2">
                         {article.title}
                     </h3>
                 </CardHeader>
-                <CardContent className="p-5 pt-0">
-                    <p className="text-muted-foreground line-clamp-3 text-sm">
+                <CardContent className="p-6 pt-0">
+                    <p className="text-muted-foreground line-clamp-3 text-sm leading-relaxed font-medium">
                         {article.excerpt || "Sem resumo disponível."}
                     </p>
                 </CardContent>
-                <CardFooter className="p-5 pt-0 flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5">
+                <CardFooter className="p-6 pt-0 flex items-center justify-between text-[11px] font-bold text-muted-foreground border-t border-white/5 mt-auto">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 opacity-70">
                             <CalendarDays className="h-3 w-3" aria-hidden="true" />
                             {dateLabel || ""}
                         </div>
-                        <div className="flex items-center gap-1.5" title="Comentários">
+                        <div className="flex items-center gap-1.5 opacity-70" title="Comentários">
                             <MessageSquare className="h-3 w-3" aria-hidden="true" />
                             {Number(article.comment_count ?? 0)}
                         </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-primary font-semibold">
-                        Ler mais
-                        <span>→</span>
+                    <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-[10px] group/btn">
+                        Acessar
+                        <span className="group-hover/btn:translate-x-1 transition-transform">→</span>
                     </div>
                 </CardFooter>
             </Card>

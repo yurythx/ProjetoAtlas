@@ -15,8 +15,23 @@ class Notification(BaseTenantModel):
         (TYPE_APPROVAL, "Aprovação"),
     ]
 
+    PRIORITY_LOW = "low"
+    PRIORITY_MEDIUM = "medium"
+    PRIORITY_HIGH = "high"
+    PRIORITY_URGENT = "urgent"
+
+    PRIORITY_CHOICES = [
+        (PRIORITY_LOW, "Baixa"),
+        (PRIORITY_MEDIUM, "Média"),
+        (PRIORITY_HIGH, "Alta"),
+        (PRIORITY_URGENT, "Urgente"),
+    ]
+
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
     notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_SYSTEM)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM)
+    module = models.CharField(max_length=50, blank=True, null=True, help_text="Module that generated the notification (e.g., finance, crm)")
+    icon = models.CharField(max_length=50, blank=True, null=True, help_text="Lucide icon name")
     title = models.CharField(max_length=255)
     message = models.TextField()
     link = models.CharField(max_length=500, blank=True, null=True)

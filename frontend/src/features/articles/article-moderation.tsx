@@ -312,60 +312,43 @@ export function ArticleModeration() {
   }
 
   return (
-    <section className="space-y-6" aria-label="Moderação de Artigos">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Moderação</h2>
-          <p className="text-muted-foreground">
-            Aprove ou rejeite artigos enviados para revisão.
+    <section className="space-y-8 animate-in fade-in duration-700" aria-label="Moderação de Artigos">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-[2.5rem] shadow-xl">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-black tracking-tighter">Moderação Editorial</h2>
+          <p className="text-muted-foreground font-medium">
+            Fluxo de aprovação ITIL para controle de qualidade de conteúdo.
           </p>
         </div>
-        <div className="w-full md:w-[640px] grid grid-cols-1 md:grid-cols-6 gap-3">
-          <div className="md:col-span-3 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
+        <div className="w-full md:w-auto flex flex-col md:flex-row gap-3">
+          <div className="relative group min-w-[280px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" aria-hidden="true" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar por título, resumo ou conteúdo..."
-              className="pl-11 h-11 rounded-xl bg-card border-muted hover:border-primary/30 shadow-sm"
+              placeholder="Pesquisar na fila..."
+              className="pl-11 h-12 rounded-xl bg-white/5 border-white/10 hover:border-primary/30 transition-all shadow-inner"
             />
           </div>
-          <div className="md:col-span-1">
+          <div className="flex gap-2">
             <Select value={status} onValueChange={(v) => setStatus(v as "pending" | "rejected" | "all")}>
-              <SelectTrigger className="h-11 rounded-xl bg-card border-muted hover:border-primary/30 shadow-sm">
+              <SelectTrigger className="h-12 w-32 rounded-xl bg-white/5 border-white/10 hover:border-primary/30 shadow-inner">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border shadow-xl p-1">
-                <SelectItem value="pending" className="rounded-lg cursor-pointer">Pendente</SelectItem>
-                <SelectItem value="rejected" className="rounded-lg cursor-pointer">Rejeitado</SelectItem>
-                <SelectItem value="all" className="rounded-lg cursor-pointer">Todos</SelectItem>
+              <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl p-1">
+                <SelectItem value="pending" className="rounded-xl cursor-pointer">Pendente</SelectItem>
+                <SelectItem value="rejected" className="rounded-xl cursor-pointer">Rejeitado</SelectItem>
+                <SelectItem value="all" className="rounded-xl cursor-pointer">Todos</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="md:col-span-1">
             <Select value={visibility} onValueChange={(v) => setVisibility(v as "all" | "public" | "private")}>
-              <SelectTrigger className="h-11 rounded-xl bg-card border-muted hover:border-primary/30 shadow-sm">
-                <SelectValue placeholder="Visibilidade" />
+              <SelectTrigger className="h-12 w-32 rounded-xl bg-white/5 border-white/10 hover:border-primary/30 shadow-inner">
+                <SelectValue placeholder="Visão" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border shadow-xl p-1">
-                <SelectItem value="all" className="rounded-lg cursor-pointer">Todos</SelectItem>
-                <SelectItem value="public" className="rounded-lg cursor-pointer">Público</SelectItem>
-                <SelectItem value="private" className="rounded-lg cursor-pointer">Privado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-1">
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className="h-11 rounded-xl bg-card border-muted hover:border-primary/30 shadow-sm">
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border shadow-xl p-1">
-                <SelectItem value="all" className="rounded-lg cursor-pointer">Todas</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)} className="rounded-lg cursor-pointer">
-                    {c.name}
-                  </SelectItem>
-                ))}
+              <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl shadow-2xl p-1">
+                <SelectItem value="all" className="rounded-xl cursor-pointer">Todos</SelectItem>
+                <SelectItem value="public" className="rounded-xl cursor-pointer">Público</SelectItem>
+                <SelectItem value="private" className="rounded-xl cursor-pointer">Privado</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -395,113 +378,101 @@ export function ArticleModeration() {
 
       {!pendingQuery.isLoading && !pendingQuery.isError && items.length > 0 && (
         <>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border bg-card/40 backdrop-blur p-4 shadow-sm">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-2xl relative overflow-hidden group/bulk">
+             <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover/bulk:opacity-100 transition-opacity duration-500" />
+            <div className="flex items-center gap-4 relative z-10">
               <input
                 type="checkbox"
-                className="h-4 w-4"
+                className="h-5 w-5 rounded-md border-white/20 bg-white/5 cursor-pointer accent-primary"
                 checked={items.length > 0 && items.every((a) => selectedIds.has(a.id))}
                 onChange={toggleSelectAll}
                 aria-label="Selecionar todos"
               />
-              <div className="text-sm text-muted-foreground">
-                {selectedCount > 0 ? `${selectedCount} selecionado(s)` : `${items.length} resultado(s)`}
+              <div className="text-sm font-bold tracking-tight">
+                {selectedCount > 0 ? `${selectedCount} item(ns) selecionado(s)` : `${items.length} resultado(s)`}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 relative z-10">
               <Button
                 type="button"
-                className="gap-2"
+                className="rounded-xl h-11 px-6 font-black uppercase tracking-widest text-[11px] shadow-lg shadow-primary/20"
                 disabled={selectedCount === 0 || isMutating}
                 onClick={() => {
                   const slugs = items.filter((a) => selectedIds.has(a.id)).map((a) => a.slug)
                   bulkApproveMutation.mutate(slugs)
                 }}
               >
-                {bulkApproveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
-                Aprovar selecionados
+                {bulkApproveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4 mr-2" aria-hidden="true" />}
+                Aprovar Lote
               </Button>
               <Button
                 type="button"
                 variant="destructive"
-                className="gap-2"
+                className="rounded-xl h-11 px-6 font-black uppercase tracking-widest text-[11px] shadow-lg shadow-rose-500/20"
                 disabled={selectedCount === 0 || isMutating}
                 onClick={() => openReject(items.filter((a) => selectedIds.has(a.id)))}
               >
-                <X className="h-4 w-4" aria-hidden="true" />
-                Rejeitar selecionados
+                <X className="h-4 w-4 mr-2" aria-hidden="true" />
+                Rejeitar Lote
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" role="list" aria-label="Artigos em moderação">
-            {items.map((a) => (
-              <div key={a.id} className="rounded-2xl border bg-card/40 backdrop-blur p-5 shadow-sm" role="listitem">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="pt-1">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" role="list" aria-label="Artigos             {items.map((a) => (
+              <div key={a.id} className="group/item relative rounded-[2rem] border border-white/5 bg-white/5 hover:bg-white/10 transition-all duration-500 p-6 shadow-xl" role="listitem">
+                <div className="flex items-start gap-5">
+                  <div className="pt-2">
                     <input
                       type="checkbox"
-                      className="h-4 w-4"
+                      className="h-5 w-5 rounded-md border-white/20 bg-white/5 cursor-pointer accent-primary"
                       checked={selectedIds.has(a.id)}
                       onChange={() => toggleSelect(a.id)}
                       aria-label={`Selecionar ${a.title}`}
                     />
                   </div>
-                  <div className="space-y-2 min-w-0">
+                  <div className="space-y-3 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="secondary" className="rounded-full px-3 py-1 text-[10px]">
+                      <Badge variant="secondary" className={cn("rounded-full px-4 py-1 text-[9px] font-black uppercase tracking-widest border border-white/10 shadow-sm", 
+                        (a.status || status) === "pending" ? "bg-amber-500/20 text-amber-500" : "bg-rose-500/20 text-rose-500")}>
                         {(a.status || status) === "rejected" ? "Rejeitado" : (a.status || status) === "pending" ? "Pendente" : "Status"}
                       </Badge>
                       {a.category_name && (
-                        <Badge variant="outline" className="rounded-full px-3 py-1 text-[10px]">
+                        <Badge variant="outline" className="rounded-full px-4 py-1 text-[9px] font-black uppercase tracking-widest border-white/10 bg-white/5">
                           {a.category_name}
                         </Badge>
                       )}
-                      {a.is_public === false && (
-                        <Badge variant="outline" className="rounded-full px-3 py-1 text-[10px]">
-                          Privado
-                        </Badge>
-                      )}
-                      {a.is_public === true && (
-                        <Badge variant="outline" className="rounded-full px-3 py-1 text-[10px]">
-                          Público
-                        </Badge>
-                      )}
                     </div>
-                    <div className="font-bold text-lg leading-tight truncate">{a.title}</div>
-                    <div className="text-sm text-muted-foreground line-clamp-2">
-                      {a.excerpt || "Sem resumo."}
+                    <div className="font-black text-xl tracking-tighter leading-tight group-hover/item:text-primary transition-colors">{a.title}</div>
+                    <div className="text-sm text-muted-foreground font-medium line-clamp-2 leading-relaxed">
+                      {a.excerpt || "Sem resumo editorial disponível."}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {a.author_name ? `Autor: ${a.author_name}` : "Autor não informado"}
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                      Autor: <span className="text-foreground/70">{a.author_name || "Desconhecido"}</span>
                     </div>
                   </div>
-                  <Link
-                    href={`/artigos/preview/${encodeURIComponent(a.slug)}`}
-                    className="text-primary hover:underline text-sm shrink-0"
-                  >
-                    Ver
-                  </Link>
+                  <Button variant="ghost" size="sm" asChild className="rounded-xl h-10 px-4 font-bold text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10">
+                    <Link href={`/artigos/preview/${encodeURIComponent(a.slug)}`}>Ver</Link>
+                  </Button>
                 </div>
 
-                <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                <div className="mt-6 flex gap-3">
                   <Button
                     type="button"
-                    className="gap-2"
+                    className="flex-1 rounded-xl h-11 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/10"
                     disabled={isMutating}
                     onClick={() => approveMutation.mutate(a.slug)}
                   >
-                    {approveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
+                    {approveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4 mr-2" aria-hidden="true" />}
                     Aprovar
                   </Button>
                   <Button
                     type="button"
                     variant="destructive"
-                    className="gap-2"
+                    className="flex-1 rounded-xl h-11 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-rose-500/10"
                     disabled={isMutating}
                     onClick={() => openReject([a])}
                   >
-                    <X className="h-4 w-4" aria-hidden="true" /> Rejeitar
+                    <X className="h-4 w-4 mr-2" aria-hidden="true" /> Rejeitar
                   </Button>
                 </div>
               </div>

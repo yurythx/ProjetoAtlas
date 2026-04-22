@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, Calendar, Minus, MoreHorizontal, Plus, User } from "lucide-react"
+import { AlertTriangle, Calendar, Clock, Minus, MoreHorizontal, Plus, User } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { useEffect, useMemo, useState } from "react"
@@ -612,9 +612,35 @@ function DealCard({
 
             <div className="flex items-center justify-between pt-1">
               {deal.closing_date && (
-                <div className={cn("flex items-center gap-2 text-[11px] font-bold py-1 px-2 rounded-lg", deadlineMeta.pillClassName)}>
-                   <Calendar className="h-3 w-3" />
-                   {format(new Date(deal.closing_date), "dd 'de' MMM", { locale: ptBR })}
+                <div className="flex flex-col gap-1">
+                  <div className={cn("flex items-center gap-2 text-[11px] font-bold py-1 px-2 rounded-lg w-fit", deadlineMeta.pillClassName)}>
+                    <Calendar className="h-3 w-3" />
+                    {format(new Date(deal.closing_date), "dd 'de' MMM", { locale: ptBR })}
+                  </div>
+                  
+                  {/* SLA Countdown Timer */}
+                  {!isCompleted && (
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border",
+                      deadlineMeta.risk === "overdue" ? "bg-rose-500 text-white border-rose-600 animate-pulse" : 
+                      deadlineMeta.risk === "warning" ? "bg-amber-100 text-amber-700 border-amber-200" :
+                      "bg-emerald-50 text-emerald-700 border-emerald-100"
+                    )}>
+                       <Clock className="h-3 w-3" />
+                       <span>
+                         {deadlineMeta.risk === "overdue" ? "BREACHED" : 
+                          (() => {
+                            const diff = new Date(deal.closing_date).getTime() - new Date().getTime()
+                            const hours = Math.floor(diff / (1000 * 60 * 60))
+                            const days = Math.floor(hours / 24)
+                            if (days > 0) return `${days}d restantes`
+                            if (hours > 0) return `${hours}h restantes`
+                            return `${Math.floor(diff / (1000 * 60))}m restantes`
+                          })()
+                         }
+                       </span>
+                    </div>
+                  )}
                 </div>
               )}
               

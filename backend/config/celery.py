@@ -18,9 +18,9 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    'publish-scheduled-articles-every-5-minutes': {
-        'task': 'articles.publish_scheduled_articles',
-        'schedule': crontab(minute='*/5'),
+    'capture-crm-metrics-daily': {
+        'task': 'apps.crm.tasks.capture_crm_metrics_snapshot',
+        'schedule': crontab(hour=0, minute=0),
     },
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronDown, ChevronUp, Plus, Settings2, Trash2 } from "lucide-react"
+import { ChevronDown, ChevronUp, Plus, Settings2, Trash2, Rocket } from "lucide-react"
 import { toast } from "sonner"
 
 import { api } from "@/lib/axios"
@@ -310,6 +310,20 @@ export function PipelineManagerModal({
     },
   })
 
+  const applyITILTemplate = useMutation({
+    mutationFn: async (pipelineId: number) => {
+      const response = await api.post(`/api/crm/pipelines/${pipelineId}/apply_itil_template/`)
+      return response.data
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["crm-pipelines"] })
+      toast.success("Template ITIL v5 aplicado com sucesso!")
+    },
+    onError: (err: unknown) => {
+      toast.error(getErrorDetail(err) || "Não foi possível aplicar o template.")
+    },
+  })
+
   const deleteColumn = useMutation({
     mutationFn: async (columnId: number) => {
       await api.delete(`/api/crm/columns/${columnId}/`)
@@ -541,7 +555,7 @@ export function PipelineManagerModal({
                       )}
                     </div>
                   ) : null}
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       className="flex-1"
                       disabled={!selectedPipeline || editPipelineName.trim().length < 2 || updatePipeline.isPending}
@@ -560,6 +574,19 @@ export function PipelineManagerModal({
                       }}
                     >
                       Salvar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="glass border-primary/20 text-primary font-bold px-3"
+                      title="Aplicar Template ITIL v5"
+                      disabled={!selectedPipeline || applyITILTemplate.isPending}
+                      onClick={() => {
+                        if (!selectedPipeline) return
+                        applyITILTemplate.mutate(selectedPipeline.id)
+                      }}
+                    >
+                      <Rocket className="h-4 w-4 mr-2" />
+                      ITIL v5
                     </Button>
                     <Button
                       variant="destructive"

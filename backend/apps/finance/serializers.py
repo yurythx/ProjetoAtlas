@@ -74,7 +74,7 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = "__all__"
-        read_only_fields = ["id", "company", "created_by", "created_at", "updated_at"]
+        read_only_fields = ["id", "company", "created_by", "created_at", "updated_at", "linked_event"]
 
     def validate_competence_date(self, value):
         request = self.context.get("request")

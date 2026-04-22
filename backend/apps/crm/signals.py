@@ -145,7 +145,7 @@ def sync_deal_with_calendar(sender, instance, created, **kwargs):
             notification_type=Notification.TYPE_SYSTEM,
             metadata={"deal_uuid": str(instance.uuid)},
         )
-    elif "stage" in (kwargs.get("update_fields") or []):
+    elif set(["stage", "column", "column_id"]) & set(kwargs.get("update_fields") or []):
         current_column = getattr(instance.stage, "column", None) or instance.column
         column_name = current_column.title if current_column else instance.stage.name
         DealActivity.objects.create(
@@ -174,12 +174,18 @@ def delete_calendar_event(sender, instance, **kwargs):
         Event.all_objects.filter(id=instance.linked_event_id).delete()
 
 
-def trigger_xla_survey(sender, instance, **kwargs):
+def trigger_xla_survey(sender, instance, created, **kwargs):
     """Gatilha pesquisa XLA via WhatsApp quando um Deal é fechado."""
-    update_fields = kwargs.get("update_fields") or []
+    if created:
+        return
+    
+    update_fields = kwargs.get("update_fields")
+    # Se update_fields foi informado e não inclui is_closed, skip
+    if update_fields is not None and "is_closed" not in update_fields:
+        return
     
     # Verifica se o card foi marcado como fechado agora
-    if "is_closed" in update_fields and instance.is_closed:
+    if instance.is_closed:
         from .models import EvolutionConfig
         from .integrations import EvolutionClient
         
@@ -208,14 +214,22 @@ def trigger_xla_survey(sender, instance, **kwargs):
 def check_wip_and_sla_risks(sender, instance, created, **kwargs):
     """
     Analisa riscos de governança em tempo real (WIP e SLA) e notifica via Push.
+    Só executa quando campos relevantes (column, closing_date, is_closed) mudam.
     """
     from .models import Deal, Column
+    
+    update_fields = kwargs.get("update_fields")
+    
+    # Se update_fields foi especificado, verificar se campos relevantes mudaram
+    relevant_fields = {"column", "closing_date", "is_closed", "column_id"}
+    if update_fields is not None and not (relevant_fields & set(update_fields)):
+        return
     
     # 1. Verificação de Limite de WIP
     if instance.column_id:
         column = instance.column
-        if column.wip_limit:
-            current_cards_count = Deal.objects.filter(column=column, is_closed=False).count()
+        if column and column.wip_limit:
+            current_cards_count = Deal.objects.filter(column=column, is_closed=False, is_deleted=False).count()
             
             if current_cards_count >= column.wip_limit:
                 # Notificar o dono do card e o técnico responsável
@@ -267,3 +281,64 @@ def check_wip_and_sla_risks(sender, instance, created, **kwargs):
                     metadata={"risk_level": "high"}
                 )
                 notify_user_push(user, "🚨 Risco de SLA", msg, f"/crm?dealId={instance.id}")
+
+def create_rfc_from_problem(sender, instance, created, **kwargs):
+    """
+    ITIL Version 5: Ao definir uma Causa Raiz em um Problema, 
+    gera automaticamente uma Requisição de Mudança (RFC) como rascunho.
+    """
+    if created:
+        return
+        
+    update_fields = kwargs.get("update_fields")
+    # Se root_cause não está no update_fields, ignoramos
+    if update_fields is not None and "root_cause" not in update_fields:
+        return
+        
+    if instance.record_type == "problem" and instance.root_cause:
+        from .models import Deal
+        
+        # Evita criar múltiplas RFCs para o mesmo problema
+        if instance.ai_metadata.get("linked_rfc_id"):
+            return
+            
+        # Cria a Mudança (Change)
+        rfc = Deal.objects.create(
+            company=instance.company,
+            owner=instance.owner,
+            contact=instance.contact,
+            stage=instance.stage,
+            column=instance.column,
+            title=f"RFC: Resolução de {instance.title}",
+            record_type="change",
+            change_justification=f"Derivado do Problema: {instance.title}\nCausa Raiz: {instance.root_cause}",
+            description=f"Mudança estrutural requerida para sanar permanentemente o problema '{instance.title}'.",
+            priority=instance.priority,
+        )
+        
+        # Vincula o ID da RFC ao problema para evitar duplicidade
+        # Usamos uma transação ou save direto aqui. Como estamos num signal post_save de Deal,
+        # precisamos ter cuidado com recursão infinita. O update_fields nos salva.
+        instance.ai_metadata["linked_rfc_id"] = rfc.id
+        instance.__class__.objects.filter(id=instance.id).update(ai_metadata=instance.ai_metadata)
+        
+        # Notifica o dono
+        from apps.notifications.models import Notification
+        Notification.objects.create(
+            recipient=instance.owner,
+            company=instance.company,
+            title="🛠️ RFC Gerada Automaticamente",
+            message=f"Uma Requisição de Mudança foi gerada para tratar a causa raiz do problema '{instance.title}'.",
+            notification_type=Notification.TYPE_SYSTEM,
+            metadata={"deal_uuid": str(rfc.uuid)},
+        )
+
+def trigger_ai_analysis(sender, instance, created, **kwargs):
+    """
+    ITIL Version 5: Dispara a análise de IA em background para atualizar 
+    o score de risco e metadados de governança.
+    """
+    from .tasks import analyze_deal_ai_metadata
+    
+    # Executa a tarefa de forma assíncrona (Celery)
+    transaction.on_commit(lambda: analyze_deal_ai_metadata.delay(instance.id))

@@ -297,6 +297,13 @@ class Deal(BaseTenantModel):
     affected_cis = models.ManyToManyField("cmdb.CI", blank=True, related_name="deals")
     
     # ITIL Version 5 Change Management Fields
+    CHANGE_TYPE_CHOICES = [
+        ("standard", "Padrão (Baixo Risco)"),
+        ("normal", "Normal (Requer CAB)"),
+        ("emergency", "Emergencial (Urgente)"),
+    ]
+    change_type = models.CharField(max_length=20, choices=CHANGE_TYPE_CHOICES, default="normal")
+
     RISK_LEVEL_CHOICES = [
         ("low", "Baixo"),
         ("medium", "Médio"),
@@ -305,12 +312,16 @@ class Deal(BaseTenantModel):
     ]
     risk_level = models.CharField(max_length=20, choices=RISK_LEVEL_CHOICES, blank=True, null=True)
     change_justification = models.TextField(blank=True, null=True)
+    change_impact = models.TextField(blank=True, null=True)
     implementation_plan = models.TextField(blank=True, null=True)
     backout_plan = models.TextField(blank=True, null=True)
     test_plan = models.TextField(blank=True, null=True)
+    cab_approval = models.BooleanField(default=False)
+    cab_date = models.DateTimeField(blank=True, null=True)
     
     # ITIL Version 5 Problem Management Fields
     root_cause = models.TextField(blank=True, null=True)
+    workaround = models.TextField(blank=True, null=True)
     resolution_steps = models.TextField(blank=True, null=True)
     is_known_error = models.BooleanField(default=False)
     
@@ -563,3 +574,74 @@ class Swarm(BaseTenantModel):
 
     def __str__(self):
         return f"Swarm: {self.deal.title} ({'Ativo' if self.is_active else 'Encerrado'})"
+
+class CSIEntry(BaseTenantModel):
+    """
+    Continual Service Improvement (CSI) Register.
+    ITIL Version 5 practice for logging and tracking value stream improvements.
+    """
+    STATUS_CHOICES = [
+        ('identified', 'Identificado'),
+        ('evaluating', 'Em Avaliação'),
+        ('planned', 'Planejado'),
+        ('in_progress', 'Em Execução'),
+        ('completed', 'Concluído'),
+        ('rejected', 'Rejeitado'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', 'Baixa'),
+        ('medium', 'Média'),
+        ('high', 'Alta'),
+        ('critical', 'Crítica'),
+    ]
+
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='identified')
+    
+    # Context
+    deal = models.ForeignKey(Deal, on_delete=models.SET_NULL, null=True, blank=True, related_name="csi_entries")
+    pipeline = models.ForeignKey("Pipeline", on_delete=models.SET_NULL, null=True, blank=True, related_name="csi_entries")
+    
+    # Solution
+    proposed_solution = models.TextField(blank=True, null=True)
+    expected_outcome = models.TextField(blank=True, null=True)
+    
+    # Ownership
+    requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="requested_csi")
+    responsible = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_csi")
+
+    class Meta:
+        verbose_name = "CSI Entry"
+        verbose_name_plural = "CSI Register"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"CSI: {self.title} ({self.get_status_display()})"
+
+
+class MetricSnapshot(BaseTenantModel):
+    """Daily snapshot of CRM KPIs for historical trend analysis (ITIL v5)."""
+    date = models.DateField(auto_now_add=True)
+    pipeline = models.ForeignKey("Pipeline", on_delete=models.CASCADE, related_name="snapshots")
+    
+    # Core KPIs
+    avg_lead_time_days = models.FloatField(default=0.0)
+    throughput_weekly = models.IntegerField(default=0)
+    sla_compliance_rate = models.FloatField(default=0.0)
+    avg_xla_score = models.FloatField(default=0.0)
+    
+    # Volume metrics
+    active_deals_count = models.IntegerField(default=0)
+    bottleneck_count = models.IntegerField(default=0)
+    
+    class Meta:
+        verbose_name = "Metric Snapshot"
+        verbose_name_plural = "Metric History"
+        unique_together = ["date", "pipeline", "company"]
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"Snapshot {self.date} - {self.pipeline.name}"

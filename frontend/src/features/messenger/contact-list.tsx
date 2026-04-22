@@ -1,7 +1,9 @@
+"use client"
+
 import { useState, useMemo } from "react"
 import { Contact, User } from "@/types"
 import { Conversation } from "@/types/messenger"
-import { Search, Plus, Loader2, Pin, BellOff, Users, Trash2, RotateCcw, Archive } from "lucide-react"
+import { Search, Plus, Loader2, Pin, BellOff, Users, Trash2, RotateCcw, Archive, MessageCircle, MoreHorizontal, Sparkles } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -32,6 +34,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 interface ContactListProps {
   onSelectContact: (contact: Contact, conversationId: number) => void
@@ -148,7 +152,6 @@ export function ContactList({ onSelectContact, selectedContactId, currentUser }:
     [contactsRaw],
   )
 
-  // Build a lookup map: username -> Contact, for O(1) resolution
   const contactByUsername = useMemo(() => {
     const map = new Map<string, Contact>()
     for (const c of contactList) map.set(c.username, c)
@@ -245,12 +248,10 @@ export function ContactList({ onSelectContact, selectedContactId, currentUser }:
     return [...filtered].sort((a, b) => {
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
       if (b.unreadCount !== a.unreadCount) return b.unreadCount - a.unreadCount
-      // Sort by most recent message
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     })
   }, [filtered])
 
-  // ── Mutations ─────────────────────────────────────────────────────────────
   const createGroupMutation = useMutation({
     mutationFn: async () => {
       if (!groupName.trim()) throw new Error("Nome do grupo é obrigatório")
@@ -429,21 +430,20 @@ export function ContactList({ onSelectContact, selectedContactId, currentUser }:
     })
   }
 
-  // ── Loading skeleton ───────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="w-full h-full border-r border-border/50 bg-muted/10 flex flex-col" role="status">
-        <div className="p-4 border-b border-border/50 space-y-4">
-          <Skeleton className="h-8 w-full rounded-md" />
-          <Skeleton className="h-9 w-full rounded-md" />
+      <div className="w-full h-full border-r border-white/5 bg-white/5 flex flex-col p-6 space-y-6">
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-40 rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-2xl" />
         </div>
-        <div className="p-4 space-y-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Skeleton className="h-10 w-10 rounded-full" />
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="flex items-center gap-4 p-2">
+              <Skeleton className="h-12 w-12 rounded-2xl" />
               <div className="space-y-2 flex-1">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-4 w-32 rounded-lg" />
+                <Skeleton className="h-3 w-48 rounded-lg" />
               </div>
             </div>
           ))}
@@ -453,409 +453,267 @@ export function ContactList({ onSelectContact, selectedContactId, currentUser }:
   }
 
   return (
-    <div className="w-full h-full border-r border-border/50 bg-muted/10 flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-border/50 space-y-4 bg-background/50 backdrop-blur-sm">
+    <div className="w-full h-full flex flex-col relative overflow-hidden bg-white/2">
+      {/* Header with Search & Actions */}
+      <div className="p-6 border-b border-white/5 space-y-6 bg-background/20 backdrop-blur-md">
         <div className="flex items-center justify-between">
-          <h2 className="font-bold text-lg tracking-tight">Mensagens</h2>
-          <div className="flex items-center gap-1">
-            <Dialog open={isArchivedDialogOpen} onOpenChange={setIsArchivedDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Conversas arquivadas">
-                  <Archive className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-auto sm:max-w-[520px] max-h-[calc(100vh-1.5rem)] overflow-hidden p-0 grid grid-rows-[auto_1fr]">
-                <DialogHeader className="border-b bg-muted/30 px-4 py-4 text-left sm:px-6 sm:py-5">
-                  <DialogTitle>Conversas arquivadas</DialogTitle>
-                  <DialogDescription>Restaure conversas arquivadas para a lista principal.</DialogDescription>
-                </DialogHeader>
-                <div className="min-h-0 p-4 sm:p-6">
-                  <ScrollArea className="h-full border rounded-md p-2">
-                    {archivedLoading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                      </div>
-                    ) : (archivedConversationsRaw?.length ? (
-                      <div className="grid gap-1">
-                        {archivedConversationsRaw.map((conv) => {
-                          const title = conv.is_group
-                            ? (conv.title || "Grupo sem nome")
-                            : (conv.participants_list?.find((u) => u !== currentUser?.username) || "Conversa")
-                          return (
-                            <div key={conv.id} className="flex items-center justify-between gap-2 rounded-md px-3 py-2 hover:bg-muted/50">
-                              <div className="min-w-0">
-                                <div className="text-sm font-semibold truncate">{title}</div>
-                                <div className="text-xs text-muted-foreground truncate">
-                                  {conv.last_message?.content || (conv.last_message?.file_name ? "📎 Arquivo" : "")}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setIsArchivedDialogOpen(false)
-                                    openConversation(conv)
-                                  }}
-                                >
-                                  Abrir
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-destructive"
-                                  onClick={async () => {
-                                    try {
-                                      await deleteConversationForMeFromArchived(conv)
-                                    } catch {
-                                      toast.error("Erro ao remover conversa")
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Remover
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={async () => {
-                                    try {
-                                      await unarchiveConversation(conv.id)
-                                      setIsArchivedDialogOpen(false)
-                                      openConversation(conv)
-                                    } catch {
-                                      toast.error("Erro ao desarquivar conversa")
-                                    }
-                                  }}
-                                >
-                                  <RotateCcw className="mr-2 h-4 w-4" />
-                                  Desarquivar
-                                </Button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-                        Nenhuma conversa arquivada.
-                      </div>
-                    ))}
-                  </ScrollArea>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Dialog open={isDeletedDialogOpen} onOpenChange={setIsDeletedDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Conversas removidas">
-                  <Trash2 className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-auto sm:max-w-[520px] max-h-[calc(100vh-1.5rem)] overflow-hidden p-0 grid grid-rows-[auto_1fr]">
-                <DialogHeader className="border-b bg-muted/30 px-4 py-4 text-left sm:px-6 sm:py-5">
-                  <DialogTitle>Conversas removidas</DialogTitle>
-                  <DialogDescription>Restaure conversas removidas da sua lista.</DialogDescription>
-                </DialogHeader>
-                <div className="min-h-0 p-4 sm:p-6">
-                  <ScrollArea className="h-full border rounded-md p-2">
-                    {deletedLoading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                      </div>
-                    ) : (deletedConversationsRaw?.length ? (
-                      <div className="grid gap-1">
-                        {deletedConversationsRaw.map((conv) => {
-                          const title = conv.is_group
-                            ? (conv.title || "Grupo sem nome")
-                            : (conv.participants_list?.find((u) => u !== currentUser?.username) || "Conversa")
-                          return (
-                            <div key={conv.id} className="flex items-center justify-between gap-2 rounded-md px-3 py-2 hover:bg-muted/50">
-                              <div className="min-w-0">
-                                <div className="text-sm font-semibold truncate">{title}</div>
-                                <div className="text-xs text-muted-foreground truncate">
-                                  {conv.last_message?.content || (conv.last_message?.file_name ? "📎 Arquivo" : "")}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setIsDeletedDialogOpen(false)
-                                    openConversation(conv)
-                                  }}
-                                >
-                                  Abrir
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={async () => {
-                                    try {
-                                      await archiveConversationFromDeleted(conv)
-                                    } catch {
-                                      toast.error("Erro ao arquivar conversa")
-                                    }
-                                  }}
-                                >
-                                  <Archive className="mr-2 h-4 w-4" />
-                                  Arquivar
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={async () => {
-                                    try {
-                                      await restoreConversation(conv.id)
-                                      setIsDeletedDialogOpen(false)
-                                      openConversation(conv)
-                                    } catch {
-                                      toast.error("Erro ao restaurar conversa")
-                                    }
-                                  }}
-                                >
-                                  <RotateCcw className="mr-2 h-4 w-4" />
-                                  Restaurar
-                                </Button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-                        Nenhuma conversa removida.
-                      </div>
-                    ))}
-                  </ScrollArea>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Criar novo grupo">
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-auto sm:max-w-[460px] max-h-[calc(100vh-1.5rem)] overflow-hidden p-0 grid grid-rows-[auto_1fr_auto]">
-                <DialogHeader className="border-b bg-muted/30 px-4 py-4 text-left sm:px-6 sm:py-5">
-                  <DialogTitle>Criar Novo Grupo</DialogTitle>
-                  <DialogDescription>Dê um nome ao grupo e selecione os participantes.</DialogDescription>
-                </DialogHeader>
-                <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-6">
-                  <div className="grid gap-4">
-                    <div className="grid gap-2">
-                      <label htmlFor="group-name" className="text-sm font-medium">Nome do Grupo</label>
-                      <Input
-                        id="group-name"
-                        value={groupName}
-                        onChange={(e) => setGroupName(e.target.value)}
-                        placeholder="Ex: Projeto Atlas"
-                      />
+          <div className="space-y-1">
+             <h2 className="font-black text-xl tracking-tighter uppercase text-primary">Transmissões</h2>
+             <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Canais Ativos Atlas</p>
+          </div>
+          <div className="flex items-center gap-2">
+             {/* New Group Dialog */}
+             <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
+               <DialogTrigger asChild>
+                 <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 shadow-lg">
+                   <Plus className="h-5 w-5 text-primary" />
+                 </Button>
+               </DialogTrigger>
+               <DialogContent className="sm:max-w-[480px] p-0 border-white/10 bg-background/95 backdrop-blur-3xl rounded-[2.5rem] overflow-hidden shadow-2xl">
+                 <DialogHeader className="px-8 pt-8 pb-6 bg-white/5 border-b border-white/10">
+                   <DialogTitle className="text-2xl font-black tracking-tighter flex items-center gap-3">
+                      <Users className="h-6 w-6 text-primary" /> Criar Novo Grupo
+                   </DialogTitle>
+                 </DialogHeader>
+                 <div className="px-8 py-8 space-y-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Identificação da Sala</label>
+                       <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Ex: War Room - Projeto X" className="h-12 rounded-xl border-white/10 bg-white/5 font-bold" />
                     </div>
-                    <div className="grid gap-2 min-h-0">
-                      <label className="text-sm font-medium">Participantes</label>
-                      <div className="min-h-0 border rounded-md">
-                        <ScrollArea className="h-[200px] p-2">
-                          {contactList.map((contact) => (
-                            <div key={contact.id} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-md">
-                              <Checkbox
-                                id={`g-contact-${contact.id}`}
-                                checked={selectedContactsForGroup.includes(contact.id)}
-                                onCheckedChange={() => toggleContactSelection(contact.id)}
-                              />
-                              <label
-                                htmlFor={`g-contact-${contact.id}`}
-                                className="text-sm font-medium flex items-center gap-2 cursor-pointer w-full"
-                              >
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={contact.avatar_url || undefined} alt={contact.username} />
-                                  <AvatarFallback>{contact.username.slice(0, 2).toUpperCase()}</AvatarFallback>
-                                </Avatar>
-                                {contact.username}
-                              </label>
-                            </div>
-                          ))}
-                        </ScrollArea>
-                      </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Selecionar Membros</label>
+                       <div className="border border-white/10 bg-white/5 rounded-2xl overflow-hidden">
+                          <ScrollArea className="h-64 p-4">
+                             <div className="grid gap-2">
+                                {contactList.map((contact) => (
+                                  <div key={contact.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer" onClick={() => toggleContactSelection(contact.id)}>
+                                     <Checkbox checked={selectedContactsForGroup.includes(contact.id)} onCheckedChange={() => toggleContactSelection(contact.id)} className="data-[state=checked]:bg-primary" />
+                                     <Avatar className="h-8 w-8 rounded-lg">
+                                        <AvatarImage src={contact.avatar_url || undefined} />
+                                        <AvatarFallback className="bg-primary/10 text-primary font-black">{contact.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                     </Avatar>
+                                     <span className="text-sm font-bold">{contact.username}</span>
+                                  </div>
+                                ))}
+                             </div>
+                          </ScrollArea>
+                       </div>
                     </div>
-                  </div>
-                </div>
-                <DialogFooter className="border-t bg-background/60 px-4 py-4 sm:px-6">
-                  <Button variant="outline" onClick={() => setIsGroupDialogOpen(false)}>Cancelar</Button>
-                  <Button onClick={() => createGroupMutation.mutate()} disabled={createGroupMutation.isPending}>
-                    {createGroupMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Criar Grupo
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                 </div>
+                 <div className="px-8 py-6 bg-white/5 border-t border-white/10 flex justify-end gap-3">
+                    <Button variant="ghost" onClick={() => setIsGroupDialogOpen(false)} className="h-10 rounded-xl font-black uppercase tracking-widest text-[10px]">Cancelar</Button>
+                    <Button onClick={() => createGroupMutation.mutate()} disabled={createGroupMutation.isPending} className="h-10 px-8 rounded-xl font-black uppercase tracking-widest text-[10px] bg-primary shadow-lg shadow-primary/20">
+                       {createGroupMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ativar Grupo"}
+                    </Button>
+                 </div>
+               </DialogContent>
+             </Dialog>
+
+             {/* More Actions Menu (Archived/Deleted) */}
+             <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" onClick={() => setIsArchivedDialogOpen(true)} className="h-9 w-9 rounded-xl hover:bg-white/5 text-muted-foreground">
+                   <Archive className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setIsDeletedDialogOpen(true)} className="h-9 w-9 rounded-xl hover:bg-white/5 text-muted-foreground">
+                   <Trash2 className="h-4 w-4" />
+                </Button>
+             </div>
           </div>
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <Input
-            placeholder="Buscar conversas..."
-            className="pl-9 h-10 bg-background/50 border-border/50 focus:bg-background transition-colors"
+            placeholder="Localizar transmissão..."
+            className="pl-11 h-11 bg-white/5 border-white/10 rounded-2xl focus:bg-white/10 transition-all font-medium shadow-inner"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Conversation list */}
+      {/* Conversation List Section */}
       <ScrollArea className="flex-1">
-        <div className="flex flex-col p-2 gap-1">
-          {sorted.map((item) => {
-            const contact = item.contact
-            const onlineStatus = item.isGroup
-              ? "offline"
-              : (userStatuses.get(contact.id) || item.status)
-            const isOnline = item.isGroup ? false : (item.isOnline || onlineUsers.has(contact.id))
-            const isSelected = selectedContactId === contact.id
+        <div className="flex flex-col p-4 gap-2">
+          {sorted.length === 0 ? (
+            <div className="py-20 text-center space-y-4 opacity-30">
+               <MessageCircle className="h-10 w-10 mx-auto text-muted-foreground" />
+               <p className="text-[10px] font-black uppercase tracking-[0.2em]">Nenhum canal ativo</p>
+            </div>
+          ) : (
+            sorted.map((item) => {
+              const contact = item.contact
+              const onlineStatus = item.isGroup
+                ? "offline"
+                : (userStatuses.get(contact.id) || item.status)
+              const isOnline = item.isGroup ? false : (item.isOnline || onlineUsers.has(contact.id))
+              const isSelected = selectedContactId === contact.id
 
-            return (
-              <div
-                key={item.convId}
-                role="button"
-                tabIndex={0}
-                className={cn(
-                  buttonVariants({ variant: isSelected ? "secondary" : "ghost", size: "default" }),
-                  "justify-start h-auto py-3 px-3 relative group transition-all text-left cursor-pointer",
-                )}
-                onClick={() => onSelectContact(contact, item.convId)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    onSelectContact(contact, item.convId)
-                  }
-                }}
-              >
-                {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                  <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                    {item.isGroup ? (
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        <Users className="h-5 w-5" />
-                      </AvatarFallback>
-                    ) : (
-                      <>
-                        <AvatarImage src={item.avatarUrl || undefined} alt={item.title} />
-                        <AvatarFallback className="font-bold text-xs bg-primary/10 text-primary">
-                          {item.title.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </>
-                    )}
-                  </Avatar>
-                  {isOnline && (
-                    <span
-                      className={cn(
-                        "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background shadow-sm",
-                        onlineStatus === "online" ? "bg-green-500 animate-pulse" :
-                          onlineStatus === "busy" ? "bg-amber-500" : "bg-slate-400",
-                      )}
-                      aria-hidden="true"
-                    />
+              return (
+                <div
+                  key={item.convId}
+                  role="button"
+                  tabIndex={0}
+                  className={cn(
+                    "flex items-center gap-4 p-4 rounded-3xl transition-all relative overflow-hidden group cursor-pointer",
+                    isSelected 
+                      ? "bg-primary/10 border border-primary/20 shadow-lg shadow-primary/5" 
+                      : "hover:bg-white/5 border border-transparent hover:border-white/10"
                   )}
-                </div>
+                  onClick={() => onSelectContact(contact, item.convId)}
+                >
+                  {isSelected && (
+                     <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-primary rounded-r-full shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+                  )}
 
-                {/* Content */}
-                <div className="flex flex-col items-start ml-3 flex-1 min-w-0 overflow-hidden">
-                  <div className="flex justify-between items-center w-full">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className="font-semibold text-sm truncate max-w-[140px]">{item.title}</span>
-                      {item.isPinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
-                    </div>
-
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {item.isMuted && <BellOff className="h-3 w-3 text-muted-foreground" />}
-                      {item.unreadCount > 0 && (
-                        <Badge className="h-5 min-w-[20px] px-1.5 rounded-full bg-green-500 text-white border-0 text-[10px] font-bold">
-                          {item.unreadCount > 99 ? "99+" : item.unreadCount}
-                        </Badge>
+                  {/* Avatar Section */}
+                  <div className="relative shrink-0">
+                    <Avatar className={cn(
+                      "h-12 w-12 rounded-2xl border-2 transition-all duration-500",
+                      isSelected ? "border-primary shadow-lg shadow-primary/20" : "border-white/5 group-hover:border-white/20"
+                    )}>
+                      {item.isGroup ? (
+                        <AvatarFallback className="bg-primary/5 text-primary">
+                          <Users className="h-6 w-6" />
+                        </AvatarFallback>
+                      ) : (
+                        <>
+                          <AvatarImage src={item.avatarUrl || undefined} className="object-cover" />
+                          <AvatarFallback className="font-black text-xs bg-primary/10 text-primary">
+                            {item.title.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </>
                       )}
+                    </Avatar>
+                    
+                    {isOnline && (
+                      <div className="absolute -bottom-1 -right-1 flex items-center justify-center">
+                         <div className="h-4 w-4 rounded-full bg-background border-2 border-background">
+                            <div className={cn(
+                              "h-full w-full rounded-full shadow-[0_0_10px_currentColor]",
+                              onlineStatus === "online" ? "bg-emerald-500 text-emerald-500 animate-pulse" :
+                              onlineStatus === "busy" ? "bg-orange-500 text-orange-500" : "bg-slate-500 text-slate-500"
+                            )} />
+                         </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info Section */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className={cn("text-sm font-black tracking-tight truncate", isSelected ? "text-primary" : "text-foreground/90")}>
+                           {item.title}
+                        </span>
+                        {item.isPinned && <Pin className="h-3 w-3 text-primary shrink-0 opacity-60" />}
+                      </div>
+                      <span className="text-[9px] font-black text-muted-foreground/40 shrink-0">
+                        {item.updatedAt ? format(new Date(item.updatedAt), 'HH:mm') : ''}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-end">
+                       <span className="text-xs text-muted-foreground font-bold truncate opacity-60 group-hover:opacity-100 transition-opacity">
+                         {item.lastMessage ? (
+                           <>
+                             {item.isGroup && <span className="text-primary/70">{item.lastMessage.sender_username}: </span>}
+                             {item.lastMessage.content || (item.lastMessage.file_name ? "📎 Arquivo" : "Mensagem")}
+                           </>
+                         ) : (
+                           isOnline ? (onlineStatus === 'online' ? 'Canal Disponível' : 'Ocupado') : 'Offline'
+                         )}
+                       </span>
+                       
+                       {item.unreadCount > 0 && (
+                         <div className="h-5 min-w-[20px] px-1.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-black flex items-center justify-center shadow-lg shadow-primary/30">
+                           {item.unreadCount > 99 ? "99+" : item.unreadCount}
+                         </div>
+                       )}
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground truncate w-full text-left">
-                    {item.lastMessage ? (
-                      <>
-                        {item.isGroup && (
-                          <span className="font-medium">{item.lastMessage.sender_username}: </span>
-                        )}
-                        {item.lastMessage.content ||
-                          (item.lastMessage.file_name ? "📎 Arquivo" : "Mensagem")}
-                      </>
-                    ) : isOnline ? (
-                      <span
-                        className={cn(
-                          "font-medium",
-                          onlineStatus === "online" ? "text-green-600" :
-                            onlineStatus === "busy" ? "text-amber-600" : "text-muted-foreground",
-                        )}
-                      >
-                        {onlineStatus === "online" ? "Online" :
-                          onlineStatus === "busy" ? "Ocupado" : "Offline"}
-                      </span>
-                    ) : (
-                      "Nenhuma mensagem ainda"
-                    )}
-                  </span>
                 </div>
-
-                {/* Action Buttons (hover/active) */}
-                <div className="flex items-center gap-1 flex-shrink-0 ml-1 group-hover:opacity-100 opacity-0 focus-within:opacity-100 transition-opacity">
-                  {/* Mute toggle */}
-                  <Button
-                    type="button"
-                    variant={item.isMuted ? "secondary" : "ghost"}
-                    size="icon"
-                    className={cn("h-7 w-7 rounded-full text-muted-foreground", item.isMuted && "text-primary")}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      toggleMute(item.convId, item.isMuted)
-                    }}
-                    aria-label={item.isMuted ? "Ativar som" : "Silenciar"}
-                    title={item.isMuted ? "Ativar som" : "Silenciar"}
-                  >
-                    {muteMutation.isPending && muteMutation.variables?.convId === item.convId ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <BellOff className={cn("h-3.5 w-3.5", !item.isMuted && "opacity-40")} />
-                    )}
-                  </Button>
-
-                  {/* Pin toggle */}
-                  <Button
-                    type="button"
-                    variant={item.isPinned ? "secondary" : "ghost"}
-                    size="icon"
-                    className={cn("h-7 w-7 rounded-full text-muted-foreground", item.isPinned && "text-primary")}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      togglePin(item.convId, item.isPinned)
-                    }}
-                    aria-label={item.isPinned ? "Desafixar" : "Fixar"}
-                    title={item.isPinned ? "Desafixar" : "Fixar"}
-                  >
-                    {pinMutation.isPending && pinMutation.variables?.convId === item.convId ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Pin className={cn("h-3.5 w-3.5", item.isPinned && "rotate-45")} />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )
-          })}
-
-          {sorted.length === 0 && !isLoading && (
-            <div className="p-8 text-center text-muted-foreground text-sm">
-              {search ? "Nenhuma conversa encontrada" : "Sem conversas ainda"}
-            </div>
+              )
+            })
           )}
         </div>
       </ScrollArea>
+
+      {/* Footer Info */}
+      <div className="p-4 border-t border-white/5 bg-white/2 flex items-center justify-center gap-3">
+         <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-primary shadow-lg shadow-primary/40 animate-pulse" />
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-50">Transmissão Segura Atlas P2P</span>
+         </div>
+      </div>
+
+      {/* Dialogs for Archive/Trash - Simplified for consistency */}
+      <Dialog open={isArchivedDialogOpen} onOpenChange={setIsArchivedDialogOpen}>
+        <DialogContent className="sm:max-w-[560px] p-0 border-white/10 bg-background/95 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl">
+          <DialogHeader className="px-8 pt-8 pb-6 bg-white/5 border-b border-white/10">
+            <DialogTitle className="text-2xl font-black tracking-tighter flex items-center gap-3">
+               <Archive className="h-6 w-6 text-primary" /> Arquivo de Conversas
+            </DialogTitle>
+          </DialogHeader>
+          <div className="px-8 py-8 h-[400px]">
+            <ScrollArea className="h-full">
+              {archivedLoading ? (
+                 <div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary opacity-20" /></div>
+              ) : archivedConversationsRaw?.length === 0 ? (
+                 <div className="h-full flex flex-col items-center justify-center opacity-20"><Archive className="h-12 w-12 mb-2" /><span className="text-[10px] font-black uppercase tracking-widest">Nada arquivado</span></div>
+              ) : (
+                <div className="grid gap-4">
+                   {archivedConversationsRaw?.map(conv => (
+                     <div key={conv.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 group">
+                        <div className="min-w-0">
+                           <div className="font-bold text-sm">{conv.is_group ? conv.title : conv.participants_list?.find(u => u !== currentUser?.username)}</div>
+                           <div className="text-[10px] text-muted-foreground truncate font-bold uppercase tracking-tight">{conv.last_message?.content || 'Arquivo'}</div>
+                        </div>
+                        <div className="flex gap-2">
+                           <Button size="sm" variant="ghost" className="h-8 rounded-lg font-black uppercase tracking-widest text-[9px]" onClick={() => { setIsArchivedDialogOpen(false); openConversation(conv); }}>Abrir</Button>
+                           <Button size="sm" variant="outline" className="h-8 rounded-lg font-black uppercase tracking-widest text-[9px] border-white/10" onClick={() => unarchiveConversation(conv.id)}>Restaurar</Button>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeletedDialogOpen} onOpenChange={setIsDeletedDialogOpen}>
+        <DialogContent className="sm:max-w-[560px] p-0 border-white/10 bg-background/95 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl">
+          <DialogHeader className="px-8 pt-8 pb-6 bg-white/5 border-b border-white/10 text-rose-500">
+            <DialogTitle className="text-2xl font-black tracking-tighter flex items-center gap-3">
+               <Trash2 className="h-6 w-6" /> Lixeira de Transmissões
+            </DialogTitle>
+          </DialogHeader>
+          <div className="px-8 py-8 h-[400px]">
+            <ScrollArea className="h-full">
+              {deletedLoading ? (
+                 <div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary opacity-20" /></div>
+              ) : deletedConversationsRaw?.length === 0 ? (
+                 <div className="h-full flex flex-col items-center justify-center opacity-20"><Trash2 className="h-12 w-12 mb-2" /><span className="text-[10px] font-black uppercase tracking-widest">Lixeira vazia</span></div>
+              ) : (
+                <div className="grid gap-4">
+                   {deletedConversationsRaw?.map(conv => (
+                     <div key={conv.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 group">
+                        <div className="min-w-0">
+                           <div className="font-bold text-sm">{conv.is_group ? conv.title : conv.participants_list?.find(u => u !== currentUser?.username)}</div>
+                           <div className="text-[10px] text-muted-foreground truncate font-bold uppercase tracking-tight">{conv.last_message?.content || 'Arquivo'}</div>
+                        </div>
+                        <div className="flex gap-2">
+                           <Button size="sm" variant="outline" className="h-8 rounded-lg font-black uppercase tracking-widest text-[9px] border-white/10" onClick={() => restoreConversation(conv.id)}>Restaurar</Button>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -51,6 +51,7 @@ from .models import (
     SLAPolicy,
     Stage,
     XLAFeedback,
+    CSIEntry,
     get_column_semantic_defaults,
 )
 from .serializers import (
@@ -72,6 +73,7 @@ from .serializers import (
     PipelineSerializer,
     SLAPolicySerializer,
     XLAFeedbackSerializer,
+    CSIEntrySerializer,
     should_include_legacy_overview_stages,
     should_include_legacy_stage_fields,
 )
@@ -230,6 +232,41 @@ class PipelineViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.company)
+
+    @action(detail=True, methods=["post"])
+    def apply_itil_template(self, request, pk=None):
+        pipeline = self.get_object()
+        from .models import Column
+        
+        # Estágios Estratégicos ITIL Version 5
+        itil_columns = [
+            {"title": "📥 Demanda / Backlog", "column_kind": "backlog", "vsp": "demand", "order": 10},
+            {"title": "🔍 Descoberta & Design", "column_kind": "discover", "vsp": "product_design", "order": 20},
+            {"title": "🛠️ Aquisição & Construção", "column_kind": "build", "vsp": "creation", "order": 30},
+            {"title": "🚀 Transição & Homologação", "column_kind": "transition", "vsp": "onboarding", "order": 40},
+            {"title": "💎 Entrega & Suporte", "column_kind": "support", "vsp": "realization", "order": 50},
+            {"title": "✅ Valor Realizado", "column_kind": "done", "vsp": "realization", "order": 60, "marks_done": True},
+        ]
+        
+        created_count = 0
+        for col_data in itil_columns:
+            if not Column.objects.filter(pipeline=pipeline, title=col_data["title"]).exists():
+                Column.objects.create(
+                    pipeline=pipeline,
+                    company=pipeline.company,
+                    title=col_data["title"],
+                    column_kind=col_data["column_kind"],
+                    value_stream_phase=col_data["vsp"],
+                    order=col_data["order"],
+                    marks_done=col_data.get("marks_done", False)
+                )
+                created_count += 1
+                
+        return Response({
+            "status": "success", 
+            "message": f"Template ITIL v5 aplicado. {created_count} novas colunas criadas.",
+            "created_columns": created_count
+        })
 
     @staticmethod
     def _get_progress_value(deal):
@@ -415,6 +452,7 @@ class DealViewSet(viewsets.ModelViewSet):
         "add_note": "crm.deal_comment",
         "attachments": "crm.deal_attach",
         "delete_attachment": "crm.deal_attach_delete",
+        "topology": "crm.deal_view",
     }
 
     @staticmethod
@@ -623,7 +661,98 @@ class DealViewSet(viewsets.ModelViewSet):
         )
         attachment.delete()
         deal.refresh_from_db()
-        return Response(DealSerializer(deal, context={"request": request}).data, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["get"])
+    def topology(self, request, pk=None):
+        """
+        ITIL Version 5: Visualização 360 graus do ecossistema do Deal.
+        Retorna nós e links para visualização em grafo (Topology tab).
+        """
+        deal = self.get_object()
+        
+        nodes = []
+        links = []
+        
+        # Central Node (O Deal)
+        nodes.append({
+            "id": f"deal_{deal.id}",
+            "type": "deal",
+            "label": f"[{deal.record_type.upper()}] {deal.title}",
+            "priority": deal.priority,
+            "status": "closed" if deal.is_closed else "active",
+            "uuid": str(deal.uuid)
+        })
+        
+        # ICs Afetados (Affected CIs)
+        if hasattr(deal, 'affected_cis'):
+            for ci in deal.affected_cis.all():
+                nodes.append({
+                    "id": f"ci_{ci.id}",
+                    "type": "ci",
+                    "kind": ci.ci_type.name if ci.ci_type else "General",
+                    "label": ci.name,
+                    "status": ci.status,
+                    "asset_tag": ci.asset_tag
+                })
+                links.append({
+                    "source": f"deal_{deal.id}",
+                    "target": f"ci_{ci.id}",
+                    "relation": "impacts",
+                    "label": "Afeta IC"
+                })
+            
+        # Usuários Relacionados (Participantes do Swarm se houver)
+        if hasattr(deal, 'swarm') and deal.swarm:
+            for user in deal.swarm.participants.all():
+                nodes.append({
+                    "id": f"user_{user.id}",
+                    "type": "user",
+                    "label": user.get_full_name() or user.username,
+                    "email": user.email
+                })
+                links.append({
+                    "source": f"deal_{deal.id}",
+                    "target": f"user_{user.id}",
+                    "relation": "collaborator",
+                    "label": "Swarmer"
+                })
+        
+        # Dono e Técnico Responsável
+        if deal.owner:
+             nodes.append({
+                "id": f"user_{deal.owner.id}",
+                "type": "user",
+                "label": deal.owner.get_full_name() or deal.owner.username,
+                "email": deal.owner.email,
+                "role": "Owner"
+            })
+             links.append({
+                "source": f"deal_{deal.id}",
+                "target": f"user_{deal.owner.id}",
+                "relation": "owner",
+                "label": "Responsável"
+            })
+            
+        # RFCs/Problemas Vinculados (via ai_metadata)
+        metadata = deal.ai_metadata or {}
+        if metadata.get('linked_rfc_id'):
+            rfc_id = metadata['linked_rfc_id']
+            nodes.append({
+                "id": f"deal_{rfc_id}",
+                "type": "deal",
+                "label": f"RFC #{rfc_id} (Automática)",
+                "kind": "change",
+                "status": "triggered"
+            })
+            links.append({
+                "source": f"deal_{deal.id}",
+                "target": f"deal_{rfc_id}",
+                "relation": "triggers",
+                "label": "Gatilhou Mudança"
+            })
+            
+        return Response({"nodes": nodes, "links": links})
 
     @action(detail=True, methods=["post"])
     def start_swarm(self, request, pk=None):
@@ -1314,45 +1443,140 @@ class DPSMDashboardViewSet(viewsets.ViewSet):
     def vsm_analytics(self, request):
         company = request.company
         pipeline_id = request.query_params.get('pipeline_id')
-        
+
         if not pipeline_id:
             return Response({"detail": "pipeline_id é obrigatório para análise VSM."}, status=400)
 
-        # 1. Lead Time Médio (Creation -> marks_done)
-        # 2. Cycle Time Médio (Active -> marks_done)
-        # 3. Residence Time por Fase
         from django.db.models import F, ExpressionWrapper, DurationField
-        
+        from .models import Column, DealActivity
+
+        # 1. Obter colunas do pipeline ordenadas
+        columns = list(
+            Column.all_objects.filter(pipeline_id=pipeline_id, company=company)
+            .order_by('order', 'id')
+        )
+
+        if not columns:
+            return Response({
+                "avg_lead_time_days": 0,
+                "throughput_weekly": 0,
+                "residence_times": []
+            })
+
+        # 2. Lead Time Médio — tempo total desde criação até fechamento nas colunas done
         completed_deals = Deal.objects.filter(
             company=company,
             column__pipeline_id=pipeline_id,
             column__marks_done=True,
-            is_closed=True
+            is_closed=True,
         ).annotate(
             lead_time=ExpressionWrapper(F('updated_at') - F('created_at'), output_field=DurationField())
         )
-        
+
         avg_lead_time = completed_deals.aggregate(Avg('lead_time'))['lead_time__avg']
-        
-        # Residence Time por Coluna
+
+        # 3. Calcular Residence Time real por coluna usando DealActivity
+        # Busca todas as atividades de mudança de coluna do pipeline de uma só vez (eficiente)
+        pipeline_activities = (
+            DealActivity.objects.filter(
+                deal__column__pipeline_id=pipeline_id,
+                activity_type__in=['column_change', 'stage_change'],
+                company=company,
+            )
+            .select_related('deal')
+            .order_by('deal_id', 'created_at')
+        )
+
+        # Indexar atividades por deal_id para acesso O(1)
+        activities_by_deal: dict[int, list] = {}
+        for act in pipeline_activities:
+            activities_by_deal.setdefault(act.deal_id, []).append(act)
+
+        # Mapa: column_id -> {total_days, sample_count}
+        col_totals: dict[int, dict] = {col.id: {'days': 0.0, 'count': 0} for col in columns}
+        col_title_map = {col.title.lower(): col.id for col in columns if col.title}
+
+        # Todos os deals ativos do pipeline (uma query, sem N+1)
+        all_deals = list(
+            Deal.objects.filter(
+                company=company,
+                column__pipeline_id=pipeline_id,
+                is_deleted=False,
+            ).values('id', 'column_id', 'created_at')
+        )
+
+        for deal_row in all_deals:
+            deal_id = deal_row['id']
+            current_col_id = deal_row['column_id']
+            created_at = deal_row['created_at']
+            deal_acts = activities_by_deal.get(deal_id, [])
+
+            if not deal_acts:
+                # Deal nunca se moveu — todo o tempo é na coluna atual
+                if current_col_id and current_col_id in col_totals:
+                    days = (timezone.now() - created_at).total_seconds() / 86400
+                    col_totals[current_col_id]['days'] += days
+                    col_totals[current_col_id]['count'] += 1
+            else:
+                # Percorre a cadeia de atividades para calcular tempo em cada coluna
+                entry_time = created_at
+
+                for i, act in enumerate(deal_acts):
+                    # Identifica a coluna de entrada (antes desta mudança)
+                    old_col_title = str((act.old_value or {}).get('column', '')).lower().strip()
+                    col_id = col_title_map.get(old_col_title)
+
+                    exit_time = act.created_at
+                    if col_id and col_id in col_totals and exit_time > entry_time:
+                        days = (exit_time - entry_time).total_seconds() / 86400
+                        col_totals[col_id]['days'] += days
+                        col_totals[col_id]['count'] += 1
+
+                    entry_time = act.created_at
+
+                # Tempo desde a última mudança até agora (coluna atual)
+                last_col_title = str((deal_acts[-1].new_value or {}).get('column', '')).lower().strip()
+                last_col_id = col_title_map.get(last_col_title) or current_col_id
+                if last_col_id and last_col_id in col_totals:
+                    days = (timezone.now() - entry_time).total_seconds() / 86400
+                    col_totals[last_col_id]['days'] += days
+                    col_totals[last_col_id]['count'] += 1
+
+        # 4. Monta resposta VSM com contagem atual e tempo médio real por coluna
+        col_current_count = {
+            row['column_id']: row['cnt']
+            for row in Deal.objects.filter(
+                company=company,
+                column__pipeline_id=pipeline_id,
+                is_deleted=False,
+                is_closed=False,
+            ).values('column_id').annotate(cnt=Count('id'))
+        }
+
         residence_times = []
-        columns = Column.objects.filter(pipeline_id=pipeline_id).order_by('order')
         for col in columns:
-            col_deals = Deal.objects.filter(column=col, company=company)
-            # Simplificação: média de tempo que os cards ficaram nesta coluna (estimado via updated_at se for o estado atual)
-            # Para um log preciso, precisaríamos da DealActivity, faremos uma agregação por histórico:
+            totals = col_totals[col.id]
+            avg_days = round(totals['days'] / totals['count'], 1) if totals['count'] > 0 else 0.0
             residence_times.append({
                 "column": col.title,
+                "column_id": col.id,
                 "phase": col.value_stream_phase,
-                "count": col_deals.count(),
-                "avg_days_residence": 2.5 # Placeholder para lógica complexa de histórico
+                "column_kind": col.column_kind,
+                "count": col_current_count.get(col.id, 0),
+                "avg_days_residence": avg_days,
+                "is_bottleneck": avg_days > 3.0 and col_current_count.get(col.id, 0) > 0,
             })
 
         return Response({
-            "avg_lead_time_days": round(avg_lead_time.days + avg_lead_time.seconds/86400, 1) if avg_lead_time else 0,
-            "throughput_weekly": completed_deals.filter(updated_at__gte=timezone.now() - timezone.timedelta(days=7)).count(),
-            "residence_times": residence_times
+            "avg_lead_time_days": round(
+                avg_lead_time.days + avg_lead_time.seconds / 86400, 1
+            ) if avg_lead_time else 0,
+            "throughput_weekly": completed_deals.filter(
+                updated_at__gte=timezone.now() - timezone.timedelta(days=7)
+            ).count(),
+            "residence_times": residence_times,
         })
+
 
     @action(detail=False, methods=['get'])
     def governance_reports(self, request):
@@ -1759,4 +1983,20 @@ class IntegrationEvolutionWebhookAPIView(APIView):
         event.status = IntegrationInboundStatus.FAILED
         event.error = "EvolutionConfig sem Pipeline/Coluna padrão."
         event.save()
-        return Response({"status": "error_config"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "error", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class XLAFeedbackViewSet(viewsets.ModelViewSet):
+    serializer_class = XLAFeedbackSerializer
+    queryset = XLAFeedback.objects.all()
+    filterset_fields = ["deal", "contact"]
+
+    def get_queryset(self):
+        return super().get_queryset().filter(company=self.request.company)
+
+class CSIEntryViewSet(viewsets.ModelViewSet):
+    serializer_class = CSIEntrySerializer
+    queryset = CSIEntry.objects.all()
+    filterset_fields = ["status", "priority", "deal", "pipeline"]
+
+    def get_queryset(self):
+        return super().get_queryset().filter(company=self.request.company)

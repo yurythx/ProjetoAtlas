@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { format, formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Box, Camera, Loader2, Search, Trash2, X, Zap, TrendingUp, BookOpen, Layers } from "lucide-react"
+import { Box, Camera, Loader2, Search, Trash2, X, Zap, TrendingUp, BookOpen, Layers, Sparkles, ShieldCheck, Star, Smile, Clock, Target, MessageSquare } from "lucide-react"
+import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 
-import { Deal, DealActivity, isCRMNetworkError, useCRM, useServiceCatalog, useCMDB, useXLA } from "./use-crm"
+import { Deal, DealActivity, isCRMNetworkError, useCRM, useServiceCatalog, useCMDB, useXLA, useDealTopology } from "./use-crm"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -105,15 +106,42 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
   const [draftBackoutPlan, setDraftBackoutPlan] = useState("")
   const [draftTestPlan, setDraftTestPlan] = useState("")
   const [draftRootCause, setDraftRootCause] = useState("")
+  const [draftWorkaround, setDraftWorkaround] = useState("")
   const [draftResolutionSteps, setDraftResolutionSteps] = useState("")
   const [draftIsKnownError, setDraftIsKnownError] = useState(false)
+  const [draftChangeType, setDraftChangeType] = useState<Deal["change_type"]>("normal")
+  const [draftChangeImpact, setDraftChangeImpact] = useState("")
+  const [draftCabApproval, setDraftCabApproval] = useState(false)
+  const [draftCabDate, setDraftCabDate] = useState<string>("")
   const [userSearch, setUserSearch] = useState("")
   const [draftUpdateNote, setDraftUpdateNote] = useState("")
   const [activityFilter, setActivityFilter] = useState<ActivityFilterId>("all")
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
   const [activeTab, setActiveTab] = useState<"overview" | "details" | "images" | "history" | "cis" | "governance" | "xla" | "topology">("details")
   const { data: xlaFeedbacks = [], createFeedback: submitXla } = useXLA(currentDeal.id)
+  
+  const [xlaRating, setXlaRating] = useState(0)
+  const [xlaEase, setXlaEase] = useState(0)
+  const [xlaSpeed, setXlaSpeed] = useState(0)
+  const [xlaOutcome, setXlaOutcome] = useState(0)
+  const [xlaComment, setXlaComment] = useState("")
+
   const { data: topologyData, isLoading: isLoadingTopology } = useDealTopology(currentDeal.id)
+  const handleDraftAIProblemReport = () => {
+    const riskFactors = currentDeal.ai_metadata?.risk_factors || []
+    const baseText = currentDeal.description || "N/A"
+    
+    const rca = `[DRAFT IA] - BASEADO NO FLUXO DE VALOR\n\nCausa Provável: Analisando os sinais detectados (${riskFactors.join(", ")}), o problema parece estar relacionado à estagnação do fluxo em etapas críticas.\n\nEvidência Primária: ${baseText.substring(0, 100)}...`
+    
+    const workaround = "Reiniciar serviços vinculados e limpar cache de processamento conforme KEDB standard."
+    const resolution = "Otimizar o WIP Limit da coluna afetada e automatizar o gatilho de transição para evitar novos bloqueios."
+
+    setDraftRootCause(rca)
+    setDraftWorkaround(workaround)
+    setDraftResolutionSteps(resolution)
+    toast.success("Draft de Investigação gerado pela IA com sucesso!")
+  }
+
   const [imagesFilter, setImagesFilter] = useState<"all" | "before" | "during" | "after">("all")
   const updateTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [mentionQuery, setMentionQuery] = useState("")
@@ -145,6 +173,20 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     setDraftColumnId(String(getDealColumnId(currentDeal) ?? ""))
     setDraftRelatedUsers(getRelatedUserIds(currentDeal))
     setDraftProgress(getProgressValue(currentDeal).toString())
+    setDraftResolutionSteps(currentDeal.resolution_steps || "")
+    setDraftWorkaround(currentDeal.workaround || "")
+    setDraftIsKnownError(currentDeal.is_known_error || false)
+    setDraftChangeType(currentDeal.change_type || "normal")
+    setDraftChangeImpact(currentDeal.change_impact || "")
+    setDraftCabApproval(currentDeal.cab_approval || false)
+    setDraftCabDate(currentDeal.cab_date || "")
+    
+    setXlaRating(0)
+    setXlaEase(0)
+    setXlaSpeed(0)
+    setXlaOutcome(0)
+    setXlaComment("")
+    
     setDraftServiceItemId(
       typeof currentDeal.service_item === "object" && currentDeal.service_item !== null
         ? String(currentDeal.service_item.id)
@@ -252,8 +294,13 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     draftBackoutPlan !== (currentDeal.backout_plan || "") ||
     draftTestPlan !== (currentDeal.test_plan || "") ||
     draftRootCause !== (currentDeal.root_cause || "") ||
+    draftWorkaround !== (currentDeal.workaround || "") ||
     draftResolutionSteps !== (currentDeal.resolution_steps || "") ||
     draftIsKnownError !== (currentDeal.is_known_error || false) ||
+    draftChangeType !== (currentDeal.change_type || "normal") ||
+    draftChangeImpact !== (currentDeal.change_impact || "") ||
+    draftCabApproval !== (currentDeal.cab_approval || false) ||
+    draftCabDate !== (currentDeal.cab_date || "") ||
     safeDraftProgress !== currentProgress ||
     JSON.stringify([...draftRelatedUsers].sort((a, b) => a - b)) !==
       JSON.stringify([...getRelatedUserIds(currentDeal)].sort((a, b) => a - b))
@@ -281,8 +328,13 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     setDraftBackoutPlan(currentDeal.backout_plan || "")
     setDraftTestPlan(currentDeal.test_plan || "")
     setDraftRootCause(currentDeal.root_cause || "")
+    setDraftWorkaround(currentDeal.workaround || "")
     setDraftResolutionSteps(currentDeal.resolution_steps || "")
     setDraftIsKnownError(currentDeal.is_known_error || false)
+    setDraftChangeType(currentDeal.change_type || "normal")
+    setDraftChangeImpact(currentDeal.change_impact || "")
+    setDraftCabApproval(currentDeal.cab_approval || false)
+    setDraftCabDate(currentDeal.cab_date || "")
   }
 
   const handleToggleRelatedUser = (userId: number, checked: boolean) => {
@@ -318,8 +370,13 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
       backout_plan: draftBackoutPlan,
       test_plan: draftTestPlan,
       root_cause: draftRootCause,
+      workaround: draftWorkaround,
       resolution_steps: draftResolutionSteps,
       is_known_error: draftIsKnownError,
+      change_type: draftChangeType,
+      change_impact: draftChangeImpact,
+      cab_approval: draftCabApproval,
+      cab_date: draftCabDate || null,
       custom_fields: nextCustomFields,
     })
   }
@@ -597,141 +654,170 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "w-[calc(100vw-1.5rem)] sm:w-auto max-h-[calc(100vh-1.5rem)] overflow-hidden border bg-background p-0 glass grid grid-rows-[auto_1fr]",
+          "w-[calc(100vw-1.5rem)] sm:w-auto max-h-[calc(100vh-1.5rem)] overflow-hidden border border-white/10 bg-background/30 p-0 backdrop-blur-3xl rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] grid grid-rows-[auto_1fr] animate-in zoom-in-95 duration-300",
           activeTab === "images" ? "sm:max-w-[1440px]" : "sm:max-w-[1120px]"
         )}
       >
         {currentDeal.swarm?.is_active && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-3 sm:px-6 flex items-center justify-between animate-pulse">
-            <div className="flex items-center gap-3">
-              <div className="bg-amber-500 p-2 rounded-lg shadow-lg shadow-amber-500/20">
-                <Zap className="h-4 w-4 text-white fill-white" />
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-4 flex items-center justify-between relative overflow-hidden group/swarm">
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent animate-pulse" />
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="h-12 w-12 rounded-2xl bg-amber-500 border border-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/30 group-hover/swarm:scale-110 transition-transform">
+                <Zap className="h-6 w-6 text-white fill-white animate-pulse" />
               </div>
               <div>
-                <p className="text-sm font-bold text-amber-700 uppercase tracking-tighter sm:tracking-wider">War Room Ativa (Swarming)</p>
-                <p className="text-[10px] sm:text-xs text-amber-600/80 font-medium">Equipe colaborativa focada na resolução estratégica.</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/80 mb-0.5">Operação Swarming Ativa</p>
+                <h4 className="text-sm font-black text-amber-700 uppercase tracking-tighter">War Room Colaborativa de Alta Performance</h4>
               </div>
             </div>
-            <div className="flex -space-x-2">
-              {currentDeal.swarm.participant_names.slice(0, 5).map((name, i) => (
-                <Avatar key={i} className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-white shadow-sm">
-                  <AvatarFallback className="text-[8px] sm:text-[10px] bg-amber-100 text-amber-900 font-bold">{getUserInitials(name)}</AvatarFallback>
-                </Avatar>
-              ))}
-              {currentDeal.swarm.participant_names.length > 5 && (
-                <div className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-white bg-amber-200 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold text-amber-900 z-10">
-                  +{currentDeal.swarm.participant_names.length - 5}
+            <div className="flex items-center gap-4 relative z-10">
+                <div className="flex -space-x-3">
+                {currentDeal.swarm.participant_names.slice(0, 5).map((name, i) => (
+                    <Avatar key={i} className="h-9 w-9 border-2 border-background shadow-xl ring-2 ring-amber-500/20">
+                    <AvatarFallback className="text-[10px] bg-amber-100 text-amber-900 font-black">{getUserInitials(name)}</AvatarFallback>
+                    </Avatar>
+                ))}
+                {currentDeal.swarm.participant_names.length > 5 && (
+                    <div className="h-9 w-9 border-2 border-background bg-amber-500 rounded-full flex items-center justify-center text-[10px] font-black text-white z-10 shadow-xl">
+                    +{currentDeal.swarm.participant_names.length - 5}
+                    </div>
+                )}
                 </div>
-              )}
+                <div className="h-8 w-[1px] bg-amber-500/20 mx-2 hidden sm:block" />
+                <Button 
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => endSwarm.mutate(currentDeal.id)}
+                    className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-500 hover:text-white transition-all active:scale-95 border border-amber-500/20"
+                >
+                    Finalizar Missão
+                </Button>
             </div>
           </div>
         )}
-        <DialogHeader className="border-b bg-muted/30 px-4 py-4 text-left sm:px-6 sm:py-5">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{selectedColumn?.title || getDealColumnTitle(currentDeal)}</Badge>
-                <Badge variant="outline" className="uppercase font-bold border-primary/20">
+        <DialogHeader className="border-b border-white/5 bg-white/5 px-8 py-8 text-left relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-12 opacity-[0.03] rotate-12 pointer-events-none">
+             <Target className="h-48 w-48 text-primary" />
+          </div>
+          <div className="flex flex-col gap-8 xl:flex-row xl:items-start xl:justify-between relative z-10">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant="outline" className="h-6 px-3 rounded-lg border-white/10 bg-white/5 font-black uppercase tracking-widest text-[9px] text-muted-foreground/60">{selectedColumn?.title || getDealColumnTitle(currentDeal)}</Badge>
+                <Badge variant="outline" className="h-6 px-3 rounded-lg border-primary/20 bg-primary/5 font-black uppercase tracking-widest text-[9px] text-primary">
                   {draftRecordType === 'service_request' ? 'Requisição' : 
                    draftRecordType === 'incident' ? 'Incidente' :
                    draftRecordType === 'problem' ? 'Problema' :
                    draftRecordType === 'change' ? 'Mudança' : 'Oportunidade'}
                 </Badge>
-                <Badge className={draftPriorityMeta.className}>{draftPriorityMeta.label}</Badge>
-                <Badge className={draftProgressMeta.badgeClassName}>{safeDraftProgress}%</Badge>
-                <Badge className={deadlineMeta.badgeClassName}>{deadlineMeta.label}</Badge>
-                {hasChanges && <Badge>Alterações pendentes</Badge>}
-              </div>
-              <DialogTitle className="text-2xl font-semibold">{currentDeal.title}</DialogTitle>
-              <DialogDescription className="flex flex-wrap items-center gap-3 text-sm">
-                <span className="rounded-full bg-background px-3 py-1 text-foreground shadow-sm">
-                  {currentDeal.contact_name}
-                </span>
-                <span className="rounded-full bg-background px-3 py-1 text-foreground shadow-sm">
-                  {ownerUser ? getUserDisplayName(ownerUser) : `Usuário #${currentDeal.owner}`}
-                </span>
-                <span className="text-muted-foreground">
-                  {latestActivity
-                    ? `Última atividade ${formatDistanceToNow(new Date(latestActivity.created_at), { addSuffix: true, locale: ptBR })}`
-                    : "Sem histórico recente"}
-                </span>
+                <Badge className={cn("h-6 px-3 rounded-lg font-black uppercase tracking-widest text-[9px] shadow-lg", draftPriorityMeta.className)}>{draftPriorityMeta.label}</Badge>
+                <Badge className={cn("h-6 px-3 rounded-lg font-black uppercase tracking-widest text-[9px] shadow-lg", draftProgressMeta.badgeClassName)}>{safeDraftProgress}%</Badge>
+                <Badge className={cn("h-6 px-3 rounded-lg font-black uppercase tracking-widest text-[9px] shadow-lg", deadlineMeta.badgeClassName)}>{deadlineMeta.label}</Badge>
+                
                 {currentDeal.sla_status && (
                   <Badge className={cn(
-                    "uppercase font-black px-2 tracking-widest",
+                    "h-6 px-3 rounded-lg uppercase font-black tracking-widest text-[9px] shadow-lg",
                     currentDeal.sla_status === "breached" ? "bg-red-600 text-white" : 
                     currentDeal.sla_status === "at_risk" ? "bg-amber-500 text-white" : "bg-emerald-600 text-white"
                   )}>
                     SLA: {currentDeal.sla_status === "breached" ? "Violado" : currentDeal.sla_status === "at_risk" ? "Em Risco" : "OK"}
                   </Badge>
                 )}
-              </DialogDescription>
+                {hasChanges && <Badge variant="outline" className="h-6 px-3 rounded-lg border-amber-500/20 bg-amber-500/10 text-amber-500 font-black uppercase tracking-widest text-[9px] animate-pulse">Draft Pendente</Badge>}
+              </div>
+              
+              <div className="space-y-2">
+                <DialogTitle className="text-4xl font-black tracking-tighter uppercase leading-[0.9] max-w-[700px]">{currentDeal.title}</DialogTitle>
+                <DialogDescription className="flex flex-wrap items-center gap-4 text-sm pt-2">
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 border border-white/5 shadow-inner">
+                        <Avatar className="h-6 w-6 rounded-lg border-2 border-white/10">
+                            <AvatarFallback className="text-[8px] font-black bg-primary/10 text-primary">{getUserInitials(currentDeal.contact_name)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground">{currentDeal.contact_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 border border-white/5 shadow-inner">
+                        <Avatar className="h-6 w-6 rounded-lg border-2 border-white/10">
+                            <AvatarFallback className="text-[8px] font-black bg-primary/10 text-primary">{getUserInitials(ownerUser ? getUserDisplayName(ownerUser) : "U")}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground">{ownerUser ? getUserDisplayName(ownerUser) : `Usuário #${currentDeal.owner}`}</span>
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 ml-2">
+                    {latestActivity
+                        ? `Auditado ${formatDistanceToNow(new Date(latestActivity.created_at), { addSuffix: true, locale: ptBR })}`
+                        : "Sem rastro de auditoria"}
+                    </span>
+                </DialogDescription>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-4 xl:min-w-[320px] xl:items-end">
-              <div className="text-left xl:text-right">
-                <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                  Valor do card
+            <div className="flex flex-col gap-6 xl:min-w-[380px] xl:items-end">
+              <div className="text-left xl:text-right w-full">
+                <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-1">
+                  Mensuração de Valor
                 </div>
-                <div className="text-3xl font-bold text-primary">
+                <div className="text-5xl font-black tracking-tighter text-emerald-500 tabular-nums">
                   {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(currentDeal.value))}
                 </div>
                 {currentDeal.closing_date && (
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    Fechamento: {format(new Date(currentDeal.closing_date), "dd/MM/yyyy", { locale: ptBR })}
+                  <div className="mt-2 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 flex items-center justify-start xl:justify-end gap-2">
+                    <Calendar className="h-3 w-3" />
+                    Deadline: {format(new Date(currentDeal.closing_date), "dd MMMM, yyyy", { locale: ptBR })}
                   </div>
                 )}
-                <div className="mt-3 space-y-2 rounded-2xl border bg-background/80 p-4 xl:min-w-[280px]">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Progresso</span>
-                    <Badge className={draftProgressMeta.badgeClassName}>{draftProgressMeta.label}</Badge>
+                
+                <div className="mt-6 space-y-3 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl relative overflow-hidden group/progress">
+                  <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover/progress:opacity-100 transition-opacity" />
+                  <div className="flex items-center justify-between gap-3 relative z-10">
+                    <span className="text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground/60">Status da Jornada</span>
+                    <Badge className={cn("rounded-lg font-black uppercase tracking-widest text-[9px]", draftProgressMeta.badgeClassName)}>{draftProgressMeta.label}</Badge>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 border border-white/5 shadow-inner relative z-10">
                     <div
-                      className={cn("h-full rounded-full transition-all", draftProgressMeta.barClassName)}
+                      className={cn("h-full transition-all duration-1000 ease-out", draftProgressMeta.barClassName)}
                       style={{ width: `${safeDraftProgress}%` }}
                     />
                   </div>
-                  <div className="text-sm font-semibold">{safeDraftProgress}% concluído</div>
+                  <div className="flex justify-between items-end relative z-10">
+                     <div className="text-2xl font-black tracking-tighter tabular-nums">{safeDraftProgress}%</div>
+                     <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 pb-1">Concluído</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
+              <div className="flex flex-wrap items-center justify-start gap-3 xl:justify-end w-full">
                  {canOpenMessenger ? (
-                  <Button asChild variant="outline" className="gap-1.5 h-10 rounded-xl px-4 font-bold text-xs">
+                  <Button asChild variant="outline" className="h-12 rounded-2xl px-6 font-black uppercase tracking-widest text-[10px] border-white/10 bg-white/5 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all active:scale-95 shadow-lg">
                     <Link href={`/messenger?conversation=${currentDeal.messenger_conversation}`} target="_blank" rel="noreferrer">
-                      ABRIR CHAT
+                      <MessageSquare className="mr-3 h-4 w-4" />
+                      Protocolo de Chat
                     </Link>
                   </Button>
                 ) : null}
 
-                {currentDeal.swarm?.is_active ? (
-                  <Button 
-                    variant="destructive"
-                    onClick={() => endSwarm.mutate(currentDeal.id)}
-                    className="gap-2 h-10 rounded-xl px-4 font-bold text-xs bg-red-600 hover:bg-red-700 border-none shadow-lg shadow-red-500/20"
-                  >
-                    <X className="h-4 w-4" />
-                    ENCERRAR SWARM
-                  </Button>
-                ) : (
+                {!currentDeal.swarm?.is_active && (
                   <Button 
                     onClick={() => startSwarm.mutate(currentDeal.id)}
-                    className="gap-2 h-10 rounded-xl px-4 font-bold text-xs bg-amber-500 hover:bg-amber-600 border-none text-white shadow-lg shadow-amber-500/20"
+                    className="h-12 rounded-2xl px-6 font-black uppercase tracking-widest text-[10px] bg-amber-500 hover:bg-amber-600 border-none text-white shadow-xl shadow-amber-500/20 active:scale-95 transition-all"
                   >
-                    <Zap className="h-4 w-4 fill-white" />
-                    INICIAR SWARM
+                    <Zap className="mr-3 h-4 w-4 fill-white" />
+                    Ativar Swarm
                   </Button>
                 )}
+                
                 <Button
                   variant="outline"
                   onClick={resetDraft}
                   disabled={!hasChanges || updateDeal.isPending}
+                  className="h-12 rounded-2xl px-6 font-black uppercase tracking-widest text-[10px] border-white/10 hover:bg-white/10 transition-all"
                 >
-                  Descartar
+                  Resetar
                 </Button>
-                <Button onClick={handleSave} disabled={!hasChanges || updateDeal.isPending}>
-                  {updateDeal.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Salvar alterações
+                <Button 
+                  onClick={handleSave} 
+                  disabled={!hasChanges || updateDeal.isPending}
+                  className="h-12 rounded-2xl px-8 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 active:scale-95 transition-all"
+                >
+                  {updateDeal.isPending ? <Loader2 className="mr-3 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-3 h-4 w-4" />}
+                  Atualizar Master
                 </Button>
               </div>
             </div>
@@ -740,59 +826,44 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
         <div className="min-h-0 h-full overflow-y-auto">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="h-full">
-            <div className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-              <div className="px-4 py-3 sm:px-6">
-                <div className="overflow-x-auto">
-                  <TabsList className="w-max">
-                    <TabsTrigger value="details" className="gap-2">
-                      Detalhes
-                    </TabsTrigger>
-                    <TabsTrigger value="images" className="gap-2">
-                      Imagens
-                      <Badge variant="secondary" className="ml-1">
+            <div className="sticky top-0 z-20 border-b border-white/5 bg-background/60 backdrop-blur-3xl px-8">
+              <TabsList className="h-16 w-full justify-start gap-8 bg-transparent p-0">
+                {[
+                  { id: "details", label: "Arquitetura", icon: Layers },
+                  { id: "images", label: "Galeria Visual", icon: Camera },
+                  { id: "overview", label: "Visão Geral", icon: LayoutList },
+                  { id: "cis", label: "IT Infrastructure", icon: ShieldCheck },
+                  { id: "topology", label: "Topologia 360°", icon: Target },
+                  ...(draftRecordType === 'change' ? [{ id: "governance", label: "Governança", icon: ShieldCheck }] : []),
+                  ...(draftRecordType === 'problem' ? [{ id: "governance", label: "Investigação", icon: ShieldCheck }] : []),
+                  { id: "xla", label: "Sentiment Index", icon: Smile },
+                  { id: "history", label: "Audit Log", icon: Clock },
+                ].map((tab) => (
+                  <TabsTrigger
+                    key={tab.id}
+                    value={tab.id}
+                    className="relative h-16 rounded-none border-b-2 border-transparent px-1 pb-4 pt-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 transition-all data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary hover:text-foreground group"
+                  >
+                    <tab.icon className="mr-2.5 h-4 w-4 transition-transform group-hover:scale-110" />
+                    {tab.label}
+                    {tab.id === "images" && (attachments.length + totalQueuedAttachments + totalPendingUploads) > 0 && (
+                      <Badge variant="secondary" className="ml-2 h-4 px-1.5 text-[8px] font-black bg-primary/10 text-primary border-none">
                         {attachments.length + totalQueuedAttachments + totalPendingUploads}
                       </Badge>
-                    </TabsTrigger>
-                    <TabsTrigger value="overview" className="gap-2">
-                      Visão geral
-                    </TabsTrigger>
-                    <TabsTrigger value="cis" className="gap-2">
-                      ICs Afetados
-                      <Badge variant="secondary" className="ml-1">
+                    )}
+                    {tab.id === "cis" && draftAffectedCis.length > 0 && (
+                      <Badge variant="secondary" className="ml-2 h-4 px-1.5 text-[8px] font-black bg-primary/10 text-primary border-none">
                         {draftAffectedCis.length}
                       </Badge>
-                    </TabsTrigger>
-                    <TabsTrigger value="topology" className="gap-2 group">
-                      <div className="flex items-center gap-1.5">
-                        <span className="group-data-[state=active]:animate-pulse text-primary block w-1.5 h-1.5 rounded-full bg-primary" />
-                        Topologia 360°
-                      </div>
-                    </TabsTrigger>
-                    {draftRecordType === 'change' && (
-                      <TabsTrigger value="governance" className="gap-2">
-                        Governança
-                        {draftRiskLevel !== 'none' && <Badge variant="secondary" className="ml-1 capitalize">{draftRiskLevel}</Badge>}
-                      </TabsTrigger>
                     )}
-                    {draftRecordType === 'problem' && (
-                      <TabsTrigger value="governance" className="gap-2">
-                        Investigação
-                        {draftIsKnownError && <Badge className="ml-1 bg-amber-500">KEDB</Badge>}
-                      </TabsTrigger>
-                    )}
-                    <TabsTrigger value="xla" className="gap-2">
-                      Experiência (XLA)
-                      {currentDeal.xla_score && <Badge variant="outline" className="ml-1">{currentDeal.xla_score}</Badge>}
-                    </TabsTrigger>
-                    <TabsTrigger value="history" className="gap-2">
-                      Histórico
-                      <Badge variant="secondary" className="ml-1">
+                    {tab.id === "history" && activities.length > 0 && (
+                      <Badge variant="secondary" className="ml-2 h-4 px-1.5 text-[8px] font-black bg-primary/10 text-primary border-none">
                         {activities.length}
                       </Badge>
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-              </div>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
 
             <TabsContent value="overview" className="mt-0 space-y-6 p-4 sm:p-6">
@@ -888,6 +959,59 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   </div>
                 </div>
               </section>
+
+              {currentDeal.ai_metadata && (
+                <motion.section 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-[2rem] border-2 border-primary/20 bg-primary/5 p-6 shadow-xl relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                    <Sparkles className="h-20 w-20 text-primary" />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-2xl bg-primary flex items-center justify-center text-white shadow-lg">
+                          <Activity className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-black uppercase tracking-widest text-primary">IA Governance Insights</h3>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold">Análise preditiva ITIL v5</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-black text-primary">{currentDeal.ai_metadata.risk_score || 0}%</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-black">Score de Risco</p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <div className="space-y-3">
+                        <p className="text-xs font-black uppercase tracking-tighter text-muted-foreground">Fatores de Risco Detectados</p>
+                        <div className="flex flex-wrap gap-2">
+                          {(currentDeal.ai_metadata.risk_factors || []).map((f: string, i: number) => (
+                            <Badge key={i} variant="secondary" className="bg-white/50 border-primary/10 text-[10px] px-3 py-1">
+                              {f}
+                            </Badge>
+                          ))}
+                          {(!currentDeal.ai_metadata.risk_factors || currentDeal.ai_metadata.risk_factors.length === 0) && (
+                            <p className="text-xs italic text-muted-foreground">Nenhum fator crítico detectado.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <p className="text-xs font-black uppercase tracking-tighter text-muted-foreground">Next Best Action (Sugerido)</p>
+                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary text-white shadow-lg">
+                          <Rocket className="h-5 w-5" />
+                          <p className="text-sm font-black italic">{currentDeal.ai_metadata.next_best_action || "Manter monitoramento"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.section>
+              )}
 
               {latestManualUpdate ? (
                 <section className="rounded-2xl border bg-card p-5 shadow-sm">
@@ -1777,138 +1901,6 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                                 className="h-4 w-4 rounded-full p-0 hover:bg-muted" 
                                 onClick={() => setDraftAffectedCis(prev => prev.filter(i => i !== id))}
                               >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </Badge>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </section>
-            </TabsContent>
-            <TabsContent value="governance" className="mt-0 space-y-6 p-4 sm:p-6">
-              {draftRecordType === 'change' && (
-                <section className="rounded-2xl border bg-card p-5 shadow-sm">
-                  {/* ... Existing Change UI (I'll need to wrap it or keep it) ... */}
-                  <div className="mb-6 flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Governança de Mudança</h3>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Documentação obrigatória para requisições de mudança (RFC) conforme ITIL version 5.
-                      </p>
-                    </div>
-                    <Badge variant={draftRiskLevel === 'critical' || draftRiskLevel === 'high' ? 'destructive' : 'outline'}>
-                      Risco: {draftRiskLevel === 'none' || !draftRiskLevel ? 'Não definido' : draftRiskLevel.toUpperCase()}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="rounded-2xl border bg-background p-4">
-                      <p className="text-sm font-medium">Nível de Risco</p>
-                      <Select value={draftRiskLevel || "none"} onValueChange={(v) => setDraftRiskLevel(v as any)}>
-                        <SelectTrigger className="mt-3">
-                          <SelectValue placeholder="Selecione o risco" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Selecione o risco</SelectItem>
-                          <SelectItem value="low">Baixo (Standard Change)</SelectItem>
-                          <SelectItem value="medium">Médio (Normal Change)</SelectItem>
-                          <SelectItem value="high">Alto (High Impact)</SelectItem>
-                          <SelectItem value="critical">Crítico (Emergency/Critical)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-sm font-medium">Justificativa da Mudança</p>
-                        <Textarea 
-                          value={draftChangeJustification}
-                          onChange={(e) => setDraftChangeJustification(e.target.value)}
-                          placeholder="Por que esta mudança é necessária?"
-                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                        />
-                      </div>
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-sm font-medium">Plano de Implementação</p>
-                        <Textarea 
-                          value={draftImplementationPlan}
-                          onChange={(e) => setDraftImplementationPlan(e.target.value)}
-                          placeholder="Passo a passo da execução..."
-                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-sm font-medium">Plano de Recuo (Backout)</p>
-                        <Textarea 
-                          value={draftBackoutPlan}
-                          onChange={(e) => setDraftBackoutPlan(e.target.value)}
-                          placeholder="Como reverter em caso de falha?"
-                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                        />
-                      </div>
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-sm font-medium">Plano de Testes</p>
-                        <Textarea 
-                          value={draftTestPlan}
-                          onChange={(e) => setDraftTestPlan(e.target.value)}
-                          placeholder="Como validar o sucesso?"
-                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {draftRecordType === 'problem' && (
-                <section className="rounded-2xl border bg-card p-5 shadow-sm">
-                  <div className="mb-6 flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Investigação de Problema</h3>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Análise de Causa Raiz (RCA) e definição de Error Conhecido.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-full border bg-background px-3 py-1">
-                      <span className="text-xs font-semibold text-muted-foreground mr-2">PUBLICAR NO KEDB</span>
-                      <Switch 
-                        checked={draftIsKnownError} 
-                        onCheckedChange={setDraftIsKnownError} 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="rounded-2xl border bg-background p-4">
-                      <p className="text-sm font-medium">Análise de Causa Raiz (RCA)</p>
-                      <p className="mt-1 text-xs text-muted-foreground mb-3">Identifique o motivo fundamental da falha encontrada.</p>
-                      <Textarea 
-                        value={draftRootCause}
-                        onChange={(e) => setDraftRootCause(e.target.value)}
-                        placeholder="Ex: Falha no disco rígido por desgaste físico após 5 anos..."
-                        className="mt-3 min-h-[160px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                      />
-                    </div>
-
-                    <div className="rounded-2xl border bg-background p-4">
-                      <p className="text-sm font-medium">Solução Definitiva / Workaround</p>
-                      <p className="mt-1 text-xs text-muted-foreground mb-3">Estes passos serão visíveis para o Service Desk como erro conhecido.</p>
-                      <Textarea 
-                        value={draftResolutionSteps}
-                        onChange={(e) => setDraftResolutionSteps(e.target.value)}
-                        placeholder="Passos para resolver ou contornar..."
-                        className="mt-3 min-h-[160px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                      />
-                    </div>
-                  </div>
-                </section>
-              )}
             </TabsContent>
 
             <TabsContent value="xla" className="mt-0 space-y-6 p-4 sm:p-6">
@@ -1928,57 +1920,425 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   )}
                 </div>
 
-                <div className="space-y-6">
-                  {/* Form for new XLA if closed (simplified) */}
-                  {currentDeal.is_closed && (
-                    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                      <p className="text-sm font-semibold">Como foi sua experiência com este item?</p>
-                      <div className="mt-4 flex flex-wrap gap-4">
-                         <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground uppercase">Geral</p>
-                            <div className="flex gap-1">
-                               {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                                 <button 
-                                   key={n} 
-                                   onClick={() => submitXla.mutate({ rating: n, deal: currentDeal.id, contact: currentDeal.contact ?? undefined })}
-                                   className="h-8 w-8 rounded-lg border bg-background hover:bg-primary hover:text-primary-foreground transition-colors text-xs font-medium"
-                                 >
-                                   {n}
-                                 </button>
-                               ))}
-                            </div>
-                         </div>
+                <div className="space-y-8">
+                  {/* XLA Feedback form - available for any deal */}
+                  {(
+                    <div className="rounded-3xl border-2 border-primary/20 bg-primary/5 p-6 shadow-xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                         <Smile className="h-24 w-24 text-primary" />
+                      </div>
+                      
+                      <div className="relative z-10 space-y-6">
+                        <div className="flex items-center gap-2">
+                           <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                           <p className="text-sm font-black uppercase tracking-widest text-primary">Novo Feedback XLA</p>
+                        </div>
+                        
+                        <div className="grid gap-8 md:grid-cols-2">
+                           {/* Main Rating */}
+                           <div className="space-y-4">
+                              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                <Star className="h-3 w-3" /> Satisfação Geral (1-10)
+                              </label>
+                              <div className="flex flex-wrap gap-1.5">
+                                 {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                                   <button 
+                                     key={n} 
+                                     onClick={() => setXlaRating(n)}
+                                     className={cn(
+                                       "h-9 w-9 rounded-xl border font-bold text-sm transition-all",
+                                       xlaRating === n 
+                                         ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-110" 
+                                         : "bg-background hover:border-primary/50"
+                                     )}
+                                   >
+                                     {n}
+                                   </button>
+                                 ))}
+                              </div>
+                           </div>
+
+                           {/* Metrics Grid */}
+                           <div className="space-y-5">
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                                    <Smile className="h-3 w-3" /> Facilidade de Uso
+                                  </label>
+                                  <span className="text-xs font-bold text-primary">{xlaEase}/10</span>
+                                </div>
+                                <Input 
+                                  type="range" min="0" max="10" step="1" 
+                                  value={xlaEase} onChange={(e) => setXlaEase(Number(e.target.value))}
+                                  className="h-1.5 accent-primary p-0 bg-slate-200"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                                    <Clock className="h-3 w-3" /> Velocidade de Entrega
+                                  </label>
+                                  <span className="text-xs font-bold text-primary">{xlaSpeed}/10</span>
+                                </div>
+                                <Input 
+                                  type="range" min="0" max="10" step="1" 
+                                  value={xlaSpeed} onChange={(e) => setXlaSpeed(Number(e.target.value))}
+                                  className="h-1.5 accent-primary p-0 bg-slate-200"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                                    <Target className="h-3 w-3" /> Resultado Alcançado
+                                  </label>
+                                  <span className="text-xs font-bold text-primary">{xlaOutcome}/10</span>
+                                </div>
+                                <Input 
+                                  type="range" min="0" max="10" step="1" 
+                                  value={xlaOutcome} onChange={(e) => setXlaOutcome(Number(e.target.value))}
+                                  className="h-1.5 accent-primary p-0 bg-slate-200"
+                                />
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="space-y-3">
+                           <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                             <MessageSquare className="h-3 w-3" /> Comentário Adicional
+                           </label>
+                           <Textarea 
+                             value={xlaComment}
+                             onChange={(e) => setXlaComment(e.target.value)}
+                             placeholder="Conte-nos um pouco mais sobre sua percepção..."
+                             className="min-h-[100px] rounded-2xl border-primary/10 focus:border-primary/30 transition-all bg-background/50"
+                           />
+                        </div>
+
+                        <div className="flex justify-end">
+                           <Button 
+                             disabled={xlaRating === 0 || submitXla.isPending}
+                             onClick={() => {
+                               submitXla.mutate({
+                                 deal: currentDeal.id,
+                                 contact: currentDeal.contact ?? undefined,
+                                 rating: xlaRating,
+                                 ease_of_use: xlaEase,
+                                 speed_satisfaction: xlaSpeed,
+                                 outcome_satisfaction: xlaOutcome,
+                                 comment: xlaComment
+                               }, {
+                                 onSuccess: () => {
+                                   toast.success("Feedback XLA registrado com sucesso!")
+                                   setXlaRating(0)
+                                   setXlaEase(0)
+                                   setXlaSpeed(0)
+                                   setXlaOutcome(0)
+                                   setXlaComment("")
+                                 }
+                               })
+                             }}
+                             className="px-8 rounded-xl font-bold uppercase tracking-widest text-[10px]"
+                           >
+                             {submitXla.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2 fill-current" />}
+                             Publicar Experiência
+                           </Button>
+                        </div>
                       </div>
                     </div>
                   )}
 
                   <div className="space-y-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Histórico de Feedback</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Linha do Tempo de Satisfação</p>
+                      <Badge variant="outline" className="text-[9px] uppercase font-bold">ITIL v5 Compliance</Badge>
+                    </div>
+
                     {xlaFeedbacks.length > 0 ? (
-                      xlaFeedbacks.map((f: any) => (
-                        <div key={f.id} className="rounded-2xl border p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                             <div className="flex items-center gap-2">
-                               <Badge variant="secondary">{f.rating}/10</Badge>
-                               <span className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleDateString()}</span>
-                             </div>
-                          </div>
-                          {f.comment && <p className="text-sm italic text-muted-foreground">"{f.comment}"</p>}
-                          <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground uppercase">
-                             <div>Uso: {f.ease_of_use}/10</div>
-                             <div>Velocidade: {f.speed_satisfaction}/10</div>
-                             <div>Resultado: {f.outcome_satisfaction}/10</div>
-                          </div>
+                      <div className="grid gap-4">
+                        {xlaFeedbacks.map((f: any) => (
+                          <motion.div 
+                            key={f.id} 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="rounded-3xl border bg-card p-6 space-y-4 hover:shadow-md transition-all relative overflow-hidden"
+                          >
+                            <div className="flex items-center justify-between relative z-10">
+                               <div className="flex items-center gap-3">
+                                 <div className={cn(
+                                   "h-12 w-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm",
+                                   f.rating >= 8 ? "bg-emerald-500/10 text-emerald-600" : 
+                                   f.rating >= 5 ? "bg-amber-500/10 text-amber-600" : "bg-rose-500/10 text-rose-600"
+                                 )}>
+                                   {f.rating}
+                                 </div>
+                                 <div>
+                                   <p className="text-sm font-bold">{f.contact_name || "Usuário Final"}</p>
+                                   <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
+                                     {format(new Date(f.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                                   </p>
+                                 </div>
+                               </div>
+                               <Badge variant="outline" className="border-primary/10 text-[10px] font-bold uppercase">Score: {f.rating}/10</Badge>
+                            </div>
+
+                            {f.comment && (
+                              <div className="relative p-4 rounded-2xl bg-muted/30 italic text-sm text-foreground/80 leading-relaxed">
+                                 <span className="absolute -top-2 -left-1 text-4xl text-primary/10 font-serif">"</span>
+                                 {f.comment}
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-3 gap-4">
+                               <div className="space-y-1">
+                                  <div className="flex justify-between text-[8px] font-black uppercase text-muted-foreground tracking-widest">
+                                    <span>Facilidade</span>
+                                    <span>{f.ease_of_use}/10</span>
+                                  </div>
+                                  <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500" style={{ width: `${f.ease_of_use * 10}%` }} />
+                                  </div>
+                               </div>
+                               <div className="space-y-1">
+                                  <div className="flex justify-between text-[8px] font-black uppercase text-muted-foreground tracking-widest">
+                                    <span>Velocidade</span>
+                                    <span>{f.speed_satisfaction}/10</span>
+                                  </div>
+                                  <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-amber-500" style={{ width: `${f.speed_satisfaction * 10}%` }} />
+                                  </div>
+                               </div>
+                               <div className="space-y-1">
+                                  <div className="flex justify-between text-[8px] font-black uppercase text-muted-foreground tracking-widest">
+                                    <span>Resultado</span>
+                                    <span>{f.outcome_satisfaction}/10</span>
+                                  </div>
+                                  <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-primary" style={{ width: `${f.outcome_satisfaction * 10}%` }} />
+                                  </div>
+                               </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                      <div className="rounded-3xl border border-dashed p-12 text-center space-y-4">
+                        <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto opacity-50">
+                           <Smile className="h-8 w-8 text-muted-foreground" />
                         </div>
-                      ))
-                    ) : (
-                      <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                        Nenhum feedback XLA registrado ainda.
+                        <p className="text-sm text-muted-foreground font-medium">Nenhum feedback XLA registrado ainda para este fluxo.</p>
                       </div>
                     )}
                   </div>
                 </div>
               </section>
+            </TabsContent>
+
+            <TabsContent value="governance" className="mt-0 space-y-6 p-4 sm:p-6">
+              {draftRecordType === 'change' && (
+                <div className="space-y-6">
+                  <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                    <div className="mb-6 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Governança de Mudança</h3>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Documentação obrigatória para requisições de mudança (RFC) conforme ITIL version 5.
+                        </p>
+                      </div>
+                      <Badge variant={draftCabApproval ? "default" : "outline"} className={cn(draftCabApproval && "bg-emerald-500 hover:bg-emerald-600")}>
+                        {draftCabApproval ? "Aprovado pelo CAB" : "Aguardando Aprovação"}
+                      </Badge>
+                    </div>
+
+                    <div className="grid gap-6">
+                      <div className="grid gap-4 md:grid-cols-2">
+                         <div className="rounded-2xl border bg-background p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Tipo de Mudança</p>
+                            <Select value={draftChangeType} onValueChange={(v) => setDraftChangeType(v as any)}>
+                              <SelectTrigger className="mt-3">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="standard">Padrão (Baixo Risco)</SelectItem>
+                                <SelectItem value="normal">Normal (Requer CAB)</SelectItem>
+                                <SelectItem value="emergency">Emergencial (Urgente)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                         </div>
+                         <div className="rounded-2xl border bg-background p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Nível de Risco</p>
+                            <Select value={draftRiskLevel} onValueChange={(v) => setDraftRiskLevel(v as any)}>
+                              <SelectTrigger className="mt-3">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Não definido</SelectItem>
+                                <SelectItem value="low">Baixo</SelectItem>
+                                <SelectItem value="medium">Médio</SelectItem>
+                                <SelectItem value="high">Alto</SelectItem>
+                                <SelectItem value="critical">Crítico</SelectItem>
+                              </SelectContent>
+                            </Select>
+                         </div>
+                      </div>
+
+                      <div className="rounded-2xl border bg-background p-4">
+                        <div className="flex items-center justify-between mb-3">
+                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Aprovação CAB</p>
+                           <Switch 
+                             checked={draftCabApproval} 
+                             onCheckedChange={setDraftCabApproval}
+                           />
+                        </div>
+                        {draftCabApproval && (
+                          <div className="mt-4 space-y-2 animate-in fade-in slide-in-from-top-2">
+                             <p className="text-xs text-muted-foreground">Data da Reunião/Aprovação</p>
+                             <Input 
+                               type="datetime-local" 
+                               value={draftCabDate ? draftCabDate.split('.')[0] : ''} 
+                               onChange={(e) => setDraftCabDate(e.target.value)}
+                             />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium mb-3">Justificativa da Mudança</p>
+                        <Textarea 
+                          value={draftChangeJustification}
+                          onChange={(e) => setDraftChangeJustification(e.target.value)}
+                          placeholder="Por que esta mudança é necessária?"
+                          className="min-h-[100px] bg-muted/20"
+                        />
+                      </div>
+
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium mb-3">Impacto Esperado</p>
+                        <Textarea 
+                          value={draftChangeImpact}
+                          onChange={(e) => setDraftChangeImpact(e.target.value)}
+                          placeholder="Quais sistemas ou usuários serão afetados durante a transição?"
+                          className="min-h-[100px] bg-muted/20"
+                        />
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                         <div className="space-y-4">
+                            <div className="rounded-2xl border bg-background p-4">
+                              <p className="text-sm font-medium mb-3 text-primary flex items-center gap-2">
+                                <Layers className="h-4 w-4" /> Plano de Implementação
+                              </p>
+                              <Textarea 
+                                value={draftImplementationPlan}
+                                onChange={(e) => setDraftImplementationPlan(e.target.value)}
+                                placeholder="Passo a passo técnico..."
+                                className="min-h-[150px]"
+                              />
+                            </div>
+                            <div className="rounded-2xl border bg-background p-4">
+                              <p className="text-sm font-medium mb-3 text-rose-600 flex items-center gap-2">
+                                <Trash2 className="h-4 w-4" /> Plano de Backout (Rollback)
+                              </p>
+                              <Textarea 
+                                value={draftBackoutPlan}
+                                onChange={(e) => setDraftBackoutPlan(e.target.value)}
+                                placeholder="Como reverter em caso de falha?"
+                                className="min-h-[150px]"
+                              />
+                            </div>
+                         </div>
+                         <div className="space-y-4">
+                            <div className="rounded-2xl border bg-background p-4">
+                              <p className="text-sm font-medium mb-3 text-amber-600 flex items-center gap-2">
+                                <Zap className="h-4 w-4" /> Plano de Testes
+                              </p>
+                              <Textarea 
+                                value={draftTestPlan}
+                                onChange={(e) => setDraftTestPlan(e.target.value)}
+                                placeholder="Como validar que a mudança foi bem sucedida?"
+                                className="min-h-[150px]"
+                              />
+                            </div>
+                            <div className="rounded-2xl border border-dashed bg-muted/10 p-6 flex flex-col items-center justify-center text-center space-y-3">
+                               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                 <ShieldCheck className="h-6 w-6 text-primary" />
+                               </div>
+                               <p className="text-xs font-bold uppercase text-muted-foreground">Compliance ITIL v5</p>
+                               <p className="text-[10px] text-muted-foreground max-w-[200px]">
+                                 O preenchimento completo destes campos é vital para a auditoria e governança do valor.
+                               </p>
+                            </div>
+                         </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {draftRecordType === 'problem' && (
+                <div className="space-y-6">
+                  <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                    <div className="mb-6 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Investigação de Problema</h3>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Análise de causa raiz e gestão de erros conhecidos (KEDB).
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-3">
+                         <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="gap-2 border-primary/20 text-primary hover:bg-primary/5 font-black uppercase tracking-widest text-[10px]"
+                            onClick={handleDraftAIProblemReport}
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Draft RCA com IA
+                          </Button>
+                         <div className="flex items-center gap-3">
+                            <span className="text-xs font-medium text-muted-foreground">Erro Conhecido (KEDB)?</span>
+                            <Switch 
+                              checked={draftIsKnownError} 
+                              onCheckedChange={setDraftIsKnownError}
+                            />
+                         </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium mb-3 text-rose-600">Causa Raiz (Root Cause Analysis)</p>
+                        <Textarea 
+                          value={draftRootCause}
+                          onChange={(e) => setDraftRootCause(e.target.value)}
+                          placeholder="Qual a origem estrutural deste problema?"
+                          className="min-h-[120px] bg-rose-50/10 border-rose-100"
+                        />
+                      </div>
+
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium mb-3 text-amber-600">Contorno (Workaround)</p>
+                        <Textarea 
+                          value={draftWorkaround}
+                          onChange={(e) => setDraftWorkaround(e.target.value)}
+                          placeholder="Existe uma solução paliativa para restaurar o serviço?"
+                          className="min-h-[120px] bg-amber-50/10 border-amber-100"
+                        />
+                      </div>
+
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium mb-3 text-emerald-600">Resolução Definitiva</p>
+                        <Textarea 
+                          value={draftResolutionSteps}
+                          onChange={(e) => setDraftResolutionSteps(e.target.value)}
+                          placeholder="Passos para eliminar o problema permanentemente..."
+                          className="min-h-[120px] bg-emerald-50/10 border-emerald-100"
+                        />
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="topology" className="mt-0 p-4 sm:p-6">

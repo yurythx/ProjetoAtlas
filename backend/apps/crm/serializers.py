@@ -16,6 +16,7 @@ from .models import (
     Stage,
     Swarm,
     XLAFeedback,
+    CSIEntry,
     get_column_semantic_defaults,
 )
 
@@ -362,12 +363,17 @@ class DealSerializer(serializers.ModelSerializer):
             "priority",
             "service_item",
             "affected_cis",
+            "change_type",
             "risk_level",
             "change_justification",
+            "change_impact",
             "implementation_plan",
             "backout_plan",
             "test_plan",
+            "cab_approval",
+            "cab_date",
             "root_cause",
+            "workaround",
             "resolution_steps",
             "is_known_error",
             "xla_score",
@@ -739,3 +745,34 @@ class EvolutionConfigSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(path)
         return path
+
+class XLAFeedbackSerializer(serializers.ModelSerializer):
+    contact_name = serializers.ReadOnlyField(source="contact.name")
+    
+    class Meta:
+        model = XLAFeedback
+        fields = [
+            "id", "deal", "contact", "contact_name", "rating", "comment",
+            "ease_of_use", "speed_satisfaction", "outcome_satisfaction", "created_at"
+        ]
+
+class CSIEntrySerializer(serializers.ModelSerializer):
+    requester_name = serializers.ReadOnlyField(source="requester.get_full_name")
+    responsible_name = serializers.ReadOnlyField(source="responsible.get_full_name")
+    deal_title = serializers.ReadOnlyField(source="deal.title")
+    pipeline_title = serializers.ReadOnlyField(source="pipeline.title")
+
+    class Meta:
+        model = CSIEntry
+        fields = [
+            "id", "title", "description", "priority", "status",
+            "deal", "deal_title", "pipeline", "pipeline_title",
+            "proposed_solution", "expected_outcome",
+            "requester", "requester_name", "responsible", "responsible_name",
+            "created_at", "updated_at"
+        ]
+        read_only_fields = ["requester"]
+
+    def create(self, validated_data):
+        validated_data['requester'] = self.context['request'].user
+        return super().create(validated_data)

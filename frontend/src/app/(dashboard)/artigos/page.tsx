@@ -231,39 +231,49 @@ function ArtigosPageContent() {
 
     return (
         <div className="h-full space-y-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-4xl font-extrabold tracking-tight">Centro de Conteúdo</h1>
-                    <p className="text-muted-foreground text-lg">Gerencie artigos, notícias e organização temática.</p>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12">
+                   <BookOpen className="h-40 w-40 text-primary" />
                 </div>
-                <div className="flex items-center gap-2">
-                    <Link
-                        href="/artigos/novo"
-                        className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition"
-                        aria-label="Criar novo artigo"
+                <div className="relative z-10 space-y-2">
+                    <h1 className="text-5xl font-black tracking-tighter flex items-center gap-6">
+                        <div className="h-16 w-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/10">
+                            <BookOpen className="h-8 w-8 text-primary" />
+                        </div>
+                        Centro de Conteúdo
+                    </h1>
+                    <p className="text-muted-foreground text-lg font-medium max-w-xl">Gestão editorial, base de conhecimento e comunicação estratégica do ecossistema Atlas.</p>
+                </div>
+                <div className="flex items-center gap-4 relative z-10">
+                    <Button
+                        variant="outline"
+                        asChild
+                        className="rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 font-black uppercase tracking-widest h-14 px-8 shadow-lg"
                     >
-                        <Plus className="h-4 w-4" aria-hidden="true" />
-                        Novo Artigo
-                    </Link>
+                        <Link href="/artigos/novo" className="flex items-center gap-3">
+                            <Plus className="h-5 w-5 text-primary" aria-hidden="true" />
+                            Novo Artigo
+                        </Link>
+                    </Button>
                 </div>
             </div>
 
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'articles' | 'tags' | 'analytics' | 'moderation')} className="w-full">
-                <TabsList className="bg-muted/50 p-1 rounded-xl">
-                    <TabsTrigger value="articles" className="rounded-lg px-6">Artigos</TabsTrigger>
-                    <TabsTrigger value="tags" className="rounded-lg px-6">Tags & Categorias</TabsTrigger>
-                    <TabsTrigger value="moderation" className="rounded-lg px-6">Moderação</TabsTrigger>
-                    <TabsTrigger value="analytics" className="rounded-lg px-6">Analytics</TabsTrigger>
+                <TabsList className="bg-white/5 p-1.5 rounded-2xl border border-white/5 backdrop-blur-md mb-8">
+                    <TabsTrigger value="articles" className="rounded-xl px-8 h-12 font-black uppercase tracking-widest text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300">Artigos</TabsTrigger>
+                    <TabsTrigger value="tags" className="rounded-xl px-8 h-12 font-black uppercase tracking-widest text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300">Tags & Categorias</TabsTrigger>
+                    <TabsTrigger value="moderation" className="rounded-xl px-8 h-12 font-black uppercase tracking-widest text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300">Moderação</TabsTrigger>
+                    <TabsTrigger value="analytics" className="rounded-xl px-8 h-12 font-black uppercase tracking-widest text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-300">Analytics</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="articles" className="mt-6">
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-6">
-                        <div className="relative flex-1" role="search" aria-label="Pesquisar artigos">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" aria-hidden="true" />
+                        <div className="relative flex-1 group" role="search" aria-label="Pesquisar artigos">
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-all group-focus-within:text-primary group-focus-within:scale-110" aria-hidden="true" />
                             <Input
                                 type="search"
-                                placeholder="Buscar por título, resumo ou categoria..."
-                                className="pl-12 h-12 rounded-2xl bg-background/50 backdrop-blur border-primary/10 focus-visible:ring-primary/20"
+                                placeholder="Buscar no acervo de conhecimento..."
+                                className="pl-14 h-16 rounded-2xl bg-white/5 backdrop-blur-md border-white/10 focus-visible:ring-primary/20 text-lg font-medium"
                                 value={searchTerm}
                                 onChange={(e) => { setSearchTerm(e.target.value) }}
                                 aria-label="Buscar artigos"
@@ -293,25 +303,25 @@ function ArtigosPageContent() {
                             </button>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-4">
-                        <button
-                            type="button"
+                    <div className="flex items-center gap-3 overflow-x-auto pb-4 mb-8 scrollbar-hide">
+                        <Button
+                            variant={categoryId === null ? 'default' : 'outline'}
                             onClick={() => setCategoryId(null)}
-                            className={`h-8 px-3 rounded-full text-xs font-medium border whitespace-nowrap ${categoryId === null ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border'}`}
+                            className={cn("h-10 px-6 rounded-full text-[11px] font-black uppercase tracking-widest transition-all", categoryId === null ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-white/5 border-white/10 text-muted-foreground hover:text-foreground')}
                             aria-label="Todas as categorias"
                         >
                             Todas as categorias
-                        </button>
+                        </Button>
                         {categories?.map((cat) => (
-                            <button
+                            <Button
                                 key={cat.id}
-                                type="button"
+                                variant={categoryId === cat.id ? 'default' : 'outline'}
                                 onClick={() => setCategoryId(cat.id)}
-                                className={`h-8 px-3 rounded-full text-xs font-medium border whitespace-nowrap ${categoryId === cat.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border'}`}
+                                className={cn("h-10 px-6 rounded-full text-[11px] font-black uppercase tracking-widest transition-all", categoryId === cat.id ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-white/5 border-white/10 text-muted-foreground hover:text-foreground')}
                                 aria-label={`Filtrar por ${cat.name}`}
                             >
                                 {cat.name}
-                            </button>
+                            </Button>
                         ))}
                     </div>
 

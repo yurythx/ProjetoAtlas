@@ -6,7 +6,7 @@ import { ChatWindow } from "./chat-window"
 import { Contact } from "@/types"
 import { Message } from "@/types/messenger"
 import type { Conversation } from "@/types/messenger"
-import { MessageSquareDashed, Loader2, SlidersHorizontal } from "lucide-react"
+import { MessageSquareDashed, Loader2, SlidersHorizontal, Search, Sparkles, MessageCircle, ArrowLeft } from "lucide-react"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/axios"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/hooks/use-auth"
+import { AnimatePresence, motion } from "framer-motion"
 
 export function MessengerView() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
@@ -175,8 +176,6 @@ export function MessengerView() {
       return true
     })()
 
-    // We can't easily get sender_username unless augmented. 
-    // Usually it is sender_username in the Message interface from types/messenger.ts 
     const sender = m.sender_username || ""
     const byUser = userFilter.trim().length === 0
       ? true
@@ -351,179 +350,198 @@ export function MessengerView() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center border border-border/50 rounded-2xl bg-background/50 backdrop-blur-sm shadow-sm">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex h-full items-center justify-center border border-white/10 rounded-[3rem] bg-white/5 backdrop-blur-xl shadow-2xl">
+        <Loader2 className="h-10 w-10 animate-spin text-primary opacity-50" />
       </div>
     )
   }
 
   if (!currentUser) {
     return (
-      <div className="flex h-full items-center justify-center border border-border/50 rounded-2xl bg-background/50 backdrop-blur-sm shadow-sm">
-        <div className="text-sm text-muted-foreground">Sessão expirada. Faça login novamente.</div>
+      <div className="flex h-full items-center justify-center border border-white/10 rounded-[3rem] bg-white/5 backdrop-blur-xl shadow-2xl">
+        <div className="text-sm font-black uppercase tracking-widest text-muted-foreground opacity-50">Sessão expirada. Autentique-se.</div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-full border border-border/50 rounded-2xl overflow-hidden bg-background/50 backdrop-blur-sm shadow-sm flex-col">
-      <div className="w-full p-3 sticky top-0 z-10 bg-background/70 backdrop-blur-sm border-b">
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Buscar em mensagens..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 h-10"
-          />
+    <div className="flex h-full border border-white/10 rounded-[3rem] overflow-hidden bg-white/5 backdrop-blur-2xl shadow-2xl flex-col relative animate-in fade-in duration-1000">
+      {/* Premium Search & Filters Header */}
+      <div className="w-full p-6 sticky top-0 z-20 bg-background/40 backdrop-blur-xl border-b border-white/5">
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+            <Input
+              placeholder="Pesquisar mensagens e arquivos no histórico..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-12 pl-11 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 focus:ring-primary/20 transition-all font-medium shadow-inner"
+            />
+          </div>
           <Sheet open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Filtros de busca">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className={cn("h-12 w-12 rounded-2xl border-white/10 transition-all shadow-lg", isFiltersOpen ? "bg-primary text-primary-foreground border-primary" : "bg-white/5 hover:bg-white/10")}
+                aria-label="Filtros"
+              >
                 <SlidersHorizontal className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[90vw] sm:w-[420px] max-h-[calc(100vh-1.5rem)] overflow-hidden p-0">
-              <SheetHeader className="border-b bg-muted/30 px-4 py-4 text-left">
-                <SheetTitle>Filtros de busca</SheetTitle>
+            <SheetContent side="right" className="w-[90vw] sm:w-[420px] p-0 border-white/10 bg-background/95 backdrop-blur-3xl rounded-l-[3rem] overflow-hidden shadow-2xl">
+              <SheetHeader className="px-8 pt-8 pb-6 bg-white/5 border-b border-white/10">
+                <SheetTitle className="text-2xl font-black tracking-tighter uppercase">Atlas Search Engine</SheetTitle>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Refine sua busca no meta-histórico.</p>
               </SheetHeader>
-              <div className="min-h-0 overflow-y-auto">
-                <div className="space-y-4 px-4 py-4">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Tipo de resultado</label>
-                  <div className="mt-2">
-                    <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="media">Mídia</SelectItem>
-                        <SelectItem value="files">Arquivos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className="px-8 py-8 space-y-8 overflow-y-auto max-h-[calc(100vh-160px)]">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Domínio de Dados</label>
+                  <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
+                    <SelectTrigger className="h-11 rounded-xl border-white/10 bg-white/5 font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl">
+                      <SelectItem value="all" className="rounded-xl font-bold">Toda a Rede</SelectItem>
+                      <SelectItem value="media" className="rounded-xl font-bold">Mídia Visuais</SelectItem>
+                      <SelectItem value="files" className="rounded-xl font-bold">Documentos & Binários</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex items-center gap-3">
+
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
+                  <div className="space-y-0.5">
+                    <label htmlFor="attachments" className="text-[10px] font-black uppercase tracking-widest">Anexos Filtrados</label>
+                    <p className="text-[9px] text-muted-foreground font-bold">Exibir apenas mensagens com arquivos.</p>
+                  </div>
                   <Checkbox
                     id="attachments"
                     checked={hasAttachments}
                     onCheckedChange={(v) => setHasAttachments(Boolean(v))}
+                    className="data-[state=checked]:bg-primary rounded-md"
                   />
-                  <label htmlFor="attachments" className="text-sm">Somente com anexo</label>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Tipo de arquivo</label>
-                  <div className="mt-2">
-                    <Select value={fileKind} onValueChange={(v) => setFileKind(v as typeof fileKind)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Tipo de arquivo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="any">Todos os tipos</SelectItem>
-                        <SelectItem value="image">Imagem</SelectItem>
-                        <SelectItem value="video">Vídeo</SelectItem>
-                        <SelectItem value="audio">Áudio</SelectItem>
-                        <SelectItem value="pdf">PDF</SelectItem>
-                        <SelectItem value="doc">Word</SelectItem>
-                        <SelectItem value="xls">Planilha</SelectItem>
-                        <SelectItem value="ppt">Apresentação</SelectItem>
-                        <SelectItem value="zip">ZIP</SelectItem>
-                      </SelectContent>
-                    </Select>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Extensão de Arquivo</label>
+                  <Select value={fileKind} onValueChange={(v) => setFileKind(v as typeof fileKind)}>
+                    <SelectTrigger className="h-11 rounded-xl border-white/10 bg-white/5 font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl">
+                      <SelectItem value="any" className="rounded-xl font-bold">Todos os formatos</SelectItem>
+                      <SelectItem value="image" className="rounded-xl font-bold">Imagens (JPG, PNG...)</SelectItem>
+                      <SelectItem value="video" className="rounded-xl font-bold">Vídeos (MP4, MKV...)</SelectItem>
+                      <SelectItem value="audio" className="rounded-xl font-bold">Áudios (MP3, WAV...)</SelectItem>
+                      <SelectItem value="pdf" className="rounded-xl font-bold">PDF Documents</SelectItem>
+                      <SelectItem value="doc" className="rounded-xl font-bold">Word Documents</SelectItem>
+                      <SelectItem value="xls" className="rounded-xl font-bold">Planilhas Excel</SelectItem>
+                      <SelectItem value="ppt" className="rounded-xl font-bold">Apresentações</SelectItem>
+                      <SelectItem value="zip" className="rounded-xl font-bold">Arquivos Compactos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-4">
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <label htmlFor="onlyUnread" className="text-[10px] font-black uppercase tracking-widest">Não Lidas</label>
+                    <Checkbox id="onlyUnread" checked={onlyUnread} onCheckedChange={(v) => setOnlyUnread(Boolean(v))} />
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <label htmlFor="onlyWithReactions" className="text-[10px] font-black uppercase tracking-widest">Com Reações</label>
+                    <Checkbox id="onlyWithReactions" checked={onlyWithReactions} onCheckedChange={(v) => setOnlyWithReactions(Boolean(v))} />
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="onlyUnread"
-                    checked={onlyUnread}
-                    onCheckedChange={(v) => setOnlyUnread(Boolean(v))}
-                  />
-                  <label htmlFor="onlyUnread" className="text-sm">Apenas não lidas</label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="onlyWithReactions"
-                    checked={onlyWithReactions}
-                    onCheckedChange={(v) => setOnlyWithReactions(Boolean(v))}
-                  />
-                  <label htmlFor="onlyWithReactions" className="text-sm">Com reação</label>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground">Usuário (remetente)</label>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Filtrar por Usuário</label>
                   <Input
-                    placeholder="Nome de usuário"
+                    placeholder="@username"
                     value={userFilter}
                     onChange={(e) => setUserFilter(e.target.value)}
-                    className="mt-2"
+                    className="h-11 rounded-xl border-white/10 bg-white/5 font-bold"
                   />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground">De</label>
-                    <Input
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
-                      className="mt-2"
-                    />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">De</label>
+                    <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-11 rounded-xl border-white/10 bg-white/5 font-bold" />
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground">Até</label>
-                    <Input
-                      type="date"
-                      value={dateTo}
-                      onChange={(e) => setDateTo(e.target.value)}
-                      className="mt-2"
-                    />
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Até</label>
+                    <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-11 rounded-xl border-white/10 bg-white/5 font-bold" />
                   </div>
                 </div>
-                <div className="pt-2">
-                  <Button className="w-full" onClick={() => setIsFiltersOpen(false)}>
-                    Aplicar filtros
-                  </Button>
-                </div>
-                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-8 bg-background/80 backdrop-blur-md border-t border-white/10">
+                 <Button className="w-full h-12 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20" onClick={() => setIsFiltersOpen(false)}>
+                   Aplicar Filtros Avançados
+                 </Button>
               </div>
             </SheetContent>
           </Sheet>
         </div>
-        {debounced.length >= 3 && (
-          <div className="mt-2 max-h-64 overflow-auto border rounded-xl bg-background/90 backdrop-blur-sm">
-            {searchQuery.isLoading && (
-              <div className="p-4 text-sm text-muted-foreground">Buscando...</div>
-            )}
-            {!searchQuery.isLoading && advancedFilteredResults.length === 0 && (
-              <div className="p-4 text-sm text-muted-foreground">Sem resultados</div>
-            )}
-            {advancedFilteredResults.map((m) => (
-              <div key={`${m.conversation}-${m.id}`} className="p-3 border-b last:border-b-0 flex items-center gap-3 hover:bg-muted/50 cursor-pointer transition-colors" role="button" onClick={() => openMessage(m)}>
-                <Badge variant="outline" className="text-[10px] px-2 truncate">{getConversationLabel(m)}</Badge>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm truncate font-medium">
-                    {highlight(m.content || m.file_name || 'Mensagem', debounced)}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">{new Date(m.created_at).toLocaleString()}</p>
+
+        <AnimatePresence>
+          {debounced.length >= 3 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mt-4 max-h-80 overflow-auto rounded-3xl border border-white/10 bg-background/90 backdrop-blur-2xl shadow-2xl p-2"
+            >
+              {searchQuery.isLoading && (
+                <div className="p-8 flex items-center justify-center gap-3">
+                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                   <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Escaneando base de dados...</span>
                 </div>
-                <Button size="sm" variant="outline">Abrir</Button>
-              </div>
-            ))}
-            {searchQuery.hasNextPage && (
-              <div className="p-2 flex items-center justify-center">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={searchQuery.isFetchingNextPage}
-                  onClick={() => searchQuery.fetchNextPage()}
-                >
-                  {searchQuery.isFetchingNextPage ? "Carregando..." : "Carregar mais"}
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+              {!searchQuery.isLoading && advancedFilteredResults.length === 0 && (
+                <div className="p-12 text-center space-y-2">
+                   <div className="text-sm font-black uppercase tracking-widest text-muted-foreground/40">Nenhum registro encontrado</div>
+                   <p className="text-[10px] text-muted-foreground font-bold italic">Tente outros parâmetros de busca.</p>
+                </div>
+              )}
+              {advancedFilteredResults.map((m) => (
+                <div key={`${m.conversation}-${m.id}`} className="group p-4 rounded-2xl hover:bg-white/5 cursor-pointer transition-all flex items-center gap-4" role="button" onClick={() => openMessage(m)}>
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                     <MessageCircle className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                       <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-2 py-0 border-primary/20 text-primary">{getConversationLabel(m)}</Badge>
+                       <span className="text-[9px] text-muted-foreground font-black opacity-40">{new Date(m.created_at).toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm truncate font-bold text-foreground/90">
+                      {highlight(m.content || m.file_name || 'Arquivo Compartilhado', debounced)}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="ghost" className="rounded-xl font-black uppercase tracking-widest text-[9px] opacity-0 group-hover:opacity-100 transition-opacity">Abrir</Button>
+                </div>
+              ))}
+              {searchQuery.hasNextPage && (
+                <div className="p-4 flex items-center justify-center">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl font-black uppercase tracking-widest text-[9px] border-white/10"
+                    disabled={searchQuery.isFetchingNextPage}
+                    onClick={() => searchQuery.fetchNextPage()}
+                  >
+                    {searchQuery.isFetchingNextPage ? "Carregando..." : "Carregar mais resultados"}
+                  </Button>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-      <div className="flex min-h-0 flex-1">
+
+      <div className="flex min-h-0 flex-1 relative overflow-hidden">
+        {/* Left Sidebar: Contact List */}
         <div className={cn(
-          "w-full md:w-80 border-r border-border/50 bg-background/50 md:flex flex-col",
+          "w-full md:w-96 border-r border-white/5 bg-background/20 md:flex flex-col relative z-10",
           selectedContact ? "hidden" : "flex"
         )}>
           <ContactList
@@ -536,27 +554,58 @@ export function MessengerView() {
           />
         </div>
 
+        {/* Main Content: Chat Window */}
         <div className={cn(
-          "flex-1 bg-background/30 flex flex-col min-w-0",
+          "flex-1 bg-white/5 flex flex-col min-w-0 relative z-0",
           !selectedContact ? "hidden md:flex" : "flex"
         )}>
-          {selectedContact ? (
-            <ChatWindow
-              contact={selectedContact}
-              currentUser={currentUser || null}
-              onBack={() => setSelectedContact(null)}
-              conversationId={conversationId ? Number(conversationId) : null}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-muted-foreground flex-col gap-4">
-              <div className="p-6 bg-primary/5 rounded-full border border-primary/10">
-                <MessageSquareDashed className="w-10 h-10 text-primary/40" />
-              </div>
-              <p className="font-medium">Selecione uma conversa para começar</p>
-            </div>
-          )}
+          <AnimatePresence mode="wait">
+            {selectedContact ? (
+              <motion.div 
+                key={selectedContact.id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="h-full flex flex-col"
+              >
+                <ChatWindow
+                  contact={selectedContact}
+                  currentUser={currentUser || null}
+                  onBack={() => setSelectedContact(null)}
+                  conversationId={conversationId ? Number(conversationId) : null}
+                />
+              </motion.div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex h-full items-center justify-center text-muted-foreground flex-col gap-6 p-12 text-center"
+              >
+                <div className="relative">
+                   <div className="absolute -inset-4 bg-primary/20 blur-3xl opacity-20 rounded-full animate-pulse" />
+                   <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 shadow-2xl relative">
+                      <MessageSquareDashed className="w-16 h-16 text-primary opacity-20" />
+                   </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-black tracking-tight text-foreground/80">Canal de Comunicação Criptografado</h3>
+                  <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.2em] max-w-xs leading-relaxed">
+                    Selecione uma transmissão ativa na barra lateral para iniciar a sessão de chat.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                   <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 opacity-60">Servidores Atlas Operacionais</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
+
+      {/* Background Decorative Blur */}
+      <div className="absolute -bottom-24 -left-24 h-96 w-96 bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute -top-24 -right-24 h-96 w-96 bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
     </div>
   )
 }
