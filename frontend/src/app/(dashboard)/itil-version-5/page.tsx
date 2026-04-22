@@ -48,15 +48,15 @@ export default function ITILVersãon5Page() {
       icon: LineChart,
       color: "text-blue-500",
       bg: "bg-blue-500/10",
-      content: "O VSM no Atlas nÃ£o Ã© apenas um grÃ¡fico; Ã© a espinha dorsal da operaÃ§Ã£o. Mapeamos desde a Demanda inicial atÃ© a RealizaÃ§Ã£o de Valor, identificanão gargalos e tempo de residÃªncia em tempo real."
+      content: "O VSM no Atlas nção é apenas um gráfico; é a espinha dorsal da operaçção. Mapeamos desde a Demanda inicial até a Realizaçção de Valor, identificando gargalos e tempo de residência em tempo real."
     },
     {
       id: "swarm",
-      title: "Swarming & ColaboraÃ§Ã£o",
+      title: "Swarming & Colaboraçção",
       icon: Network,
       color: "text-purple-500",
       bg: "bg-purple-500/10",
-      content: "Adeus N1/N2/N3. O Atlas implementa o Swarming nativo, permitinão colapsar os nÃ­veis de suporte em uma Ãºnica cÃ©lula de resoluÃ§Ã£o dinÃ¢mica atravÃ©s das War Rooms (Swarms)."
+      content: "Adeus N1/N2/N3. O Atlas implementa o Swarming nativo, permitinão colapsar os níveis de suporte em uma única célula de resoluçção dinÃ¢mica através das War Rooms (Swarms)."
     },
     {
       id: "xla",
@@ -64,15 +64,15 @@ export default function ITILVersãon5Page() {
       icon: Heart,
       color: "text-rose-500",
       bg: "bg-rose-500/10",
-      content: "Medimosão que realmente importa. Enquanão o SLA foca no tempo, o XLA foca no sentimenão e na utilidade percebida pelo usuÃ¡rio final. Engenharia de valor atravÃ©s da percepÃ§Ã£o humana."
+      content: "Medimosão que realmente importa. Enquando o SLA foca no tempo, o XLA foca no sentimenão e na utilidade percebida pelo usuário final. Engenharia de valor através da percepçção humana."
     },
     {
       id: "csi",
-      title: "CSI Register (Melhoria ContÃ­nua)",
+      title: "CSI Register (Melhoria Contínua)",
       icon: RefreshCcw,
       color: "text-emerald-500",
       bg: "bg-emerald-500/10",
-      content: "Cada falha Ã© uma oportunidade. O Registro de Melhoria ContÃ­nua (CSI) permite transãormar problemas recorrentes em projetos de automaÃ§Ã£o e otimizaÃ§Ã£o estrutural."
+      content: "Cada falha é uma oportunidade. O Registro de Melhoria Contínua (CSI) permite transãormar problemas recorrentes em projetos de automaçção e otimizaçção estrutural."
     },
     {
       id: "ai",
@@ -80,7 +80,7 @@ export default function ITILVersãon5Page() {
       icon: Sparkles,
       color: "text-amber-500",
       bg: "bg-amber-500/10",
-      content: "Nossa IA nÃ£o Ã© apenas um chat; ela monitora o fluxo de valor 24/7, detectanão risãos de estagnaÃ§Ã£o, calculanão sãores de governanÃ§a e sugerinão a 'PrÃ³xima Melhor AÃ§Ã£o' (Next Best Action)."
+      content: "Nossa IA nção é apenas um chat; ela monitora o fluxo de valor 24/7, detectando riscoss de estagnaçção, calculando scores de governança e sugerindo a 'Próxima Melhor Açção' (Next Best Action)."
     }
   ]
 
@@ -139,8 +139,8 @@ export default function ITILVersãon5Page() {
             transition={{ delay: 0.6 }}
             className="text-2xl md:text-4xl text-slate-400 max-w-5xl mx-auto font-medium leading-[1.1] tracking-tight"
           >
-            A fronteira final da <span className="text-white font-black underline decoration-primary decoration-4 underline-offset-8">GestÃ£o AutonÃ´mica de Valor</span>. 
-            Engenharia de resultados via orquestraÃ§Ã£o algorÃ­tmica.
+            A fronteira final da <span className="text-white font-black underline decoration-primary decoration-4 underline-offset-8">Gestção AutonÃ´mica de Valor</span>. 
+            Engenharia de resultados via orquestraçção algorítmica.
           </motion.p>
 
           <motion.div 
@@ -170,9 +170,9 @@ export default function ITILVersãon5Page() {
           </div>
           
           <p className="text-xl text-slate-500 font-bold leading-relaxed max-w-2xl">
-            No ecossistema Atlas, a barreira entre TI e OperaÃ§Ã£o Ã© inexistente. O ITIL v5 unifica IncidÃªncias e MudanÃ§as em fluxos contÃ­nãos.
+            No ecossistema Atlas, a barreira entre TI e Operaçção é inexistente. O ITIL v5 unifica Incidências e Mudanças em fluxos contínãos.
             <br/><br/>
-            Cada sinal percorre o <span className="text-foreground">Mapa de Calor Operacional</span>, senão processado por motores de governanÃ§a que garantem a entrega mÃ¡xima com o menor atrito possÃ­vel.
+            Cada sinal percorre o <span className="text-foreground">Mapa de Calor Operacional</span>, senão processado por motores de governança que garantem a entrega máxima com o menor atrito possível.
           </p>
 
           <div className="grid grid-cols-2 gap-8 pt-4">
@@ -181,8 +181,8 @@ export default function ITILVersãon5Page() {
                   <Fingerprint className="h-16 w-16" />
                </div>
                <h4 className="text-4xl font-black text-primary mb-2">01</h4>
-               <p className="text-sm font-black uppercase tracking-widest text-foreground">VisÃ£o Radical</p>
-               <p className="text-[11px] text-muted-foreground font-bold mt-2 leading-relaxed uppercase tracking-tighter">Mapeamenão granular de cada micro-transiÃ§Ã£o de valor no pipeline.</p>
+               <p className="text-sm font-black uppercase tracking-widest text-foreground">Visção Radical</p>
+               <p className="text-[11px] text-muted-foreground font-bold mt-2 leading-relaxed uppercase tracking-tighter">Mapeamenão granular de cada micro-transiçção de valor no pipeline.</p>
             </div>
             <div className="p-10 rounded-[3rem] bg-white/5 border border-white/10 shadow-2xl relative overflow-hidden group/item">
                <div className="absolute top-0 right-0 p-6 opacity-5 rotate-12 group-hover/item:rotate-0 transition-transãorm">
@@ -190,7 +190,7 @@ export default function ITILVersãon5Page() {
                </div>
                <h4 className="text-4xl font-black text-primary mb-2">02</h4>
                <p className="text-sm font-black uppercase tracking-widest text-foreground">XLA First</p>
-               <p className="text-[11px] text-muted-foreground font-bold mt-2 leading-relaxed uppercase tracking-tighter">A experiÃªncia do usuÃ¡rio final como o Ãºnico KPI inegociÃ¡vel de sucesão.</p>
+               <p className="text-[11px] text-muted-foreground font-bold mt-2 leading-relaxed uppercase tracking-tighter">A experiência do usuário final como o único KPI inegociável de sucesão.</p>
             </div>
           </div>
         </div>
@@ -260,7 +260,7 @@ export default function ITILVersãon5Page() {
         <div className="text-center space-y-4">
            <div className="flex items-center justify-center gap-4 mb-4">
               <div className="h-[1px] w-12 bg-primary/20" />
-              <h2 className="text-[12px] font-black tracking-[0.6em] uppercase text-primary">Protocolos de DomÃ­não</h2>
+              <h2 className="text-[12px] font-black tracking-[0.6em] uppercase text-primary">Protocolos de Domínão</h2>
               <div className="h-[1px] w-12 bg-primary/20" />
            </div>
            <h3 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.8] italic">Engine de Performance</h3>
@@ -308,21 +308,21 @@ export default function ITILVersãon5Page() {
                     <Sparkles className="h-8 w-8 text-amber-500" />
                  </div>
                  <div>
-                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] mb-1">CÃ³rtex Atlas</p>
+                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] mb-1">Córtex Atlas</p>
                     <CardTitle className="text-4xl font-black tracking-tighter uppercase leading-none">AI Early Warning</CardTitle>
                  </div>
               </div>
            </CardHeader>
            <CardContent className="px-0 space-y-10">
               <p className="text-lg text-slate-400 font-bold leading-snug">
-                Nossa IA nÃ£o apenas sugere; ela antecipa. O sistema identifica risãos de SLA e XLA baseados em telemetria cognitiva antes que o impacto ocorra.
+                Nossa IA nção apenas sugere; ela antecipa. O sistema identifica riscoss de SLA e XLA baseados em telemetria cognitiva antes que o impacto ocorra.
               </p>
               <ul className="space-y-4">
                  {[
-                   "DiagnÃ³stico Sugerido via LLM em Tempo Real",
-                   "PrevisÃ£o de Risão de SLA Preditiva",
-                   "Algoritmos de PrÃ³xima Melhor AÃ§Ã£o (NBA)",
-                   "AutomaÃ§Ã£o de RCA (Causa Raiz)"
+                   "Diagnóstico Sugerido via LLM em Tempo Real",
+                   "Previsção de Risão de SLA Preditiva",
+                   "Algoritmos de Próxima Melhor Açção (NBA)",
+                   "Automaçção de RCA (Causa Raiz)"
                  ].map((text, i) => (
                    <li key={i} className="flex items-center gap-4 text-[11px] font-black uppercase tracking-widest text-slate-300">
                       <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,1)]" />
@@ -330,7 +330,7 @@ export default function ITILVersãon5Page() {
                    </li>
                  ))}
               </ul>
-              <Button variant="outline" className="w-full rounded-[2rem] h-14 font-black uppercase tracking-widest text-[11px] border-white/10 bg-white/5 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all shadow-xl active:scale-95">Ver InteligÃªncia de Rede</Button>
+              <Button variant="outline" className="w-full rounded-[2rem] h-14 font-black uppercase tracking-widest text-[11px] border-white/10 bg-white/5 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all shadow-xl active:scale-95">Ver Inteligência de Rede</Button>
            </CardContent>
         </Card>
 
@@ -351,15 +351,15 @@ export default function ITILVersãon5Page() {
            </CardHeader>
            <CardContent className="px-0 space-y-10">
               <p className="text-lg text-slate-400 font-bold leading-snug">
-                O Swarming disãolve as barreiras de escalada. Especialistas sÃ£o orquestrados em cÃ©lulas dinÃ¢micas para resolver gargalos em segunãos.
+                O Swarming disãolve as barreiras de escalada. Especialistas sção orquestrados em células dinÃ¢micas para resolver gargalos em segunãos.
               </p>
               <div className="grid grid-cols-2 gap-6">
                  <div className="p-6 rounded-[2.5rem] bg-slate-950 border border-primary/20 shadow-2xl">
-                    <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest mb-1">Ganão de Velocidade</p>
+                    <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest mb-1">Gando de Velocidade</p>
                     <p className="text-4xl font-black text-primary tabular-nums">+68%</p>
                  </div>
                  <div className="p-6 rounded-[2.5rem] bg-slate-950 border border-primary/20 shadow-2xl">
-                    <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest mb-1">EficiÃªncia de CÃ©lula</p>
+                    <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest mb-1">Eficiência de Célula</p>
                     <p className="text-4xl font-black text-primary tabular-nums">99.8%</p>
                  </div>
               </div>
@@ -389,10 +389,10 @@ export default function ITILVersãon5Page() {
           </motion.div>
           <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase leading-[0.8] group-hover:scale-105 transition-transãorm duration-700">
             ENGENHAR O <br/>
-            <span className="text-primary italic underline decoration-white/10 decoration-8 underline-offset-[20px]">PRÃ“XIMO NÃVEL</span>
+            <span className="text-primary italic underline decoration-white/10 decoration-8 underline-offset-[20px]">PRÃ“XIMO NÍVEL</span>
           </h2>
           <p className="text-xl md:text-3xl text-slate-400 max-w-4xl mx-auto font-bold leading-snug italic tracking-tight">
-            O roadmap Atlas 2026 unifica PrevisÃ£o de Falhas AutonÃ´mica e ResoluÃ§Ã£o Proativa. O futuro éÃ£o Ã© reativo. O futuro é© <span className="text-white">Atlas ITIL v5</span>.
+            O roadmap Atlas 2026 unifica Previsção de Falhas AutonÃ´mica e Resoluçção Proativa. O futuro éção é reativo. O futuro é© <span className="text-white">Atlas ITIL v5</span>.
           </p>
           <div className="flex flex-wrap justify-center gap-8 pt-10">
              <Button 

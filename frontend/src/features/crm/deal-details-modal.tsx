@@ -9,7 +9,7 @@ import Link from "next/link"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 
-import { Deal, DealActivity, isCRMNetworkError, useCRM, useServiceCatalog, useCMDB, useXLA } from "./use-crm"
+import { Deal, DealActivity, isCRMNetworkError, useCRM, useServiceCatalog, useCMDB, useXLA, useDealTopology } from "./use-crm"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

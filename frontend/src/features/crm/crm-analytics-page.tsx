@@ -24,7 +24,8 @@ import {
   Waves,
   Fingerprint,
   Radio,
-  Cpu
+  Cpu,
+  Heart
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
@@ -112,7 +113,7 @@ export default function CRMAnalyticsPage() {
       link.click()
       link.remove()
     } catch (error) {
-      console.error("Erro ao gerar relatÃ³rio:", error)
+      console.error("Erro ao gerar relatório:", error)
     } finally {
       setIsExporting(false)
     }
@@ -178,7 +179,7 @@ export default function CRMAnalyticsPage() {
       {/* High-Level KPI Matrix */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         {[
-          { label: "Lead Time MÃ©dio", value: `${vsmData?.avg_lead_time_days || 0}d`, icon: Clock, sub: "Velocity Index", color: "from-blue-500/10 to-blue-600/5", border: "border-blue-500/20", glow: "shadow-blue-500/10" },
+          { label: "Lead Time Médio", value: `${vsmData?.avg_lead_time_days || 0}d`, icon: Clock, sub: "Velocity Index", color: "from-blue-500/10 to-blue-600/5", border: "border-blue-500/20", glow: "shadow-blue-500/10" },
           { label: "SLA Compliance", value: `${govData?.sla_compliance_rate || 100}%`, icon: Target, sub: "Reliability Core", color: "from-emerald-500/10 to-emerald-600/5", border: "border-emerald-500/20", glow: "shadow-emerald-500/10" },
           { label: "Throughput", value: vsmData?.throughput_weekly || 0, icon: TrendingUp, sub: "Weekly Output", color: "from-purple-500/10 to-purple-600/5", border: "border-purple-500/20", glow: "shadow-purple-500/10" },
           { 

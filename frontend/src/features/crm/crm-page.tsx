@@ -99,7 +99,7 @@ export default function CRMPage() {
   const [controlsOpen, setControlsOpen] = useState(false)
   const { data: users = [] } = useCRMUsers(controlsOpen)
 
-  // Seleciona o primeiro pipeline por padrÃ£o
+  // Seleciona o primeiro pipeline por padrção
   const currentPipeline = selectedPipelineId 
     ? pipelines.find(p => p.id === selectedPipelineId) 
     : pipelines[0]
@@ -418,7 +418,7 @@ export default function CRMPage() {
       toast.success("Vista salva com sucesso!")
     },
     onError: () => {
-      toast.error("NÃ£o foi possÃ­vel salvar a vista.")
+      toast.error("Nção foi possível salvar a vista.")
     },
   })
 
@@ -443,7 +443,7 @@ export default function CRMPage() {
       toast.success("Vista atualizada com sucesso!")
     },
     onError: () => {
-      toast.error("NÃ£o foi possÃ­vel atualizar a vista.")
+      toast.error("Nção foi possível atualizar a vista.")
     },
   })
 
@@ -461,7 +461,7 @@ export default function CRMPage() {
       toast.success("Vista removida com sucesso!")
     },
     onError: () => {
-      toast.error("NÃ£o foi possÃ­vel remover a vista.")
+      toast.error("Nção foi possível remover a vista.")
     },
   })
 
@@ -503,7 +503,7 @@ export default function CRMPage() {
                     </div>
                     Pipeline CRM
                 </h1>
-                <p className="text-muted-foreground text-lg font-medium ml-1 opacity-70">GestÃ£o estratÃ©gica de oportunidades e fluxos de serviÃ§o.</p>
+                <p className="text-muted-foreground text-lg font-medium ml-1 opacity-70">Gestção estratégica de oportunidades e fluxos de serviço.</p>
               </div>
 
               <div className="h-12 w-[1px] bg-white/10 hidden sm:block mx-2" />
@@ -577,7 +577,7 @@ export default function CRMPage() {
                     onClick={() => setShowStats(!showStats)}
                   >
                     <TrendingUp className="h-4 w-4" />
-                    <span className="hidden sm:inline">MÃ©tricas</span>
+                    <span className="hidden sm:inline">Métricas</span>
                   </Button>
               </div>
 
@@ -653,7 +653,7 @@ export default function CRMPage() {
                       <div className="mb-6 flex items-center justify-between gap-4">
                         <div className="space-y-1">
                            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary">Refinar Resultados</h3>
-                           <p className="text-[10px] text-muted-foreground font-bold">Ajuste os parÃ¢metros de visualizaÃ§Ã£o ITIL.</p>
+                           <p className="text-[10px] text-muted-foreground font-bold">Ajuste os parÃ¢metros de visualização ITIL.</p>
                         </div>
                         <Button
                           variant="ghost"
@@ -667,7 +667,7 @@ export default function CRMPage() {
 
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">EstÃ¡gio do Fluxo</label>
+                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Estágio do Fluxo</label>
                           <Select value={stageFilter} onValueChange={setStageFilter}>
                             <SelectTrigger className="h-11 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 transition-all text-xs font-bold shadow-inner">
                               <SelectValue placeholder="Coluna" />
@@ -684,15 +684,15 @@ export default function CRMPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">NÃ­vel de UrgÃªncia</label>
+                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Nível de Urgência</label>
                           <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as CRMSavedViewFilters["priorityFilter"])}>
                             <SelectTrigger className="h-11 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 transition-all text-xs font-bold shadow-inner">
-                              <SelectValue placeholder="UrgÃªncia" />
+                              <SelectValue placeholder="Urgência" />
                             </SelectTrigger>
                             <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl">
-                              <SelectItem value="all" className="rounded-xl font-bold">Todas UrgÃªncias</SelectItem>
+                              <SelectItem value="all" className="rounded-xl font-bold">Todas Urgências</SelectItem>
                               <SelectItem value="LOW" className="rounded-xl font-bold">Baixa</SelectItem>
-                              <SelectItem value="MEDIUM" className="rounded-xl font-bold">MÃ©dia</SelectItem>
+                              <SelectItem value="MEDIUM" className="rounded-xl font-bold">Média</SelectItem>
                               <SelectItem value="HIGH" className="rounded-xl font-bold">Alta</SelectItem>
                               <SelectItem value="URGENT" className="rounded-xl font-bold">Urgente</SelectItem>
                             </SelectContent>
@@ -700,13 +700,13 @@ export default function CRMPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">ProprietÃ¡rio</label>
+                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Proprietário</label>
                           <Select value={ownerFilter} onValueChange={setOwnerFilter}>
                             <SelectTrigger className="h-11 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 transition-all text-xs font-bold shadow-inner">
-                              <SelectValue placeholder="ResponsÃ¡vel" />
+                              <SelectValue placeholder="Responsável" />
                             </SelectTrigger>
                             <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl">
-                              <SelectItem value="all" className="rounded-xl font-bold">Todos responsÃ¡veis</SelectItem>
+                              <SelectItem value="all" className="rounded-xl font-bold">Todos responsáveis</SelectItem>
                               {ownerOptions.map((user) => (
                                 <SelectItem key={user.id} value={String(user.id)} className="rounded-xl font-bold">
                                   {getUserDisplayName(user)}
@@ -727,7 +727,7 @@ export default function CRMPage() {
                               <SelectItem value="overdue" className="rounded-xl font-bold">Vencidos</SelectItem>
                               <SelectItem value="today" className="rounded-xl font-bold">Vence Hoje</SelectItem>
                               <SelectItem value="this_week" className="rounded-xl font-bold">Esta Semana</SelectItem>
-                              <SelectItem value="this_month" className="rounded-xl font-bold">Este MÃªs</SelectItem>
+                              <SelectItem value="this_month" className="rounded-xl font-bold">Este Mês</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -736,15 +736,15 @@ export default function CRMPage() {
 
                     <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl relative overflow-hidden">
                       <div className="mb-6">
-                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary">PersistÃªncia de VisÃ£o</h3>
+                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary">Persistência de Visção</h3>
                         <p className="mt-1 text-[10px] text-muted-foreground font-bold">
-                          Armazene layouts, filtros e ordenaÃ§Ãµes personalizadas.
+                          Armazene layouts, filtros e ordenações personalizadas.
                         </p>
                       </div>
 
                       <div className="grid gap-6">
                         <div className="space-y-2">
-                           <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Vistas DisponÃ­veis</label>
+                           <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Vistas Disponíveis</label>
                            <Select
                              value={selectedSavedViewId ? selectedSavedViewId.toString() : "none"}
                              onValueChange={(value) => {
@@ -768,7 +768,7 @@ export default function CRMPage() {
                                <SelectItem value="none" className="rounded-xl font-bold">Sem vista salva</SelectItem>
                                {savedViews.map((savedView) => (
                                  <SelectItem key={savedView.id} value={savedView.id.toString()} className="rounded-xl font-bold">
-                                   {savedView.is_default ? `${savedView.name} (padrÃ£o)` : savedView.name}
+                                   {savedView.is_default ? `${savedView.name} (padrção)` : savedView.name}
                                  </SelectItem>
                                ))}
                              </SelectContent>
@@ -812,7 +812,7 @@ export default function CRMPage() {
                              disabled={!selectedSavedViewId || updateSavedView.isPending}
                              className="h-9 rounded-lg px-4 text-[9px] font-black uppercase tracking-widest border-white/10 hover:bg-white/5 transition-all"
                            >
-                             Definir como PadrÃ£o
+                             Definir como Padrção
                            </Button>
                            <Button
                              variant="ghost"

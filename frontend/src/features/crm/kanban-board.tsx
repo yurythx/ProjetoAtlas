@@ -201,14 +201,14 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
     
     if (!dealId || !draggedDeal || !targetColumn) return
 
-    // 1. Verifica se jÃ¡ estÃ¡ na mesma coluna
+    // 1. Verifica se já está na mesma coluna
     if (getDealColumnId(draggedDeal) === targetColumn.id) return
 
-    // 2. Resolve semÃ¢ntica e governanÃ§a
+    // 2. Resolve semÃ¢ntica e governança
     const targetColumnSemantics = resolveColumnSemantics(targetColumn)
     const guard = getColumnTransitionGuard(draggedDeal, targetColumn, deals, [pipeline])
     
-    // 3. Verifica obrigatoriedades (Data/TÃ©cnico)
+    // 3. Verifica obrigatoriedades (Data/Técnico)
     const needsDate = targetColumnSemantics.requires_schedule && !draggedDeal.data_agendamento
     const needsTechnician = targetColumnSemantics.requires_assignee && !draggedDeal.tecnico_responsavel
 
@@ -217,13 +217,13 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
       return
     }
 
-    // 4. Verifica guardas de negÃ³cio (ex: WIP limit, transiÃ§Ãµes proibidas)
+    // 4. Verifica guardas de negócio (ex: WIP limit, transições proibidas)
     if (!guard.allowed) {
-      toast.error(guard.reason || "Movimento nÃ£o permitido para esta coluna.")
+      toast.error(guard.reason || "Movimento nção permitido para esta coluna.")
       return
     }
 
-    // 5. Executa a transiÃ§Ã£o
+    // 5. Executa a transição
     try {
       await updateDeal.mutateAsync({
         id: dealId,
