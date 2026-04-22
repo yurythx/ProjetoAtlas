@@ -326,7 +326,7 @@ export default function CRMAnalyticsPage() {
                     <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black">AI CORE v5</Badge>
                 </div>
                 <p className="text-lg text-slate-400 font-bold leading-relaxed max-w-3xl">
-                  Identificamos uma retenção anômala em <span className="text-white font-black">{vsmData?.residence_times?.find((r:any) => r.avg_days_residence > 4)?.column || "Fila de Atendimento"}</span>. 
+                  Identificamos uma retenão anômala em <span className="text-white font-black">{vsmData?.residence_times?.find((r:any) => r.avg_days_residence > 4)?.column || "Fila de Atendimento"}</span>. 
                   O motor preditivo sugere a <span className="text-primary font-black underline decoration-primary/40 underline-offset-4">Ativação Imídiata de Swarm</span> para normalização do Lead Time.
                 </p>
               </div>
