@@ -653,7 +653,7 @@ export default function CRMPage() {
                       <div className="mb-6 flex items-center justify-between gap-4">
                         <div className="space-y-1">
                            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary">Refinar Resultados</h3>
-                           <p className="text-[10px] text-muted-foreground font-bold">Ajuste os parÃ¢metros de visualização ITIL.</p>
+                           <p className="text-[10px] text-muted-foreground font-bold">Ajuste os parâmetros de visualização ITIL.</p>
                         </div>
                         <Button
                           variant="ghost"

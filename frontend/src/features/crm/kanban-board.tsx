@@ -204,7 +204,7 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
     // 1. Verifica se já está na mesma coluna
     if (getDealColumnId(draggedDeal) === targetColumn.id) return
 
-    // 2. Resolve semÃ¢ntica e governança
+    // 2. Resolve semântica e governança
     const targetColumnSemantics = resolveColumnSemantics(targetColumn)
     const guard = getColumnTransitionGuard(draggedDeal, targetColumn, deals, [pipeline])
     
@@ -219,7 +219,7 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
 
     // 4. Verifica guardas de negócio (ex: WIP limit, transições proibidas)
     if (!guard.allowed) {
-      toast.error(guard.reason || "Movimento nção permitido para esta coluna.")
+      toast.error(guard.reason || "Movimento não permitido para esta coluna.")
       return
     }
 

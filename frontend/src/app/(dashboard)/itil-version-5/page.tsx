@@ -48,15 +48,15 @@ export default function ITILVersãon5Page() {
       icon: LineChart,
       color: "text-blue-500",
       bg: "bg-blue-500/10",
-      content: "O VSM no Atlas nção é apenas um gráfico; é a espinha dorsal da operaçção. Mapeamos desde a Demanda inicial até a Realizaçção de Valor, identificando gargalos e tempo de residência em tempo real."
+      content: "O VSM no Atlas não é apenas um gráfico; é a espinha dorsal da operação. Mapeamos desde a Demanda inicial até a Realização de Valor, identificando gargalos e tempo de residência em tempo real."
     },
     {
       id: "swarm",
-      title: "Swarming & Colaboraçção",
+      title: "Swarming & Colaboração",
       icon: Network,
       color: "text-purple-500",
       bg: "bg-purple-500/10",
-      content: "Adeus N1/N2/N3. O Atlas implementa o Swarming nativo, permitinão colapsar os níveis de suporte em uma única célula de resoluçção dinÃ¢mica através das War Rooms (Swarms)."
+      content: "Adeus N1/N2/N3. O Atlas implementa o Swarming nativo, permitindo colapsar os níveis de suporte em uma única célula de resolução dinâmica através das War Rooms (Swarms)."
     },
     {
       id: "xla",
@@ -64,7 +64,7 @@ export default function ITILVersãon5Page() {
       icon: Heart,
       color: "text-rose-500",
       bg: "bg-rose-500/10",
-      content: "Medimosão que realmente importa. Enquando o SLA foca no tempo, o XLA foca no sentimenão e na utilidade percebida pelo usuário final. Engenharia de valor através da percepçção humana."
+      content: "Medimos o que realmente importa. Enquanto o SLA foca no tempo, o XLA foca no sentimento e na utilidade percebida pelo usuário final. Engenharia de valor através da percepção humana."
     },
     {
       id: "csi",
@@ -72,7 +72,7 @@ export default function ITILVersãon5Page() {
       icon: RefreshCcw,
       color: "text-emerald-500",
       bg: "bg-emerald-500/10",
-      content: "Cada falha é uma oportunidade. O Registro de Melhoria Contínua (CSI) permite transãormar problemas recorrentes em projetos de automaçção e otimizaçção estrutural."
+      content: "Cada falha é uma oportunidade. O Registro de Melhoria Contínua (CSI) permite transformar problemas recorrentes em projetos de automação e otimização estrutural."
     },
     {
       id: "ai",
@@ -80,7 +80,7 @@ export default function ITILVersãon5Page() {
       icon: Sparkles,
       color: "text-amber-500",
       bg: "bg-amber-500/10",
-      content: "Nossa IA nção é apenas um chat; ela monitora o fluxo de valor 24/7, detectando riscoss de estagnaçção, calculando scores de governança e sugerindo a 'Próxima Melhor Açção' (Next Best Action)."
+      content: "Nossa IA não é apenas um chat; ela monitora o fluxo de valor 24/7, detectando riscos de estagnação, calculando scores de governança e sugerindo a 'Próxima Melhor Ação' (Next Best Action)."
     }
   ]
 
@@ -140,7 +140,7 @@ export default function ITILVersãon5Page() {
             className="text-2xl md:text-4xl text-slate-400 max-w-5xl mx-auto font-medium leading-[1.1] tracking-tight"
           >
             A fronteira final da <span className="text-white font-black underline decoration-primary decoration-4 underline-offset-8">Gestção AutonÃ´mica de Valor</span>. 
-            Engenharia de resultados via orquestraçção algorítmica.
+            Engenharia de resultados via orquestração algorítmica.
           </motion.p>
 
           <motion.div 
@@ -170,7 +170,7 @@ export default function ITILVersãon5Page() {
           </div>
           
           <p className="text-xl text-slate-500 font-bold leading-relaxed max-w-2xl">
-            No ecossistema Atlas, a barreira entre TI e Operaçção é inexistente. O ITIL v5 unifica Incidências e Mudanças em fluxos contínãos.
+            No ecossistema Atlas, a barreira entre TI e Operação é inexistente. O ITIL v5 unifica Incidências e Mudanças em fluxos contínãos.
             <br/><br/>
             Cada sinal percorre o <span className="text-foreground">Mapa de Calor Operacional</span>, senão processado por motores de governança que garantem a entrega máxima com o menor atrito possível.
           </p>
@@ -182,7 +182,7 @@ export default function ITILVersãon5Page() {
                </div>
                <h4 className="text-4xl font-black text-primary mb-2">01</h4>
                <p className="text-sm font-black uppercase tracking-widest text-foreground">Visção Radical</p>
-               <p className="text-[11px] text-muted-foreground font-bold mt-2 leading-relaxed uppercase tracking-tighter">Mapeamenão granular de cada micro-transiçção de valor no pipeline.</p>
+               <p className="text-[11px] text-muted-foreground font-bold mt-2 leading-relaxed uppercase tracking-tighter">Mapeamenão granular de cada micro-transição de valor no pipeline.</p>
             </div>
             <div className="p-10 rounded-[3rem] bg-white/5 border border-white/10 shadow-2xl relative overflow-hidden group/item">
                <div className="absolute top-0 right-0 p-6 opacity-5 rotate-12 group-hover/item:rotate-0 transition-transãorm">
@@ -315,14 +315,14 @@ export default function ITILVersãon5Page() {
            </CardHeader>
            <CardContent className="px-0 space-y-10">
               <p className="text-lg text-slate-400 font-bold leading-snug">
-                Nossa IA nção apenas sugere; ela antecipa. O sistema identifica riscoss de SLA e XLA baseados em telemetria cognitiva antes que o impacto ocorra.
+                Nossa IA não apenas sugere; ela antecipa. O sistema identifica riscos de SLA e XLA baseados em telemetria cognitiva antes que o impacto ocorra.
               </p>
               <ul className="space-y-4">
                  {[
                    "Diagnóstico Sugerido via LLM em Tempo Real",
                    "Previsção de Risão de SLA Preditiva",
-                   "Algoritmos de Próxima Melhor Açção (NBA)",
-                   "Automaçção de RCA (Causa Raiz)"
+                   "Algoritmos de Próxima Melhor Ação (NBA)",
+                   "Automação de RCA (Causa Raiz)"
                  ].map((text, i) => (
                    <li key={i} className="flex items-center gap-4 text-[11px] font-black uppercase tracking-widest text-slate-300">
                       <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,1)]" />
@@ -351,7 +351,7 @@ export default function ITILVersãon5Page() {
            </CardHeader>
            <CardContent className="px-0 space-y-10">
               <p className="text-lg text-slate-400 font-bold leading-snug">
-                O Swarming disãolve as barreiras de escalada. Especialistas sção orquestrados em células dinÃ¢micas para resolver gargalos em segunãos.
+                O Swarming disãolve as barreiras de escalada. Especialistas sção orquestrados em células dinâmicas para resolver gargalos em segunãos.
               </p>
               <div className="grid grid-cols-2 gap-6">
                  <div className="p-6 rounded-[2.5rem] bg-slate-950 border border-primary/20 shadow-2xl">
@@ -392,7 +392,7 @@ export default function ITILVersãon5Page() {
             <span className="text-primary italic underline decoration-white/10 decoration-8 underline-offset-[20px]">PRÃ“XIMO NÍVEL</span>
           </h2>
           <p className="text-xl md:text-3xl text-slate-400 max-w-4xl mx-auto font-bold leading-snug italic tracking-tight">
-            O roadmap Atlas 2026 unifica Previsção de Falhas AutonÃ´mica e Resoluçção Proativa. O futuro éção é reativo. O futuro é© <span className="text-white">Atlas ITIL v5</span>.
+            O roadmap Atlas 2026 unifica Previsção de Falhas AutonÃ´mica e Resolução Proativa. O futuro éção é reativo. O futuro é© <span className="text-white">Atlas ITIL v5</span>.
           </p>
           <div className="flex flex-wrap justify-center gap-8 pt-10">
              <Button 
