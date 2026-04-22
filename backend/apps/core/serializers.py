@@ -151,9 +151,21 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
 
 class DashboardCounterSerializer(serializers.Serializer):
-    total = serializers.IntegerField()
-    new_this_month = serializers.IntegerField()
-    growth = serializers.FloatField()
+    total = serializers.IntegerField(required=False)
+    new_this_month = serializers.IntegerField(required=False)
+    growth = serializers.FloatField(required=False)
+
+
+class DashboardCRMCounterSerializer(serializers.Serializer):
+    total_deals = serializers.IntegerField()
+    active_swarms = serializers.IntegerField()
+    csi_identified = serializers.IntegerField()
+
+
+class DashboardFinanceCounterSerializer(serializers.Serializer):
+    revenue_month = serializers.FloatField()
+    expenses_month = serializers.FloatField()
+    balance_month = serializers.FloatField()
 
 
 class DashboardChartDataSerializer(serializers.Serializer):
@@ -182,7 +194,7 @@ class SystemStatusSerializer(serializers.Serializer):
 
 
 class DashboardStatsSerializer(serializers.Serializer):
-    counters = serializers.DictField(child=DashboardCounterSerializer())
+    counters = serializers.DictField() # Flexible to allow different structures
     charts = serializers.DictField(child=serializers.ListField(child=DashboardChartDataSerializer()))
     recent_activity = RecentActivitySerializer(many=True)
     system_status = SystemStatusSerializer()

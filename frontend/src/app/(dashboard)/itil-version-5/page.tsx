@@ -30,12 +30,12 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export default function ITILVersãon5Page() {
+export default function ITILVersion5Page() {
   const [activeModule, setActiveModule] = useState<string | null>(null)
 
   const container = {
     hidden: { opacity: 0 },
-    sãow: {
+    show: {
       opacity: 1,
       transition: { staggerChildren: 0.1 }
     }
@@ -123,7 +123,7 @@ export default function ITILVersãon5Page() {
                transition={{ delay: 0.4 }}
                className="text-6xl sm:text-8xl md:text-[10rem] font-black tracking-tighter leading-[0.85] text-white italic"
              >
-               ITIL <span className="text-primary not-italic tracking-normal bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">VERsãoN 5</span>
+               ITIL <span className="text-primary not-italic tracking-normal bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">VERSION 5</span>
              </motion.h1>
              <motion.div 
                initial={{ scaleX: 0 }}
@@ -139,7 +139,7 @@ export default function ITILVersãon5Page() {
             transition={{ delay: 0.6 }}
             className="text-2xl md:text-4xl text-slate-400 max-w-5xl mx-auto font-medium leading-[1.1] tracking-tight"
           >
-            A fronteira final da <span className="text-white font-black underline decoration-primary decoration-4 underline-offset-8">Gestção AutonÃ´mica de Valor</span>. 
+            A fronteira final da <span className="text-white font-black underline decoration-primary decoration-4 underline-offset-8">Gestão Autonômica de Valor</span>. 
             Engenharia de resultados via orquestração algorítmica.
           </motion.p>
 
@@ -150,7 +150,7 @@ export default function ITILVersãon5Page() {
             className="flex flex-wrap justify-center gap-6 pt-6"
           >
              <Badge variant="outline" className="px-6 py-2 text-[10px] border-white/10 bg-white/5 text-primary-foreground font-black uppercase tracking-[0.2em] rounded-xl backdrop-blur-md">SVS 2.0 Compliance</Badge>
-             <Badge variant="outline" className="px-6 py-2 text-[10px] border-white/10 bg-white/5 text-primary-foreground font-black uppercase tracking-[0.2em] rounded-xl backdrop-blur-md">Autonomousãops</Badge>
+             <Badge variant="outline" className="px-6 py-2 text-[10px] border-white/10 bg-white/5 text-primary-foreground font-black uppercase tracking-[0.2em] rounded-xl backdrop-blur-md">AutonomousOps</Badge>
              <Badge variant="outline" className="px-6 py-2 text-[10px] border-white/10 bg-white/5 text-primary-foreground font-black uppercase tracking-[0.2em] rounded-xl backdrop-blur-md">XLA Cognitive Matrix</Badge>
           </motion.div>
         </div>
@@ -170,27 +170,27 @@ export default function ITILVersãon5Page() {
           </div>
           
           <p className="text-xl text-slate-500 font-bold leading-relaxed max-w-2xl">
-            No ecossistema Atlas, a barreira entre TI e Operação é inexistente. O ITIL v5 unifica Incidências e Mudanças em fluxos contínãos.
+            No ecossistema Atlas, a barreira entre TI e Operação é inexistente. O ITIL v5 unifica Incidências e Mudanças em fluxos contínuos.
             <br/><br/>
-            Cada sinal percorre o <span className="text-foreground">Mapa de Calor Operacional</span>, senão processado por motores de governança que garantem a entrega máxima com o menor atrito possível.
+            Cada sinal percorre o <span className="text-foreground">Mapa de Calor Operacional</span>, sendo processado por motores de governança que garantem a entrega máxima com o menor atrito possível.
           </p>
 
           <div className="grid grid-cols-2 gap-8 pt-4">
             <div className="p-10 rounded-[3rem] bg-white/5 border border-white/10 shadow-2xl relative overflow-hidden group/item">
-               <div className="absolute top-0 right-0 p-6 opacity-5 rotate-12 group-hover/item:rotate-0 transition-transãorm">
+               <div className="absolute top-0 right-0 p-6 opacity-5 rotate-12 group-hover/item:rotate-0 transition-transorm">
                   <Fingerprint className="h-16 w-16" />
                </div>
                <h4 className="text-4xl font-black text-primary mb-2">01</h4>
-               <p className="text-sm font-black uppercase tracking-widest text-foreground">Visção Radical</p>
-               <p className="text-[11px] text-muted-foreground font-bold mt-2 leading-relaxed uppercase tracking-tighter">Mapeamenão granular de cada micro-transição de valor no pipeline.</p>
+               <p className="text-sm font-black uppercase tracking-widest text-foreground">Visão Radical</p>
+               <p className="text-[11px] text-muted-foreground font-bold mt-2 leading-relaxed uppercase tracking-tighter">Mapeamento granular de cada micro-transição de valor no pipeline.</p>
             </div>
             <div className="p-10 rounded-[3rem] bg-white/5 border border-white/10 shadow-2xl relative overflow-hidden group/item">
-               <div className="absolute top-0 right-0 p-6 opacity-5 rotate-12 group-hover/item:rotate-0 transition-transãorm">
+               <div className="absolute top-0 right-0 p-6 opacity-5 rotate-12 group-hover/item:rotate-0 transition-transorm">
                   <Heart className="h-16 w-16" />
                </div>
                <h4 className="text-4xl font-black text-primary mb-2">02</h4>
                <p className="text-sm font-black uppercase tracking-widest text-foreground">XLA First</p>
-               <p className="text-[11px] text-muted-foreground font-bold mt-2 leading-relaxed uppercase tracking-tighter">A experiência do usuário final como o único KPI inegociável de sucesão.</p>
+               <p className="text-[11px] text-muted-foreground font-bold mt-2 leading-relaxed uppercase tracking-tighter">A experiência do usuário final como o único KPI inegociável de sucesso.</p>
             </div>
           </div>
         </div>
@@ -222,7 +222,7 @@ export default function ITILVersãon5Page() {
                        <motion.div 
                          initial={{ width: 0 }} 
                          whileInView={{ width: '94.2%' }} 
-                         transition={{ duration: 1.5, ease: "easãout" }}
+                         transition={{ duration: 1.5, ease: "easeOut" }}
                          className="h-full bg-gradient-to-r from-primary to-blue-400 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)]" 
                        />
                     </div>
@@ -260,7 +260,7 @@ export default function ITILVersãon5Page() {
         <div className="text-center space-y-4">
            <div className="flex items-center justify-center gap-4 mb-4">
               <div className="h-[1px] w-12 bg-primary/20" />
-              <h2 className="text-[12px] font-black tracking-[0.6em] uppercase text-primary">Protocolos de Domínão</h2>
+              <h2 className="text-[12px] font-black tracking-[0.6em] uppercase text-primary">Protocolos de Domínio</h2>
               <div className="h-[1px] w-12 bg-primary/20" />
            </div>
            <h3 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.8] italic">Engine de Performance</h3>
@@ -271,7 +271,7 @@ export default function ITILVersãon5Page() {
             <motion.div
               key={mod.id}
               whileHover={{ y: -10, scale: 1.02 }}
-              onãouseEnter={() => setActiveModule(mod.id)}
+              onMouseEnter={() => setActiveModule(mod.id)}
               className={cn(
                 "group cursor-pointer p-10 rounded-[3.5rem] border transition-all duration-700 relative overflow-hidden",
                 activeModule === mod.id ? "bg-white/10 shadow-3xl border-primary/30" : "bg-white/5 border-white/5 shadow-xl"
@@ -281,7 +281,7 @@ export default function ITILVersãon5Page() {
                 <mod.icon className={cn("h-10 w-10", mod.color)} />
               </div>
               <h3 className="text-2xl font-black tracking-tighter uppercase mb-6 leading-none">{mod.title}</h3>
-              <p className="text-xs text-slate-400 leading-relaxed font-bold uppercase tracking-tight opacity-60 group-hover:opacity-100 transitionãopacity">
+              <p className="text-xs text-slate-400 leading-relaxed font-bold uppercase tracking-tight opacity-60 group-hover:opacity-100 transition-opacity">
                 {mod.content}
               </p>
               
@@ -299,7 +299,7 @@ export default function ITILVersãon5Page() {
       {/* High-Tech Deep Dives */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
         <Card className="rounded-[4rem] border-white/5 bg-slate-900/40 p-10 shadow-3xl relative overflow-hidden group/card">
-           <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12 group-hover/card:rotate-0 transition-transãorm">
+           <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12 group-hover/card:rotate-0 transition-transorm">
               <Sparkles className="h-40 w-40 text-amber-500" />
            </div>
            <CardHeader className="px-0 pt-0">
@@ -320,7 +320,7 @@ export default function ITILVersãon5Page() {
               <ul className="space-y-4">
                  {[
                    "Diagnóstico Sugerido via LLM em Tempo Real",
-                   "Previsção de Risão de SLA Preditiva",
+                   "Previsão de Risco de SLA Preditiva",
                    "Algoritmos de Próxima Melhor Ação (NBA)",
                    "Automação de RCA (Causa Raiz)"
                  ].map((text, i) => (
@@ -335,7 +335,7 @@ export default function ITILVersãon5Page() {
         </Card>
 
         <Card className="rounded-[4rem] border-white/5 bg-primary/5 p-10 shadow-3xl relative overflow-hidden group/card">
-           <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12 group-hover/card:rotate-0 transition-transãorm">
+           <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12 group-hover/card:rotate-0 transition-transorm">
               <Radio className="h-40 w-40 text-primary" />
            </div>
            <CardHeader className="px-0 pt-0">
@@ -344,18 +344,18 @@ export default function ITILVersãon5Page() {
                     <Network className="h-8 w-8 text-primary" />
                  </div>
                  <div>
-                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-1">Mecanisão Swarm</p>
+                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-1">Mecanismo Swarm</p>
                     <CardTitle className="text-4xl font-black tracking-tighter uppercase leading-none">Radical Swarming</CardTitle>
                  </div>
               </div>
            </CardHeader>
            <CardContent className="px-0 space-y-10">
               <p className="text-lg text-slate-400 font-bold leading-snug">
-                O Swarming disãolve as barreiras de escalada. Especialistas sção orquestrados em células dinâmicas para resolver gargalos em segunãos.
+                O Swarming dissolve as barreiras de escalada. Especialistas são orquestrados em células dinâmicas para resolver gargalos em segundos.
               </p>
               <div className="grid grid-cols-2 gap-6">
                  <div className="p-6 rounded-[2.5rem] bg-slate-950 border border-primary/20 shadow-2xl">
-                    <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest mb-1">Gando de Velocidade</p>
+                    <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest mb-1">Ganho de Velocidade</p>
                     <p className="text-4xl font-black text-primary tabular-nums">+68%</p>
                  </div>
                  <div className="p-6 rounded-[2.5rem] bg-slate-950 border border-primary/20 shadow-2xl">
@@ -387,18 +387,18 @@ export default function ITILVersãon5Page() {
           >
              <Globe className="h-full w-full text-primary" />
           </motion.div>
-          <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase leading-[0.8] group-hover:scale-105 transition-transãorm duration-700">
+          <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase leading-[0.8] group-hover:scale-105 transition-transform duration-700">
             ENGENHAR O <br/>
-            <span className="text-primary italic underline decoration-white/10 decoration-8 underline-offset-[20px]">PRÃ“XIMO NÍVEL</span>
+            <span className="text-primary italic underline decoration-white/10 decoration-8 underline-offset-[20px]">PRÓXIMO NÍVEL</span>
           </h2>
           <p className="text-xl md:text-3xl text-slate-400 max-w-4xl mx-auto font-bold leading-snug italic tracking-tight">
-            O roadmap Atlas 2026 unifica Previsção de Falhas AutonÃ´mica e Resolução Proativa. O futuro éção é reativo. O futuro é© <span className="text-white">Atlas ITIL v5</span>.
+            O roadmap Atlas 2026 unifica Previsão de Falhas Autonômica e Resolução Proativa. O futuro não é reativo. O futuro é <span className="text-white">Atlas ITIL v5</span>.
           </p>
           <div className="flex flex-wrap justify-center gap-8 pt-10">
              <Button 
                size="lg" 
                className="h-20 px-16 bg-white text-slate-950 rounded-[2rem] font-black text-sm tracking-[0.2em] hover:bg-primary hover:text-white transition-all shadow-3xl active:scale-95 uppercase"
-               onClick={() => winãow.location.href = '/crm/analytics'}
+               onClick={() => window.location.href = '/crm/analytics'}
              >
                VSM Real-Time Analytics
              </Button>

@@ -22,6 +22,18 @@ from .serializers import (
 )
 
 
+def get_month_range():
+    """Helper to get start and end of current month."""
+    now = timezone.now()
+    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # Next month start
+    if now.month == 12:
+        end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        end = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    return start, end
+
+
 class IsSuperUser(permissions.BasePermission):
     """
     Permissão que permite acesso apenas a superusuários globais.
@@ -271,7 +283,47 @@ class DashboardStatsView(generics.GenericAPIView):
                 pass
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).error(f"Error fetching messenger stats: {e}")
+
+            # 1.1 CRM Stats
+            total_deals = 0
+            active_swarms = 0
+            csi_identified = 0
+            try:
+                from apps.crm.models import CSIEntry, Deal, Swarm
+
+                total_deals = Deal.objects.filter(company=company, is_deleted=False).count()
+                active_swarms = Swarm.objects.filter(company=company, is_active=True).count()
+                csi_identified = CSIEntry.objects.filter(company=company, status="identified").count()
+            except ImportError:
+                pass
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).error(f"Error fetching CRM stats: {e}")
+
+            # 1.2 Finance Stats
+            total_revenue = 0.0
+            total_expenses = 0.0
+            try:
+                from django.db.models import Sum
+                from apps.finance.models import Transaction
+
+                month_start, _ = get_month_range()
+                finance_qs = Transaction.objects.filter(company=company, competence_date__gte=month_start.date())
+                
+                revenue = finance_qs.filter(type="in").aggregate(total=Sum("amount"))["total"] or 0
+                expenses = finance_qs.filter(type="out").aggregate(total=Sum("amount"))["total"] or 0
+                
+                total_revenue = float(revenue)
+                total_expenses = float(expenses)
+            except ImportError:
+                pass
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).error(f"Error fetching Finance stats: {e}")
 
             # 2. Atividade Recente (Audit Logs)
             try:
@@ -338,6 +390,16 @@ class DashboardStatsView(generics.GenericAPIView):
                         "growth": 0.0,
                     },
                     "messages": {"total": total_messages, "new_this_month": 0, "growth": 0.0},
+                    "crm": {
+                        "total_deals": total_deals,
+                        "active_swarms": active_swarms,
+                        "csi_identified": csi_identified,
+                    },
+                    "finance": {
+                        "revenue_month": total_revenue,
+                        "expenses_month": total_expenses,
+                        "balance_month": total_revenue - total_expenses,
+                    },
                 },
                 "system_status": {"api_uptime": "100%", "storage_used": "1.2GB", "last_backup": timezone.now()},
                 "recent_activity": recent_activity_data,
