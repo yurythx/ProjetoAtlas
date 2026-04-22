@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { useMemo, useState, useEffect } from "react"
-import { BarChart3, ChevronDown, ChevronRight, LayoutGrid, Users } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { BarChart3, ChevronDown, ChevronRight, LayoutGrid, Users, Target } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -190,36 +191,36 @@ export function PipelinesHub({ autoRedirect = false }: { autoRedirect?: boolean 
     <ModuleGuard moduleCode="crm">
       <div className="space-y-10 pb-20 max-w-[1600px] mx-auto px-4">
         {/* Header Glass Section */}
-        <div className="relative overflow-hidden rounded-[3rem] bg-slate-950 p-10 md:p-14 text-white shadow-2xl">
+        <div className="relative overflow-hidden rounded-[2.5rem] md:rounded-[3rem] bg-slate-950 p-6 md:p-14 text-white shadow-2xl">
           <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-primary/30 to-transparent" />
           <div className="absolute -left-20 -top-20 h-80 w-80 rounded-full bg-primary/10 blur-[100px]" />
           
           <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-white/10 backdrop-blur-xl border border-white/10 text-primary-foreground shadow-2xl">
-                  <BarChart3 className="h-8 w-8" />
+                <div className="flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-xl md:rounded-[1.5rem] bg-white/10 backdrop-blur-xl border border-white/10 text-primary-foreground shadow-2xl shrink-0">
+                  <BarChart3 className="h-6 w-6 md:h-8 md:w-8" />
                 </div>
                 <div>
-                  <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter leading-none uppercase">PIPELINES HUB</h1>
-                  <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-2">ITIL Version 5 Value Stream Management</p>
+                  <h1 className="text-2xl md:text-6xl font-black italic tracking-tighter leading-none uppercase">PIPELINES HUB</h1>
+                  <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[8px] md:text-[10px] mt-2">ITIL Version 5 Value Stream Management</p>
                 </div>
               </div>
             </div>
             
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="relative group w-full sm:w-72">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-4">
+              <div className="relative group w-full sm:w-64 xl:w-72">
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="LOCALIZAR FLUXO..."
-                  className="h-14 w-full bg-white/5 border-white/10 rounded-2xl pl-12 focus-visible:ring-primary/40 text-white placeholder:text-slate-500 font-bold"
+                  className="h-12 md:h-14 w-full bg-white/5 border-white/10 rounded-xl md:rounded-2xl pl-12 focus-visible:ring-primary/40 text-white placeholder:text-slate-500 font-bold text-xs"
                 />
                 <LayoutGrid className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
               </div>
 
               <Select value={sort} onValueChange={(value) => setSort(value as typeof sort)}>
-                <SelectTrigger className="h-14 w-full sm:w-56 bg-white/5 border-white/10 rounded-2xl text-white font-black uppercase text-[11px] tracking-wider">
+                <SelectTrigger className="h-12 md:h-14 w-full sm:w-48 xl:w-56 bg-white/5 border-white/10 rounded-xl md:rounded-2xl text-white font-black uppercase text-[10px] tracking-wider">
                   <SelectValue placeholder="ORDENAR POR" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl border-white/10 bg-slate-900 text-white font-bold">
@@ -232,7 +233,7 @@ export function PipelinesHub({ autoRedirect = false }: { autoRedirect?: boolean 
 
               {canManagePipelines && (
                 <PipelineManagerModal>
-                    <Button className="h-14 px-10 bg-primary hover:bg-white hover:text-primary text-white rounded-2xl font-black text-[12px] tracking-[0.1em] transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase">
+                    <Button className="h-12 md:h-14 px-6 md:px-10 bg-primary hover:bg-white hover:text-primary text-white rounded-xl md:rounded-2xl font-black text-[11px] md:text-[12px] tracking-[0.1em] transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase">
                       NOVO PIPELINE
                     </Button>
                 </PipelineManagerModal>

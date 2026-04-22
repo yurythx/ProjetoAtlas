@@ -228,7 +228,8 @@ function useThemeHooks(): ThemeConfigShape {
   }
 
   const currentPalette = useMemo(() => {
-    if (!isPublicRoute && userTheme && !userTheme.use_tenant_theme && userTheme.theme_palette) {
+    if (isPublicRoute) return 'django-green'
+    if (userTheme && !userTheme.use_tenant_theme && userTheme.theme_palette) {
       return userTheme.theme_palette
     }
     return tenantTheme?.theme_palette || 'django-green'
@@ -271,8 +272,8 @@ function ThemeEffects({ themeConfig }: { themeConfig: ThemeConfigShape }) {
       const root = document.documentElement
       root.setAttribute("data-palette", themeConfig.currentPalette)
 
-      const shouldUseTenantColor = themeConfig.isPublicRoute || themeConfig.userTheme?.use_tenant_theme !== false
-
+      const shouldUseTenantColor = !themeConfig.isPublicRoute && themeConfig.userTheme?.use_tenant_theme !== false
+      
       if (shouldUseTenantColor && themeConfig.tenantTheme?.primary_color) {
         if (resolvedTheme !== 'dark') {
           const primaryHex = themeConfig.tenantTheme.primary_color
@@ -288,7 +289,7 @@ function ThemeEffects({ themeConfig }: { themeConfig: ThemeConfigShape }) {
         root.style.removeProperty('--primary-foreground')
       }
 
-      if (themeConfig.secondaryColor) {
+      if (!themeConfig.isPublicRoute && themeConfig.secondaryColor) {
         const secondaryHex = themeConfig.secondaryColor
         root.style.setProperty('--secondary', secondaryHex)
         const foregroundHex = getContrastColor(secondaryHex)

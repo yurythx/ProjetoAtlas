@@ -49,7 +49,7 @@ export default function ITILVersion5Page() {
             <span className="text-[10px] font-black tracking-[0.4em] uppercase text-slate-400">Knowledge Center</span>
           </div>
           
-          <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-none text-white italic">
+          <h1 className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter leading-none text-white italic">
             ATLAS <span className="text-primary not-italic tracking-normal">ACADEMY</span>
           </h1>
           

@@ -18,9 +18,9 @@ export function ThemeInitScript() {
           document.documentElement.classList.remove('dark');
           if (desiredMode === 'light') localStorage.setItem('theme', 'light');
         }
-        const darkTheme = shouldBeDark;
+        const isPublicRoute = window.location.pathname.startsWith('/p/');
         
-        if (tenantBranding) {
+        if (tenantBranding && !isPublicRoute) {
           const root = document.documentElement;
           
           // Apply Palette

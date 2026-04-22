@@ -40,7 +40,7 @@ export function PublicFooter() {
                         </div>
                     </div>
 
-                    <nav className="flex items-center gap-8 text-sm text-muted-foreground font-medium md:justify-end" role="navigation" aria-label="Links do rodapé">
+                    <nav className="flex flex-wrap items-center gap-x-8 gap-y-4 text-sm text-muted-foreground font-medium justify-center md:justify-end" role="navigation" aria-label="Links do rodapé">
                         <a href="#" className="hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md">Privacidade</a>
                         <a href="#" className="hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md">Termos de Uso</a>
                         <a href="#" className="hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md">Cookies</a>

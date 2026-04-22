@@ -69,27 +69,27 @@ export default function CRMAnalyticsPage() {
   return (
     <div className="space-y-8 pb-20 max-w-[1600px] mx-auto">
       {/* Premium Header */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-950 p-8 text-white shadow-2xl">
+      <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-950 p-6 md:p-10 text-white shadow-2xl">
         <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-primary/20 to-transparent" />
         <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
         
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-8">
           <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-white/10 p-3 backdrop-blur-md">
-                 <BarChart3 className="h-6 w-6 text-primary-foreground" />
+            <div className="flex items-center gap-4">
+              <div className="rounded-2xl bg-white/10 p-3 md:p-4 backdrop-blur-md shrink-0">
+                 <BarChart3 className="h-6 w-6 md:h-8 md:w-8 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-4xl font-black tracking-tighter italic uppercase leading-none">MANAGER ANALYTICS</h1>
-                <p className="text-slate-400 font-medium text-sm mt-1">Value Stream Management & ITIL Version 5 Governance</p>
+                <h1 className="text-3xl md:text-5xl font-black tracking-tighter italic uppercase leading-none">MANAGER ANALYTICS</h1>
+                <p className="text-slate-400 font-medium text-[10px] md:text-sm mt-1 uppercase tracking-widest">Value Stream & ITIL Version 5 Governance</p>
               </div>
             </div>
           </div>
           
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
-              <SelectTrigger className="w-[240px] h-12 bg-white/5 border-white/10 rounded-2xl backdrop-blur-xl text-white font-bold">
-                <SelectValue placeholder="Selecione o Pipeline" />
+              <SelectTrigger className="w-full sm:w-[280px] h-12 md:h-14 bg-white/5 border-white/10 rounded-2xl backdrop-blur-xl text-white font-black uppercase text-[10px] tracking-widest">
+                <SelectValue placeholder="SELECIONAR PIPELINE" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl border-white/10 bg-slate-900 text-white">
                 {pipelines.map(p => (
@@ -103,14 +103,14 @@ export default function CRMAnalyticsPage() {
             <button 
               disabled={isExporting || !selectedPipeline}
               onClick={handleDownloadReport}
-              className="group relative flex items-center gap-3 px-8 h-12 bg-primary hover:bg-white hover:text-primary text-white rounded-2xl font-black text-[11px] tracking-widest transition-all shadow-xl shadow-primary/20 disabled:opacity-50 active:scale-95"
+              className="group relative flex items-center justify-center gap-3 px-10 h-12 md:h-14 bg-primary hover:bg-white hover:text-primary text-white rounded-2xl font-black text-[10px] tracking-widest transition-all shadow-xl shadow-primary/20 disabled:opacity-50 active:scale-95 uppercase shrink-0"
             >
               {isExporting ? (
                 <Activity className="h-4 w-4 animate-spin" />
               ) : (
                 <FileDown className="h-5 w-5" />
               )}
-              GERAR RELATÓRIO EXECUTIVO PDF
+              RELATÓRIO PDF
             </button>
           </div>
         </div>
