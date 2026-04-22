@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import { Column, ColumnDef, OnChangeFn, SortingState, VisibilityState } from "@tanstack/react-table"

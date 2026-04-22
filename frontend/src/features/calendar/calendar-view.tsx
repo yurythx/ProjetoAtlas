@@ -270,7 +270,7 @@ export function CalendarView() {
                   name="title"
                   render={({ field }) => (
                     <FormItem className="space-y-3">
-                      <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Título do Compromisso</h4Label>
+                      <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Título do Compromisso</FormLabel>
                       <FormControl>
                         <div className="relative group">
                            <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />

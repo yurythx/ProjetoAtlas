@@ -418,7 +418,8 @@ export function ArticleModeration() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" role="list" aria-label="Artigos             {items.map((a) => (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" role="list" aria-label="Artigos">
+            {items.map((a) => (
               <div key={a.id} className="group/item relative rounded-[2rem] border border-white/5 bg-white/5 hover:bg-white/10 transition-all duration-500 p-6 shadow-xl" role="listitem">
                 <div className="flex items-start gap-5">
                   <div className="pt-2">

@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -16,7 +16,7 @@ import {
   FileDown,
   Plus,
   Rocket,
-  ShieldInfo,
+  Shield,
   Lightbulb,
   Layers,
   Zap,
@@ -232,11 +232,11 @@ export default function CRMAnalyticsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <div className="h-14 w-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-lg">
-                    <Layers className="h-7 w-7 text-primary" />
+                    <Shield className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                     <CardTitle className="text-2xl font-black tracking-tighter uppercase italic">VALUE STREAM MAP (VSM)</CardTitle>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1">Mapeamento GeogrÃ¡fico de Valor em Tempo Real</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1">Mapeamento Geográfico de Valor em Tempo Real</p>
                 </div>
               </div>
               <Badge className="h-8 rounded-xl px-4 border-none bg-primary/10 text-primary font-black uppercase tracking-widest text-[9px]">SVS Orquestrado</Badge>
@@ -290,7 +290,7 @@ export default function CRMAnalyticsPage() {
                             "text-[10px] font-black uppercase tracking-widest", 
                             res.is_bottleneck ? "text-rose-500" : "text-foreground/60"
                           )}>
-                            {res.avg_days_residence > 0 ? `${res.avg_days_residence}d ResidÃªncia` : "EstÃ©ril"}
+                            {res.avg_days_residence > 0 ? `${res.avg_days_residence}d Residência` : "Estéril"}
                           </p>
                         </div>
                       </div>
@@ -304,7 +304,7 @@ export default function CRMAnalyticsPage() {
                 ) : (
                   <div className="w-full flex flex-col items-center justify-center gap-6 text-muted-foreground py-16">
                     <div className="h-24 w-24 rounded-full bg-white/5 flex items-center justify-center border border-dashed border-white/10">
-                        <Layers className="h-10 w-10 opacity-20" />
+                        <Shield className="h-10 w-10 opacity-20" />
                     </div>
                     <div className="text-center space-y-1">
                         <p className="text-sm font-black uppercase tracking-[0.3em] opacity-40">Matrix VSM Sem Dados</p>
@@ -321,12 +321,12 @@ export default function CRMAnalyticsPage() {
               </div>
               <div className="space-y-3 text-center md:text-left relative z-10">
                 <div className="flex items-center justify-center md:justify-start gap-4">
-                    <p className="text-2xl font-black text-white italic tracking-tighter uppercase">DIAGNÃ“STICO & PRESCRIÃ‡ÃƒO IA</p>
+                    <p className="text-2xl font-black text-white italic tracking-tighter uppercase">DIAGNÓSTICO & PRESCRIÇÃO IA</p>
                     <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black">AI CORE v5</Badge>
                 </div>
                 <p className="text-lg text-slate-400 font-bold leading-relaxed max-w-3xl">
-                  Identificamos uma retenÃ§Ã£o anÃ´mala em <span className="text-white font-black">{vsmData?.residence_times?.find((r:any) => r.avg_days_residence > 4)?.column || "Fila de Atendimento"}</span>. 
-                  O motor preditivo sugere a <span className="text-primary font-black underline decoration-primary/40 underline-offset-4">AtivaÃ§Ã£o IMídiata de Swarm</span> para normalizaÃ§Ã£o do Lead Time.
+                  Identificamos uma retenção anômala em <span className="text-white font-black">{vsmData?.residence_times?.find((r:any) => r.avg_days_residence > 4)?.column || "Fila de Atendimento"}</span>. 
+                  O motor preditivo sugere a <span className="text-primary font-black underline decoration-primary/40 underline-offset-4">Ativação Imídiata de Swarm</span> para normalização do Lead Time.
                 </p>
               </div>
             </div>
@@ -392,11 +392,11 @@ export default function CRMAnalyticsPage() {
                     </DialogHeader>
                     <div className="space-y-8">
                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">TÃ­tulo da Melhoria</Label>
+                          <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Título da Melhoria</Label>
                           <Input 
                             value={newCSITitle} 
                             onChange={e => setNewCSITitle(e.target.value)}
-                            placeholder="EX: AUTOMAÃ‡ÃƒO DE PROVISIONAMENTO"
+                            placeholder="EX: AUTOMAÇÃO DE PROVISIONAMENTO"
                             className="bg-white/5 border-white/10 rounded-2xl h-14 font-black text-xs placeholder:text-slate-700 uppercase"
                           />
                        </div>
@@ -460,7 +460,7 @@ export default function CRMAnalyticsPage() {
                   ))
                 ) : (
                   <div className="p-12 text-center border border-dashed border-white/10 rounded-[2.5rem] bg-white/5">
-                     <ShieldInfo className="h-10 w-10 text-slate-800 mx-auto mb-4" />
+                     <Shield className="h-10 w-10 text-slate-800 mx-auto mb-4" />
                      <p className="text-[11px] font-black text-slate-600 uppercase tracking-[0.2em]">Matrix CSI Sem Registros</p>
                   </div>
                 )}
