@@ -201,14 +201,14 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
     
     if (!dealId || !draggedDeal || !targetColumn) return
 
-    // 1. Verifica se já está na mesma coluna
+    // 1. Verifica se jÃ¡ estÃ¡ na mesma coluna
     if (getDealColumnId(draggedDeal) === targetColumn.id) return
 
-    // 2. Resolve semântica e governança
+    // 2. Resolve semÃ¢ntica e governanÃ§a
     const targetColumnSemantics = resolveColumnSemantics(targetColumn)
     const guard = getColumnTransitionGuard(draggedDeal, targetColumn, deals, [pipeline])
     
-    // 3. Verifica obrigatoriedades (Data/Técnico)
+    // 3. Verifica obrigatoriedades (Data/TÃ©cnico)
     const needsDate = targetColumnSemantics.requires_schedule && !draggedDeal.data_agendamento
     const needsTechnician = targetColumnSemantics.requires_assignee && !draggedDeal.tecnico_responsavel
 
@@ -217,13 +217,13 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
       return
     }
 
-    // 4. Verifica guardas de negócio (ex: WIP limit, transições proibidas)
+    // 4. Verifica guardas de negÃ³cio (ex: WIP limit, transiÃ§Ãµes proibidas)
     if (!guard.allowed) {
-      toast.error(guard.reason || "Movimento não permitido para esta coluna.")
+      toast.error(guard.reason || "Movimento nÃ£o permitido para esta coluna.")
       return
     }
 
-    // 5. Executa a transição
+    // 5. Executa a transiÃ§Ã£o
     try {
       await updateDeal.mutateAsync({
         id: dealId,
@@ -591,7 +591,7 @@ function DealCard({
                 {/* Sentiment (XLA) - ITIL Version 5 Focus */}
                 <div className="flex items-center gap-1 mt-1 bg-muted/50 px-1.5 py-0.5 rounded-full border border-primary/5">
                   <span className="text-[12px]">
-                    {deal.xla_score && deal.xla_score >= 8 ? "😊" : deal.xla_score && deal.xla_score >= 5 ? "😐" : "😟"}
+                    {deal.xla_score && deal.xla_score >= 8 ? "Smileys fix" : deal.xla_score && deal.xla_score >= 5 ? "ðŸ˜" : "Sad fix"}
                   </span>
                   <span className="text-[10px] font-black text-muted-foreground">XLA</span>
                 </div>
@@ -667,3 +667,4 @@ function DealCard({
     </motion.div>
   )
 }
+

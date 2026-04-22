@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { format, formatDistanceToNow } from "date-fns"
@@ -30,7 +30,7 @@ import { useCRMUsers } from "./use-crm-users"
 import { MediaDialog } from "@/features/media/media-dialog"
 import { enqueueOfflineDealAttachmentUpload, flushOfflineDealAttachmentUploads, listOfflineDealAttachmentUploads, removeOfflineDealAttachmentUpload } from "./offline-attachments"
 import { useModules } from "@/hooks/use-modules"
-import { usePermission } from "@/hooks/use-permission"
+import { usePerMissãon } from "@/hooks/use-perMissãon"
 
 interface DealDetailsModalProps {
   deal: Deal
@@ -43,9 +43,9 @@ type ActivityFilterId = "all" | "updates" | "moves" | "creation" | "automation"
 const ACTIVITY_FILTER_OPTIONS: Array<{ id: ActivityFilterId; label: string }> = [
   { id: "all", label: "Tudo" },
   { id: "updates", label: "Updates" },
-  { id: "moves", label: "Movimentações" },
-  { id: "creation", label: "Criação" },
-  { id: "automation", label: "Automações & IA" },
+  { id: "moves", label: "MovimentaÃ§Ãµes" },
+  { id: "creation", label: "CriaÃ§Ã£o" },
+  { id: "automation", label: "AutomaÃ§Ãµes & IA" },
 ]
 
 const EMPTY_ACTIVITIES: DealActivity[] = []
@@ -60,12 +60,12 @@ function getRelatedUserIds(deal: Deal) {
 }
 
 function getActivityTypeLabel(activityType: DealActivity["activity_type"]) {
-  if (activityType === "column_change" || activityType === "stage_change") return "Mudança de coluna"
-  if (activityType === "creation") return "Criação do card"
-  if (activityType === "note") return "Anotação"
-  if (activityType === "automation") return "Automação"
-  if (activityType === "ai_action") return "Ação de IA"
-  if (activityType === "ai_suggestion") return "Sugestão de IA"
+  if (activityType === "column_change" || activityType === "stage_change") return "MudanÃ§a de coluna"
+  if (activityType === "creation") return "CriaÃ§Ã£o do card"
+  if (activityType === "note") return "AnotaÃ§Ã£o"
+  if (activityType === "automation") return "AutomaÃ§Ã£o"
+  if (activityType === "ai_action") return "AÃ§Ã£o de IA"
+  if (activityType === "ai_suggestion") return "SugestÃ£o de IA"
   return activityType
 }
 
@@ -87,7 +87,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
   const { cis } = useCMDB()
   const queryClient = useQueryClient()
   const { isModuleActive } = useModules()
-  const { hasPermission } = usePermission()
+  const { hasPerMissãon } = usePerMissãon()
   const currentDeal = useMemo(
     () => deals.find((item) => item.id === deal.id) || deal,
     [deal, deals]
@@ -131,15 +131,15 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     const riskFactors = currentDeal.ai_metadata?.risk_factors || []
     const baseText = currentDeal.description || "N/A"
     
-    const rca = `[DRAFT IA] - BASEADO NO FLUXO DE VALOR\n\nCausa Provável: Analisando os sinais detectados (${riskFactors.join(", ")}), o problema parece estar relacionado à estagnação do fluxo em etapas críticas.\n\nEvidência Primária: ${baseText.substring(0, 100)}...`
+    const rca = `[DRAFT IA] - BASEADO NO FLUXO DE VALOR\n\nCausa ProvÃ¡vel: Analisando os sinais detectados (${riskFactors.join(", ")}), o problema parece estar relacionado Ã  estagnaÃ§Ã£o do fluxo em etapas crÃ­ticas.\n\nEvidÃªncia PrimÃ¡ria: ${baseText.substring(0, 100)}...`
     
-    const workaround = "Reiniciar serviços vinculados e limpar cache de processamento conforme KEDB standard."
-    const resolution = "Otimizar o WIP Limit da coluna afetada e automatizar o gatilho de transição para evitar novos bloqueios."
+    const workaround = "Reiniciar serviÃ§os vinculados e limpar cache de processamento conforme KEDB standard."
+    const resolution = "Otimizar o WIP Limit da coluna afetada e automatizar o gatilho de transiÃ§Ã£o para evitar novos bloqueios."
 
     setDraftRootCause(rca)
     setDraftWorkaround(workaround)
     setDraftResolutionSteps(resolution)
-    toast.success("Draft de Investigação gerado pela IA com sucesso!")
+    toast.success("Draft de InvestigaÃ§Ã£o gerado pela IA com sucesso!")
   }
 
   const [imagesFilter, setImagesFilter] = useState<"all" | "before" | "during" | "after">("all")
@@ -395,11 +395,11 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
   const attachments = currentDeal.attachments ?? EMPTY_ATTACHMENTS
   const totalQueuedAttachments = queuedAttachmentPreviews.length
   const totalPendingUploads = pendingAttachmentPreviews.length
-  const canOpenMessenger = Boolean(currentDeal.messenger_conversation) && isModuleActive("messenger") && hasPermission("messenger.view")
-  const canPublishUpdate = hasPermission("crm.deal_comment")
+  const canOpenMessenger = Boolean(currentDeal.messenger_conversation) && isModuleActive("messenger") && hasPerMissãon("messenger.view")
+  const canPublishUpdate = hasPerMissãon("crm.deal_comment")
   const canMentionUsers = canPublishUpdate
-  const canAttachFiles = hasPermission("crm.deal_attach")
-  const canDeleteAttachments = hasPermission("crm.deal_attach_delete")
+  const canAttachFiles = hasPerMissãon("crm.deal_attach")
+  const canDeleteAttachments = hasPerMissãon("crm.deal_attach_delete")
 
   const mentionSuggestions = useMemo(() => {
     if (!mentionOpen) return []
@@ -635,7 +635,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
         setQueuedAttachmentPreviews((prev) => [{ id: queued.id, url: previewUrl, title: file.name, phase, caption, isObjectUrl: true }, ...prev])
         queuedUrlsRef.current = [previewUrl, ...queuedUrlsRef.current]
         setPendingAttachmentPreviews((prev) => prev.filter((item) => item.id !== previewId))
-        toast.success("Sem conexão: foto salva localmente e será enviada quando voltar a internet.")
+        toast.success("Sem conexÃ£o: foto salva localmente e serÃ¡ enviada quando voltar a internet.")
         return
       }
       throw err
@@ -654,7 +654,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "w-[calc(100vw-1.5rem)] sm:w-auto max-h-[calc(100vh-1.5rem)] overflow-hidden border border-white/10 bg-background/30 p-0 backdrop-blur-3xl rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] grid grid-rows-[auto_1fr] animate-in zoom-in-95 duration-300",
+          "w-full sm:w-auto max-h-[95vh] overflow-hidden border border-white/10 bg-background/30 p-0 backdrop-blur-3xl rounded-[3rem] shadow-2xl grid grid-rows-[auto_1fr] animate-in zoom-in-95 duration-300",
           activeTab === "images" ? "sm:max-w-[1440px]" : "sm:max-w-[1120px]"
         )}
       >
@@ -666,7 +666,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 <Zap className="h-6 w-6 text-white fill-white animate-pulse" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/80 mb-0.5">Operação Swarming Ativa</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/80 mb-0.5">OperaÃ§Ã£o Swarming Ativa</p>
                 <h4 className="text-sm font-black text-amber-700 uppercase tracking-tighter">War Room Colaborativa de Alta Performance</h4>
               </div>
             </div>
@@ -690,7 +690,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                     onClick={() => endSwarm.mutate(currentDeal.id)}
                     className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-500 hover:text-white transition-all active:scale-95 border border-amber-500/20"
                 >
-                    Finalizar Missão
+                    Finalizar MissÃ£o
                 </Button>
             </div>
           </div>
@@ -704,10 +704,10 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
               <div className="flex flex-wrap items-center gap-3">
                 <Badge variant="outline" className="h-6 px-3 rounded-lg border-white/10 bg-white/5 font-black uppercase tracking-widest text-[9px] text-muted-foreground/60">{selectedColumn?.title || getDealColumnTitle(currentDeal)}</Badge>
                 <Badge variant="outline" className="h-6 px-3 rounded-lg border-primary/20 bg-primary/5 font-black uppercase tracking-widest text-[9px] text-primary">
-                  {draftRecordType === 'service_request' ? 'Requisição' : 
+                  {draftRecordType === 'service_request' ? 'RequisiÃ§Ã£o' : 
                    draftRecordType === 'incident' ? 'Incidente' :
                    draftRecordType === 'problem' ? 'Problema' :
-                   draftRecordType === 'change' ? 'Mudança' : 'Oportunidade'}
+                   draftRecordType === 'change' ? 'MudanÃ§a' : 'Oportunidade'}
                 </Badge>
                 <Badge className={cn("h-6 px-3 rounded-lg font-black uppercase tracking-widest text-[9px] shadow-lg", draftPriorityMeta.className)}>{draftPriorityMeta.label}</Badge>
                 <Badge className={cn("h-6 px-3 rounded-lg font-black uppercase tracking-widest text-[9px] shadow-lg", draftProgressMeta.badgeClassName)}>{safeDraftProgress}%</Badge>
@@ -738,7 +738,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                         <Avatar className="h-6 w-6 rounded-lg border-2 border-white/10">
                             <AvatarFallback className="text-[8px] font-black bg-primary/10 text-primary">{getUserInitials(ownerUser ? getUserDisplayName(ownerUser) : "U")}</AvatarFallback>
                         </Avatar>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground">{ownerUser ? getUserDisplayName(ownerUser) : `Usuário #${currentDeal.owner}`}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground">{ownerUser ? getUserDisplayName(ownerUser) : `UsuÃ¡rio #${currentDeal.owner}`}</span>
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 ml-2">
                     {latestActivity
@@ -752,7 +752,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
             <div className="flex flex-col gap-6 xl:min-w-[380px] xl:items-end">
               <div className="text-left xl:text-right w-full">
                 <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 mb-1">
-                  Mensuração de Valor
+                  MensuraÃ§Ã£o de Valor
                 </div>
                 <div className="text-5xl font-black tracking-tighter text-emerald-500 tabular-nums">
                   {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(currentDeal.value))}
@@ -778,7 +778,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   </div>
                   <div className="flex justify-between items-end relative z-10">
                      <div className="text-2xl font-black tracking-tighter tabular-nums">{safeDraftProgress}%</div>
-                     <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 pb-1">Concluído</div>
+                     <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 pb-1">ConcluÃ­do</div>
                   </div>
                 </div>
               </div>
@@ -831,11 +831,11 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 {[
                   { id: "details", label: "Arquitetura", icon: Layers },
                   { id: "images", label: "Galeria Visual", icon: Camera },
-                  { id: "overview", label: "Visão Geral", icon: LayoutList },
+                  { id: "overview", label: "VisÃ£o Geral", icon: LayoutList },
                   { id: "cis", label: "IT Infrastructure", icon: ShieldCheck },
-                  { id: "topology", label: "Topologia 360°", icon: Target },
-                  ...(draftRecordType === 'change' ? [{ id: "governance", label: "Governança", icon: ShieldCheck }] : []),
-                  ...(draftRecordType === 'problem' ? [{ id: "governance", label: "Investigação", icon: ShieldCheck }] : []),
+                  { id: "topology", label: "Topologia 360Â°", icon: Target },
+                  ...(draftRecordType === 'change' ? [{ id: "governance", label: "GovernanÃ§a", icon: ShieldCheck }] : []),
+                  ...(draftRecordType === 'problem' ? [{ id: "governance", label: "InvestigaÃ§Ã£o", icon: ShieldCheck }] : []),
                   { id: "xla", label: "Sentiment Index", icon: Smile },
                   { id: "history", label: "Audit Log", icon: Clock },
                 ].map((tab) => (
@@ -875,13 +875,13 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                       {selectedColumn?.value_stream_phase ? (
                          selectedColumn.value_stream_phase === 'demand' ? 'Demanda' :
                          selectedColumn.value_stream_phase === 'product_design' ? 'Design' :
-                         selectedColumn.value_stream_phase === 'creation' ? 'Criação' :
+                         selectedColumn.value_stream_phase === 'creation' ? 'CriaÃ§Ã£o' :
                          selectedColumn.value_stream_phase === 'onboarding' ? 'Entrega' : 'Valor'
-                      ) : 'Não mapeado'}
+                      ) : 'NÃ£o mapeado'}
                     </Badge>
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">
-                    Posição atual no Fluxo de Valor Digital (DPSM).
+                    PosiÃ§Ã£o atual no Fluxo de Valor Digital (DPSM).
                   </p>
                 </div>
 
@@ -927,7 +927,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                     </div>
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">
-                    Ajuste o avanço do trabalho como em um board operacional estilo Monday.
+                    Ajuste o avanÃ§o do trabalho como em um board operacional estilo Monday.
                   </p>
                 </div>
 
@@ -954,7 +954,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                     </div>
                     <div>
                       <div className="text-lg font-semibold">{selectedUsers.length}</div>
-                      <p className="text-sm text-muted-foreground">usuários relacionados</p>
+                      <p className="text-sm text-muted-foreground">usuÃ¡rios relacionados</p>
                     </div>
                   </div>
                 </div>
@@ -977,7 +977,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                         </div>
                         <div>
                           <h3 className="text-sm font-black uppercase tracking-widest text-primary">IA Governance Insights</h3>
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold">Análise preditiva ITIL v5</p>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold">AnÃ¡lise preditiva ITIL v5</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -996,7 +996,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                             </Badge>
                           ))}
                           {(!currentDeal.ai_metadata.risk_factors || currentDeal.ai_metadata.risk_factors.length === 0) && (
-                            <p className="text-xs italic text-muted-foreground">Nenhum fator crítico detectado.</p>
+                            <p className="text-xs italic text-muted-foreground">Nenhum fator crÃ­tico detectado.</p>
                           )}
                         </div>
                       </div>
@@ -1017,7 +1017,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 <section className="rounded-2xl border bg-card p-5 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge>Último update manual</Badge>
+                      <Badge>Ãšltimo update manual</Badge>
                       {latestManualUpdate.actor_name ? (
                         <span className="text-xs text-muted-foreground">por {latestManualUpdate.actor_name}</span>
                       ) : null}
@@ -1029,7 +1029,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   <p className="mt-3 text-sm text-foreground">{latestManualUpdate.description}</p>
                   <div className="mt-4">
                     <Button type="button" variant="outline" size="sm" onClick={() => setActiveTab("history")}>
-                      Ver histórico completo
+                      Ver histÃ³rico completo
                     </Button>
                   </div>
                 </section>
@@ -1042,44 +1042,44 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   <section className="rounded-2xl border bg-card p-5 shadow-sm">
                     <div className="mb-4 flex items-start justify-between gap-4">
                       <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Atualização do trabalho</h3>
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">AtualizaÃ§Ã£o do trabalho</h3>
                         <p className="mt-2 text-sm text-muted-foreground">
-                          Escreva como se fosse a atualização principal do item no board: contexto, andamento, bloqueios e próximos passos.
+                          Escreva como se fosse a atualizaÃ§Ã£o principal do item no board: contexto, andamento, bloqueios e prÃ³ximos passos.
                         </p>
                       </div>
                       <Badge variant={hasChanges ? "default" : "outline"}>
-                        {hasChanges ? "Pronto para salvar" : "Sem alterações"}
+                        {hasChanges ? "Pronto para salvar" : "Sem alteraÃ§Ãµes"}
                       </Badge>
                     </div>
 
                     <div className="space-y-4">
                       <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-sm font-medium">Descrição do que está sendo feito</p>
+                        <p className="text-sm font-medium">DescriÃ§Ã£o do que estÃ¡ sendo feito</p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           Este campo funciona como o update central do card, semelhante ao painel lateral do Monday.com.
                         </p>
                         <Textarea
                           value={draftDescription}
                           onChange={(event) => setDraftDescription(event.target.value)}
-                          placeholder="Descreva o andamento, bloqueios, próximos passos e contexto do card..."
+                          placeholder="Descreva o andamento, bloqueios, prÃ³ximos passos e contexto do card..."
                           className="mt-4 min-h-[320px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                         />
                       </div>
 
                       <div className="grid gap-3 md:grid-cols-2">
                         <div className="rounded-2xl border bg-background p-4">
-                          <p className="text-sm font-medium">Responsável principal</p>
+                          <p className="text-sm font-medium">ResponsÃ¡vel principal</p>
                           <div className="mt-3 flex items-center gap-3">
                             <Avatar className="h-10 w-10">
                               <AvatarFallback className="text-xs font-semibold">
-                                {getUserInitials(ownerUser ? getUserDisplayName(ownerUser) : `Usuário ${currentDeal.owner}`)}
+                                {getUserInitials(ownerUser ? getUserDisplayName(ownerUser) : `UsuÃ¡rio ${currentDeal.owner}`)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="text-sm font-semibold">
-                                {ownerUser ? getUserDisplayName(ownerUser) : `Usuário #${currentDeal.owner}`}
+                                {ownerUser ? getUserDisplayName(ownerUser) : `UsuÃ¡rio #${currentDeal.owner}`}
                               </p>
-                              <p className="text-xs text-muted-foreground">Responsável pelo card</p>
+                              <p className="text-xs text-muted-foreground">ResponsÃ¡vel pelo card</p>
                             </div>
                           </div>
                         </div>
@@ -1089,7 +1089,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                           <div className="mt-3">
                             <p className="text-sm font-semibold">{currentDeal.contact_name}</p>
                             <p className="text-xs text-muted-foreground">
-                              Referência principal do atendimento ou oportunidade
+                              ReferÃªncia principal do atendimento ou oportunidade
                             </p>
                           </div>
                         </div>
@@ -1115,10 +1115,10 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                     <div className="space-y-4">
                       <div className="p-3 rounded-xl bg-background/60 border border-primary/10 shadow-inner">
                         <h4 className="text-[10px] font-black uppercase text-primary/80 mb-2 flex items-center gap-2 tracking-widest">
-                          Diagnóstico Sugerido
+                          DiagnÃ³stico Sugerido
                         </h4>
                         <p className="text-sm text-foreground font-medium leading-relaxed italic">
-                          "{currentDeal.ai_metadata?.suggested_diagnosis || "Analisando padrões históricos e fluxos VSM para este chamado..."}"
+                          "{currentDeal.ai_metadata?.suggested_diagnosis || "Analisando padrÃµes histÃ³ricos e fluxos VSM para este chamado..."}"
                         </p>
                       </div>
 
@@ -1191,14 +1191,14 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                       </div>
 
                       <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Catálogo de Serviços</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Vincule este card a um serviço do catálogo para aplicar SLAs e fluxos automáticos.</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">CatÃ¡logo de ServiÃ§os</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Vincule este card a um serviÃ§o do catÃ¡logo para aplicar SLAs e fluxos automÃ¡ticos.</p>
                         <Select value={draftServiceItemId} onValueChange={setDraftServiceItemId}>
                           <SelectTrigger className="mt-3">
-                            <SelectValue placeholder="Selecione um serviço" />
+                            <SelectValue placeholder="Selecione um serviÃ§o" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">Nenhum serviço</SelectItem>
+                            <SelectItem value="none">Nenhum serviÃ§o</SelectItem>
                             {items.map((item) => (
                               <SelectItem key={item.id} value={String(item.id)}>
                                 {item.category_name && <span className="text-[10px] text-muted-foreground block uppercase">{item.category_name}</span>}
@@ -1210,7 +1210,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                         {draftServiceItemId !== "none" && (
                           <div className="mt-2 text-[10px] text-muted-foreground flex items-center gap-1">
                             <div className="h-1 w-1 rounded-full bg-primary/40" />
-                            SLA Padrão: {items.find((item: { id: number | string }) => String(item.id) === draftServiceItemId)?.sla_policy_name || "Conforme modalidade"}
+                            SLA PadrÃ£o: {items.find((item: { id: number | string }) => String(item.id) === draftServiceItemId)?.sla_policy_name || "Conforme modalidade"}
                           </div>
                         )}
                       </div>
@@ -1224,9 +1224,9 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="incident">Incidente</SelectItem>
-                            <SelectItem value="service_request">Requisição de Serviço</SelectItem>
+                            <SelectItem value="service_request">RequisiÃ§Ã£o de ServiÃ§o</SelectItem>
                             <SelectItem value="problem">Problema</SelectItem>
-                            <SelectItem value="change">Mudança</SelectItem>
+                            <SelectItem value="change">MudanÃ§a</SelectItem>
                             <SelectItem value="opportunity">Oportunidade (Vendas)</SelectItem>
                           </SelectContent>
                         </Select>
@@ -1234,14 +1234,14 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
                       <div className="rounded-2xl border bg-background p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Prioridade</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Destaque rápido para urgência e foco do time.</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Destaque rÃ¡pido para urgÃªncia e foco do time.</p>
                         <Select value={draftPriority} onValueChange={(value) => setDraftPriority(value as Deal["priority"])}>
                           <SelectTrigger className="mt-3">
                             <SelectValue placeholder="Selecione a prioridade" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="LOW">Baixa</SelectItem>
-                            <SelectItem value="MEDIUM">Média</SelectItem>
+                            <SelectItem value="MEDIUM">MÃ©dia</SelectItem>
                             <SelectItem value="HIGH">Alta</SelectItem>
                             <SelectItem value="URGENT">Urgente</SelectItem>
                           </SelectContent>
@@ -1250,7 +1250,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
                       <div className="rounded-2xl border bg-background p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Progresso</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Defina o percentual de conclusão do trabalho em andamento.</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Defina o percentual de conclusÃ£o do trabalho em andamento.</p>
                         <div className="mt-3 flex items-center gap-3">
                           <Input
                             type="number"
@@ -1276,7 +1276,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   <section className="rounded-2xl border bg-card p-5 shadow-sm">
                     <div className="mb-4">
                       <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Pessoas</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">Organize responsáveis relacionados ao card em um painel editável no estilo Monday.</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Organize responsÃ¡veis relacionados ao card em um painel editÃ¡vel no estilo Monday.</p>
                     </div>
 
                     <div className="space-y-4">
@@ -1303,13 +1303,13 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                       )}
 
                       <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-sm font-medium">Usuários relacionados</p>
+                        <p className="text-sm font-medium">UsuÃ¡rios relacionados</p>
                         <div className="relative mt-3">
                           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             value={userSearch}
                             onChange={(event) => setUserSearch(event.target.value)}
-                            placeholder="Buscar por nome, usuário ou e-mail"
+                            placeholder="Buscar por nome, usuÃ¡rio ou e-mail"
                             className="pl-9"
                           />
                         </div>
@@ -1351,7 +1351,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                               })
                             ) : (
                               <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                                Nenhum usuário encontrado para a busca atual.
+                                Nenhum usuÃ¡rio encontrado para a busca atual.
                               </div>
                             )}
                           </div>
@@ -1369,7 +1369,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Imagens</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Tire uma foto na hora (câmera) ou selecione um arquivo já enviado na biblioteca.
+                      Tire uma foto na hora (cÃ¢mera) ou selecione um arquivo jÃ¡ enviado na biblioteca.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -1418,7 +1418,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                     className="w-full sm:w-auto"
                   >
                     <Camera className="mr-2 h-4 w-4" />
-                    Câmera
+                    CÃ¢mera
                   </Button>
 
                   <MediaDialog
@@ -1452,7 +1452,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                             caption,
                           })
                           setQueuedAttachmentPreviews((prev) => [{ id: queued.id, url, title: item.title, phase, caption, isObjectUrl: false }, ...prev])
-                          toast.success("Sem conexão: anexo salvo localmente e será enviado quando voltar a internet.")
+                          toast.success("Sem conexÃ£o: anexo salvo localmente e serÃ¡ enviado quando voltar a internet.")
                         })
                         .finally(() => {
                           setPendingAttachmentPreviews((prev) => prev.filter((p) => p.id !== previewId))
@@ -1467,7 +1467,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 </div>
                 {!canAttachFiles ? (
                   <p className="mt-3 text-xs text-muted-foreground">
-                    Você não tem permissão para anexar imagens/arquivos neste card.
+                    VocÃª nÃ£o tem permissÃ£o para anexar imagens/arquivos neste card.
                   </p>
                 ) : null}
 
@@ -1642,12 +1642,12 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 <section className="rounded-2xl border bg-card p-5 shadow-sm">
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Publicar atualização</h3>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Publicar atualizaÃ§Ã£o</h3>
                       <p className="mt-2 text-sm text-muted-foreground">
-                        Registre um update rápido no histórico do card com contexto, bloqueios ou próximos passos sem alterar a descrição principal.
+                        Registre um update rÃ¡pido no histÃ³rico do card com contexto, bloqueios ou prÃ³ximos passos sem alterar a descriÃ§Ã£o principal.
                       </p>
                     </div>
-                    <Badge variant="outline">Histórico colaborativo</Badge>
+                    <Badge variant="outline">HistÃ³rico colaborativo</Badge>
                   </div>
 
                   <div className="rounded-2xl border bg-background p-4">
@@ -1701,7 +1701,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                         onClick={(event) => updateMentionState((event.target as HTMLTextAreaElement).value, (event.target as HTMLTextAreaElement).selectionStart)}
                         onKeyUp={(event) => updateMentionState((event.target as HTMLTextAreaElement).value, (event.target as HTMLTextAreaElement).selectionStart)}
                         maxLength={5000}
-                        placeholder="Ex.: Cliente respondeu, agenda confirmada para amanhã e aguardamos a liberação do acesso remoto. Use @usuario para mencionar."
+                        placeholder="Ex.: Cliente respondeu, agenda confirmada para amanhÃ£ e aguardamos a liberaÃ§Ã£o do acesso remoto. Use @usuario para mencionar."
                         className="min-h-[140px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                       />
 
@@ -1730,7 +1730,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
                     <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs text-muted-foreground">
-                        A atualização entra no histórico do card como anotação manual. Ctrl+Enter publica.
+                        A atualizaÃ§Ã£o entra no histÃ³rico do card como anotaÃ§Ã£o manual. Ctrl+Enter publica.
                       </p>
                       <Button
                         onClick={handlePublishUpdate}
@@ -1743,7 +1743,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                     </div>
                     {!canPublishUpdate ? (
                       <p className="mt-3 text-xs text-muted-foreground">
-                        Você não tem permissão para publicar updates neste card.
+                        VocÃª nÃ£o tem permissÃ£o para publicar updates neste card.
                       </p>
                     ) : null}
                   </div>
@@ -1752,9 +1752,9 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 <section className="rounded-2xl border bg-card p-5 shadow-sm">
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Histórico</h3>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">HistÃ³rico</h3>
                       <p className="mt-2 text-sm text-muted-foreground">
-                        Filtre rapidamente os eventos do card para acompanhar updates manuais, movimentações e automações.
+                        Filtre rapidamente os eventos do card para acompanhar updates manuais, movimentaÃ§Ãµes e automaÃ§Ãµes.
                       </p>
                     </div>
                     <Badge variant="outline">
@@ -1819,8 +1819,8 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
             <TabsContent value="cis" className="mt-0 space-y-6 p-4 sm:p-6">
               <section className="rounded-2xl border bg-card p-5 shadow-sm">
                 <div className="mb-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Itens de Configuração (CMDB)</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Escolha os ativos ou serviços de TI impactados por este card para manter a rastreabilidade ITIL version 5.</p>
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Itens de ConfiguraÃ§Ã£o (CMDB)</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Escolha os ativos ou serviÃ§os de TI impactados por este card para manter a rastreabilidade ITIL version 5.</p>
                 </div>
 
                 <div className="space-y-4">
@@ -1831,7 +1831,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                       <Input
                         value={userSearch} // Reusing search state for simplicity or could new one
                         onChange={(e) => setUserSearch(e.target.value)}
-                        placeholder="Buscar por nome, tag ou número de série"
+                        placeholder="Buscar por nome, tag ou nÃºmero de sÃ©rie"
                         className="pl-9"
                       />
                     </div>
@@ -1878,7 +1878,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                           })
                         ) : (
                           <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground text-center">
-                            Nenhum Item de Configuração encontrado.
+                            Nenhum Item de ConfiguraÃ§Ã£o encontrado.
                           </div>
                         )}
                       </div>
@@ -1907,15 +1907,15 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
               <section className="rounded-2xl border bg-card p-5 shadow-sm">
                 <div className="mb-6 flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Experiência do Usuário (XLA)</h3>
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">ExperiÃªncia do UsuÃ¡rio (XLA)</h3>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Acordos de Nível de Experiência medem a satisfação subjetiva e a percepção de valor do produto digital.
+                      Acordos de NÃ­vel de ExperiÃªncia medem a satisfaÃ§Ã£o subjetiva e a percepÃ§Ã£o de valor do produto digital.
                     </p>
                   </div>
                   {currentDeal.xla_score && (
                     <div className="flex flex-col items-end">
                       <span className="text-2xl font-bold text-primary">{currentDeal.xla_score}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase">Score Médio</span>
+                      <span className="text-[10px] text-muted-foreground uppercase">Score MÃ©dio</span>
                     </div>
                   )}
                 </div>
@@ -1938,7 +1938,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                            {/* Main Rating */}
                            <div className="space-y-4">
                               <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                <Star className="h-3 w-3" /> Satisfação Geral (1-10)
+                                <Star className="h-3 w-3" /> SatisfaÃ§Ã£o Geral (1-10)
                               </label>
                               <div className="flex flex-wrap gap-1.5">
                                  {[1,2,3,4,5,6,7,8,9,10].map(n => (
@@ -1991,7 +1991,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                               <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                                    <Target className="h-3 w-3" /> Resultado Alcançado
+                                    <Target className="h-3 w-3" /> Resultado AlcanÃ§ado
                                   </label>
                                   <span className="text-xs font-bold text-primary">{xlaOutcome}/10</span>
                                 </div>
@@ -2006,12 +2006,12 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
                         <div className="space-y-3">
                            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                             <MessageSquare className="h-3 w-3" /> Comentário Adicional
+                             <MessageSquare className="h-3 w-3" /> ComentÃ¡rio Adicional
                            </label>
                            <Textarea 
                              value={xlaComment}
                              onChange={(e) => setXlaComment(e.target.value)}
-                             placeholder="Conte-nos um pouco mais sobre sua percepção..."
+                             placeholder="Conte-nos um pouco mais sobre sua percepÃ§Ã£o..."
                              className="min-h-[100px] rounded-2xl border-primary/10 focus:border-primary/30 transition-all bg-background/50"
                            />
                         </div>
@@ -2042,7 +2042,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                              className="px-8 rounded-xl font-bold uppercase tracking-widest text-[10px]"
                            >
                              {submitXla.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2 fill-current" />}
-                             Publicar Experiência
+                             Publicar ExperiÃªncia
                            </Button>
                         </div>
                       </div>
@@ -2051,7 +2051,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Linha do Tempo de Satisfação</p>
+                      <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Linha do Tempo de SatisfaÃ§Ã£o</p>
                       <Badge variant="outline" className="text-[9px] uppercase font-bold">ITIL v5 Compliance</Badge>
                     </div>
 
@@ -2074,9 +2074,9 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                                    {f.rating}
                                  </div>
                                  <div>
-                                   <p className="text-sm font-bold">{f.contact_name || "Usuário Final"}</p>
+                                   <p className="text-sm font-bold">{f.contact_name || "UsuÃ¡rio Final"}</p>
                                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
-                                     {format(new Date(f.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                                     {format(new Date(f.created_at), "dd 'de' MMMM 'Ã s' HH:mm", { locale: ptBR })}
                                    </p>
                                  </div>
                                </div>
@@ -2140,43 +2140,43 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   <section className="rounded-2xl border bg-card p-5 shadow-sm">
                     <div className="mb-6 flex items-start justify-between gap-4">
                       <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Governança de Mudança</h3>
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">GovernanÃ§a de MudanÃ§a</h3>
                         <p className="mt-2 text-sm text-muted-foreground">
-                          Documentação obrigatória para requisições de mudança (RFC) conforme ITIL version 5.
+                          DocumentaÃ§Ã£o obrigatÃ³ria para requisiÃ§Ãµes de mudanÃ§a (RFC) conforme ITIL version 5.
                         </p>
                       </div>
                       <Badge variant={draftCabApproval ? "default" : "outline"} className={cn(draftCabApproval && "bg-emerald-500 hover:bg-emerald-600")}>
-                        {draftCabApproval ? "Aprovado pelo CAB" : "Aguardando Aprovação"}
+                        {draftCabApproval ? "Aprovado pelo CAB" : "Aguardando AprovaÃ§Ã£o"}
                       </Badge>
                     </div>
 
                     <div className="grid gap-6">
                       <div className="grid gap-4 md:grid-cols-2">
                          <div className="rounded-2xl border bg-background p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Tipo de Mudança</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Tipo de MudanÃ§a</p>
                             <Select value={draftChangeType} onValueChange={(v) => setDraftChangeType(v as any)}>
                               <SelectTrigger className="mt-3">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="standard">Padrão (Baixo Risco)</SelectItem>
+                                <SelectItem value="standard">PadrÃ£o (Baixo Risco)</SelectItem>
                                 <SelectItem value="normal">Normal (Requer CAB)</SelectItem>
                                 <SelectItem value="emergency">Emergencial (Urgente)</SelectItem>
                               </SelectContent>
                             </Select>
                          </div>
                          <div className="rounded-2xl border bg-background p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Nível de Risco</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">NÃ­vel de Risco</p>
                             <Select value={draftRiskLevel} onValueChange={(v) => setDraftRiskLevel(v as any)}>
                               <SelectTrigger className="mt-3">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="none">Não definido</SelectItem>
+                                <SelectItem value="none">NÃ£o definido</SelectItem>
                                 <SelectItem value="low">Baixo</SelectItem>
-                                <SelectItem value="medium">Médio</SelectItem>
+                                <SelectItem value="medium">MÃ©dio</SelectItem>
                                 <SelectItem value="high">Alto</SelectItem>
-                                <SelectItem value="critical">Crítico</SelectItem>
+                                <SelectItem value="critical">CrÃ­tico</SelectItem>
                               </SelectContent>
                             </Select>
                          </div>
@@ -2184,7 +2184,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
                       <div className="rounded-2xl border bg-background p-4">
                         <div className="flex items-center justify-between mb-3">
-                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Aprovação CAB</p>
+                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">AprovaÃ§Ã£o CAB</p>
                            <Switch 
                              checked={draftCabApproval} 
                              onCheckedChange={setDraftCabApproval}
@@ -2192,7 +2192,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                         </div>
                         {draftCabApproval && (
                           <div className="mt-4 space-y-2 animate-in fade-in slide-in-from-top-2">
-                             <p className="text-xs text-muted-foreground">Data da Reunião/Aprovação</p>
+                             <p className="text-xs text-muted-foreground">Data da ReuniÃ£o/AprovaÃ§Ã£o</p>
                              <Input 
                                type="datetime-local" 
                                value={draftCabDate ? draftCabDate.split('.')[0] : ''} 
@@ -2203,11 +2203,11 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                       </div>
 
                       <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-sm font-medium mb-3">Justificativa da Mudança</p>
+                        <p className="text-sm font-medium mb-3">Justificativa da MudanÃ§a</p>
                         <Textarea 
                           value={draftChangeJustification}
                           onChange={(e) => setDraftChangeJustification(e.target.value)}
-                          placeholder="Por que esta mudança é necessária?"
+                          placeholder="Por que esta mudanÃ§a Ã© necessÃ¡ria?"
                           className="min-h-[100px] bg-muted/20"
                         />
                       </div>
@@ -2217,7 +2217,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                         <Textarea 
                           value={draftChangeImpact}
                           onChange={(e) => setDraftChangeImpact(e.target.value)}
-                          placeholder="Quais sistemas ou usuários serão afetados durante a transição?"
+                          placeholder="Quais sistemas ou usuÃ¡rios serÃ£o afetados durante a transiÃ§Ã£o?"
                           className="min-h-[100px] bg-muted/20"
                         />
                       </div>
@@ -2226,12 +2226,12 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                          <div className="space-y-4">
                             <div className="rounded-2xl border bg-background p-4">
                               <p className="text-sm font-medium mb-3 text-primary flex items-center gap-2">
-                                <Layers className="h-4 w-4" /> Plano de Implementação
+                                <Layers className="h-4 w-4" /> Plano de ImplementaÃ§Ã£o
                               </p>
                               <Textarea 
                                 value={draftImplementationPlan}
                                 onChange={(e) => setDraftImplementationPlan(e.target.value)}
-                                placeholder="Passo a passo técnico..."
+                                placeholder="Passo a passo tÃ©cnico..."
                                 className="min-h-[150px]"
                               />
                             </div>
@@ -2255,7 +2255,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                               <Textarea 
                                 value={draftTestPlan}
                                 onChange={(e) => setDraftTestPlan(e.target.value)}
-                                placeholder="Como validar que a mudança foi bem sucedida?"
+                                placeholder="Como validar que a mudanÃ§a foi bem sucedida?"
                                 className="min-h-[150px]"
                               />
                             </div>
@@ -2265,7 +2265,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                                </div>
                                <p className="text-xs font-bold uppercase text-muted-foreground">Compliance ITIL v5</p>
                                <p className="text-[10px] text-muted-foreground max-w-[200px]">
-                                 O preenchimento completo destes campos é vital para a auditoria e governança do valor.
+                                 O preenchimento completo destes campos Ã© vital para a auditoria e governanÃ§a do valor.
                                </p>
                             </div>
                          </div>
@@ -2280,9 +2280,9 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   <section className="rounded-2xl border bg-card p-5 shadow-sm">
                     <div className="mb-6 flex items-start justify-between gap-4">
                       <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Investigação de Problema</h3>
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">InvestigaÃ§Ã£o de Problema</h3>
                         <p className="mt-2 text-sm text-muted-foreground">
-                          Análise de causa raiz e gestão de erros conhecidos (KEDB).
+                          AnÃ¡lise de causa raiz e gestÃ£o de erros conhecidos (KEDB).
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-3">
@@ -2321,13 +2321,13 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                         <Textarea 
                           value={draftWorkaround}
                           onChange={(e) => setDraftWorkaround(e.target.value)}
-                          placeholder="Existe uma solução paliativa para restaurar o serviço?"
+                          placeholder="Existe uma soluÃ§Ã£o paliativa para restaurar o serviÃ§o?"
                           className="min-h-[120px] bg-amber-50/10 border-amber-100"
                         />
                       </div>
 
                       <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-sm font-medium mb-3 text-emerald-600">Resolução Definitiva</p>
+                        <p className="text-sm font-medium mb-3 text-emerald-600">ResoluÃ§Ã£o Definitiva</p>
                         <Textarea 
                           value={draftResolutionSteps}
                           onChange={(e) => setDraftResolutionSteps(e.target.value)}
@@ -2348,14 +2348,14 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 
                 <div className="relative z-10 w-full max-w-4xl space-y-8">
                    <div className="text-center space-y-2">
-                     <h3 className="text-xl font-black text-white tracking-widest uppercase">Análise de Impacto 360°</h3>
+                     <h3 className="text-xl font-black text-white tracking-widest uppercase">AnÃ¡lise de Impacto 360Â°</h3>
                      <p className="text-blue-400/70 text-xs font-semibold tracking-tight uppercase">CMDB Topology Analytics Engine</p>
                    </div>
 
                    {isLoadingTopology ? (
                      <div className="flex flex-col items-center justify-center py-20 space-y-4">
                         <Loader2 className="h-10 w-10 text-primary animate-spin" />
-                        <p className="text-white/50 text-xs animate-pulse">Rastreando dependências em cascata...</p>
+                        <p className="text-white/50 text-xs animate-pulse">Rastreando dependÃªncias em cascata...</p>
                      </div>
                    ) : (
                      <div className="relative border border-white/10 rounded-3xl bg-black/40 backdrop-blur-xl p-10 min-h-[400px]">
@@ -2407,7 +2407,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                              <div className="h-16 w-16 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center opacity-30">
                                 <Search className="h-8 w-8 text-white" />
                              </div>
-                             <p className="text-white/40 text-sm max-w-[250px]">Nenhum IC (Item de Configuração) vinculado a este card para análise de topologia.</p>
+                             <p className="text-white/40 text-sm max-w-[250px]">Nenhum IC (Item de ConfiguraÃ§Ã£o) vinculado a este card para anÃ¡lise de topologia.</p>
                           </div>
                         )}
                      </div>
@@ -2420,11 +2420,11 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full bg-rose-500" />
-                        <span className="text-[10px] font-bold text-white/50 uppercase">Impacto Crítico</span>
+                        <span className="text-[10px] font-bold text-white/50 uppercase">Impacto CrÃ­tico</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full bg-blue-500/30 border border-blue-500/50" />
-                        <span className="text-[10px] font-bold text-white/50 uppercase">Dependência Ativa</span>
+                        <span className="text-[10px] font-bold text-white/50 uppercase">DependÃªncia Ativa</span>
                       </div>
                    </div>
                 </div>
@@ -2436,3 +2436,4 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     </Dialog>
   )
 }
+

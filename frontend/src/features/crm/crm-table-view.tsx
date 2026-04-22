@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import { Column, ColumnDef, OnChangeFn, SortingState, VisibilityState } from "@tanstack/react-table"
@@ -125,7 +125,7 @@ export function CRMTableView({
                 </span>
                 {isCritical && (
                   <Badge className="bg-rose-500 text-white border-rose-600 text-[8px] h-4 px-1.5 font-black uppercase tracking-widest shadow-lg shadow-rose-500/20">
-                    Crítico
+                    CrÃ­tico
                   </Badge>
                 )}
               </div>
@@ -162,7 +162,7 @@ export function CRMTableView({
         cell: ({ row }) => {
           const deal = row.original
           const owner = ownerById.get(deal.tecnico_responsavel || deal.owner)
-          const name = owner ? getUserDisplayName(owner) : "Não atribuído"
+          const name = owner ? getUserDisplayName(owner) : "NÃ£o atribuÃ­do"
 
           return (
             <div className="flex items-center gap-3 py-1">
@@ -236,7 +236,7 @@ export function CRMTableView({
       },
       {
         accessorKey: "value",
-        header: ({ column }) => <SortableHeader column={column} label="Mensuração" />,
+        header: ({ column }) => <SortableHeader column={column} label="MensuraÃ§Ã£o" />,
         sortingFn: (rowA, rowB) => Number(rowA.original.value) - Number(rowB.original.value),
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-2 pr-6 py-1">
@@ -263,9 +263,9 @@ export function CRMTableView({
         </div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-1">
-            <h3 className="text-2xl font-black tracking-tighter uppercase">Tabela Operacional de Alta Precisão</h3>
+            <h3 className="text-2xl font-black tracking-tighter uppercase">Tabela Operacional de Alta PrecisÃ£o</h3>
             <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
-              Fluxo Analítico de Oportunidades • <span className="text-primary">{pipeline.name}</span>
+              Fluxo AnalÃ­tico de Oportunidades â€¢ <span className="text-primary">{pipeline.name}</span>
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -311,3 +311,4 @@ export function CRMTableView({
     </div>
   )
 }
+

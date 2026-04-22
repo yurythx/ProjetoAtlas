@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -112,7 +112,7 @@ export default function CRMAnalyticsPage() {
       link.click()
       link.remove()
     } catch (error) {
-      console.error("Erro ao gerar relatório:", error)
+      console.error("Erro ao gerar relatÃ³rio:", error)
     } finally {
       setIsExporting(false)
     }
@@ -169,7 +169,7 @@ export default function CRMAnalyticsPage() {
               ) : (
                 <FileDown className="h-6 w-6" />
               )}
-              GERAR RELATÓRIO EXECUTIVO
+              GERAR RELATÃ“RIO EXECUTIVO
             </button>
           </div>
         </div>
@@ -178,7 +178,7 @@ export default function CRMAnalyticsPage() {
       {/* High-Level KPI Matrix */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         {[
-          { label: "Lead Time Médio", value: `${vsmData?.avg_lead_time_days || 0}d`, icon: Clock, sub: "Velocity Index", color: "from-blue-500/10 to-blue-600/5", border: "border-blue-500/20", glow: "shadow-blue-500/10" },
+          { label: "Lead Time MÃ©dio", value: `${vsmData?.avg_lead_time_days || 0}d`, icon: Clock, sub: "Velocity Index", color: "from-blue-500/10 to-blue-600/5", border: "border-blue-500/20", glow: "shadow-blue-500/10" },
           { label: "SLA Compliance", value: `${govData?.sla_compliance_rate || 100}%`, icon: Target, sub: "Reliability Core", color: "from-emerald-500/10 to-emerald-600/5", border: "border-emerald-500/20", glow: "shadow-emerald-500/10" },
           { label: "Throughput", value: vsmData?.throughput_weekly || 0, icon: TrendingUp, sub: "Weekly Output", color: "from-purple-500/10 to-purple-600/5", border: "border-purple-500/20", glow: "shadow-purple-500/10" },
           { 
@@ -236,7 +236,7 @@ export default function CRMAnalyticsPage() {
                 </div>
                 <div>
                     <CardTitle className="text-2xl font-black tracking-tighter uppercase italic">VALUE STREAM MAP (VSM)</CardTitle>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1">Mapeamento Geográfico de Valor em Tempo Real</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1">Mapeamento GeogrÃ¡fico de Valor em Tempo Real</p>
                 </div>
               </div>
               <Badge className="h-8 rounded-xl px-4 border-none bg-primary/10 text-primary font-black uppercase tracking-widest text-[9px]">SVS Orquestrado</Badge>
@@ -290,7 +290,7 @@ export default function CRMAnalyticsPage() {
                             "text-[10px] font-black uppercase tracking-widest", 
                             res.is_bottleneck ? "text-rose-500" : "text-foreground/60"
                           )}>
-                            {res.avg_days_residence > 0 ? `${res.avg_days_residence}d Residência` : "Estéril"}
+                            {res.avg_days_residence > 0 ? `${res.avg_days_residence}d ResidÃªncia` : "EstÃ©ril"}
                           </p>
                         </div>
                       </div>
@@ -321,12 +321,12 @@ export default function CRMAnalyticsPage() {
               </div>
               <div className="space-y-3 text-center md:text-left relative z-10">
                 <div className="flex items-center justify-center md:justify-start gap-4">
-                    <p className="text-2xl font-black text-white italic tracking-tighter uppercase">DIAGNÓSTICO & PRESCRIÇÃO IA</p>
+                    <p className="text-2xl font-black text-white italic tracking-tighter uppercase">DIAGNÃ“STICO & PRESCRIÃ‡ÃƒO IA</p>
                     <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black">AI CORE v5</Badge>
                 </div>
                 <p className="text-lg text-slate-400 font-bold leading-relaxed max-w-3xl">
-                  Identificamos uma retenção anômala em <span className="text-white font-black">{vsmData?.residence_times?.find((r:any) => r.avg_days_residence > 4)?.column || "Fila de Atendimento"}</span>. 
-                  O motor preditivo sugere a <span className="text-primary font-black underline decoration-primary/40 underline-offset-4">Ativação Imediata de Swarm</span> para normalização do Lead Time.
+                  Identificamos uma retenÃ§Ã£o anÃ´mala em <span className="text-white font-black">{vsmData?.residence_times?.find((r:any) => r.avg_days_residence > 4)?.column || "Fila de Atendimento"}</span>. 
+                  O motor preditivo sugere a <span className="text-primary font-black underline decoration-primary/40 underline-offset-4">AtivaÃ§Ã£o IMídiata de Swarm</span> para normalizaÃ§Ã£o do Lead Time.
                 </p>
               </div>
             </div>
@@ -392,11 +392,11 @@ export default function CRMAnalyticsPage() {
                     </DialogHeader>
                     <div className="space-y-8">
                        <div className="space-y-3">
-                          <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Título da Melhoria</Label>
+                          <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">TÃ­tulo da Melhoria</Label>
                           <Input 
                             value={newCSITitle} 
                             onChange={e => setNewCSITitle(e.target.value)}
-                            placeholder="EX: AUTOMAÇÃO DE PROVISIONAMENTO"
+                            placeholder="EX: AUTOMAÃ‡ÃƒO DE PROVISIONAMENTO"
                             className="bg-white/5 border-white/10 rounded-2xl h-14 font-black text-xs placeholder:text-slate-700 uppercase"
                           />
                        </div>
@@ -513,3 +513,4 @@ function Layers(props: any) {
     </svg>
   )
 }
+
