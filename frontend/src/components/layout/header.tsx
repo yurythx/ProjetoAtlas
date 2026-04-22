@@ -58,26 +58,27 @@ export function Header() {
 
   const { user: me, isLoading: authLoading } = useAuth()
 
+  // useMemo MUST be before any early return to comply with Rules of Hooks
+  const isDashboardArea = React.useMemo(() => {
+    if (!pathname) return false
+    const publicPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/accept-invite', '/servicos', '/404', '/500']
+    const publicPrefixes = ['/p/', '/api/']
+
+    if (publicPaths.includes(pathname)) return false
+    if (publicPrefixes.some(prefix => pathname.startsWith(prefix))) return false
+
+    return true
+  }, [pathname])
+
   const onLogout = () => {
     clearClientSession()
     window.location.href = "/"
   }
 
-
   if (!isClient) {
     return <header className="h-20 border-b bg-background/50 animate-pulse" />
   }
 
-  const isDashboardArea = React.useMemo(() => {
-    if (!pathname) return false
-    const publicPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/accept-invite', '/servicos', '/404', '/500']
-    const publicPrefixes = ['/p/', '/api/']
-    
-    if (publicPaths.includes(pathname)) return false
-    if (publicPrefixes.some(prefix => pathname.startsWith(prefix))) return false
-    
-    return true
-  }, [pathname])
   const hasDesktopSidebar = Boolean(me && isDashboardArea)
   const showDesktopNav = (!isDashboardArea && !me) || (Boolean(me) && !hasDesktopSidebar)
   const showGuestAuthCta = !isDashboardArea
