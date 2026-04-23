@@ -850,8 +850,7 @@ export function useCRM() {
                 : deal.column_data,
               is_closed: targetColumn
                 ? (() => {
-                    if (!targetPipeline) return resolveColumnSemantics(targetColumn).marks_done
-                    const allColumns = getPipelineColumns(targetPipeline)
+                    const allColumns = getPipelineColumns(targetPipeline!)
                     const currentIndex = allColumns.findIndex((c) => c.id === targetColumn.id)
                     return resolveColumnSemantics(targetColumn).marks_done || currentIndex === allColumns.length - 1
                   })()
@@ -1010,7 +1009,7 @@ export function useServiceCatalog() {
     queryKey: ["service-categories"],
     queryFn: async () => {
       const response = await api.get("/api/service-catalog/categories/")
-      return response.data
+      return normalizeListResponse(response.data)
     },
   })
 
@@ -1018,7 +1017,7 @@ export function useServiceCatalog() {
     queryKey: ["service-items"],
     queryFn: async () => {
       const response = await api.get("/api/service-catalog/items/")
-      return response.data
+      return normalizeListResponse(response.data)
     },
   })
 
@@ -1030,7 +1029,7 @@ export function useCMDB() {
     queryKey: ["cmdb-types"],
     queryFn: async () => {
       const response = await api.get("/api/cmdb/types/")
-      return response.data
+      return normalizeListResponse(response.data)
     },
   })
 
@@ -1038,7 +1037,7 @@ export function useCMDB() {
     queryKey: ["cmdb-items"],
     queryFn: async () => {
       const response = await api.get("/api/cmdb/items/")
-      return response.data
+      return normalizeListResponse(response.data)
     },
   })
 

@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Article } from "@/types"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CalendarDays, MessageSquare } from "lucide-react"
+import { CalendarDays, MessageSquare, BookOpen } from "lucide-react"
 import Image from "next/image"
 import { fixImageUrl } from "@/lib/utils"
 

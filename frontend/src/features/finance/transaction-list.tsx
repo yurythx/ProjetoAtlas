@@ -493,7 +493,7 @@ export function TransactionList() {
                     <TableRow key={transaction.id} className="group hover:bg-white/5 transition-colors border-white/5">
                       <TableCell className="px-8 py-4">
                          <div className="font-bold text-sm text-foreground/90">{transaction.description}</div>
-                         <div className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight mt-0.5">ID: {transaction.id.slice(0, 8)}</div>
+                         <div className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight mt-0.5">ID: {String(transaction.id).slice(0, 8)}</div>
                       </TableCell>
                       <TableCell>
                         {transaction.category_details ? (
