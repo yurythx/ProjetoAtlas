@@ -90,7 +90,7 @@ export function TransactionList() {
 
   const handleExportCSV = () => {
     const headers = ["Descrição", "Tipo", "Valor", "Vencimento", "Status", "Categoria"]
-    const rows = filteredTransactions.map(t => [
+    const rows = (Array.isArray(filteredTransactions) ? filteredTransactions : []).map(t => [
       t.description,
       t.type === 'in' ? 'Receita' : 'Despesa',
       t.amount,
@@ -489,7 +489,7 @@ export function TransactionList() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredTransactions.map((transaction) => (
+                  (Array.isArray(filteredTransactions) ? filteredTransactions : []).map((transaction) => (
                     <TableRow key={transaction.id} className="group hover:bg-white/5 transition-colors border-white/5">
                       <TableCell className="px-8 py-4">
                          <div className="font-bold text-sm text-foreground/90">{transaction.description}</div>

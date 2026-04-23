@@ -62,7 +62,7 @@ import {
 import { LinkPreview } from "./link-preview"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { AnimatePresence, motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface ChatWindowProps {
   contact: Contact;
