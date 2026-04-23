@@ -21,7 +21,7 @@ export function CRMTriageInbox() {
     // Simulação de Inteligência ITIL Version 5
     // Em produção, isso chamaria um endpoint de IA real
     const currentPipeline = pipelines.find(p => 
-      p.stages.some(s => s.id === deal.stage) || 
+      (Array.isArray(p.stages) && p.stages.some(s => s.id === deal.stage)) || 
       p.columns?.some(c => c.id === deal.column)
     ) || pipelines[0]
 

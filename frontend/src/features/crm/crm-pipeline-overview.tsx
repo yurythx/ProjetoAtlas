@@ -74,7 +74,7 @@ function getDeadlineRisk(deal: Deal) {
 
 export function CRMPipelineOverview({ pipeline, deals, overview, isLoading = false }: CRMPipelineOverviewProps) {
   const pipelineColumns = useMemo(() => getPipelineColumns(pipeline), [pipeline])
-  const stageIds = useMemo(() => new Set(pipeline.stages.map((stage) => stage.id)), [pipeline.stages])
+  const stageIds = useMemo(() => new Set((pipeline.stages ?? []).map((stage) => stage.id)), [pipeline.stages])
   const columnIds = useMemo(() => new Set(pipelineColumns.map((column) => column.id)), [pipelineColumns])
   const pipelineDeals = useMemo(() => {
     return deals.filter((deal) => {

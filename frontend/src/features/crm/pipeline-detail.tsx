@@ -23,7 +23,7 @@ function isDealInPipeline(deal: Deal, pipeline: Pipeline) {
   if (deal.column_data?.pipeline) {
     return deal.column_data.pipeline === pipeline.id
   }
-  if (deal.stage) {
+  if (deal.stage && Array.isArray(pipeline.stages)) {
     return pipeline.stages.some((stage) => stage.id === deal.stage)
   }
   return false

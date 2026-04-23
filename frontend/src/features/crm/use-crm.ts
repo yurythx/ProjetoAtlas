@@ -594,13 +594,13 @@ export function resolveColumnSemantics(column?: Partial<CRMColumn> | null) {
 }
 
 export function getPipelineColumns(pipeline: Pipeline): CRMColumn[] {
-  if (pipeline.columns && pipeline.columns.length > 0) {
+  if (pipeline.columns && Array.isArray(pipeline.columns) && pipeline.columns.length > 0) {
     return [...pipeline.columns]
       .map((column) => ({ ...column, ...resolveColumnSemantics(column) }))
       .sort((a, b) => a.order - b.order || a.id - b.id)
   }
 
-  return [...pipeline.stages]
+  return [...(pipeline.stages ?? [])]
     .sort((a, b) => a.order - b.order || a.id - b.id)
     .map((stage) => ({
       id: stage.id,
