@@ -593,14 +593,16 @@ export function resolveColumnSemantics(column?: Partial<CRMColumn> | null) {
   }
 }
 
-export function getPipelineColumns(pipeline: Pipeline): CRMColumn[] {
+export function getPipelineColumns(pipeline: Pipeline | null | undefined): CRMColumn[] {
+  if (!pipeline) return []
   if (pipeline.columns && Array.isArray(pipeline.columns) && pipeline.columns.length > 0) {
     return [...pipeline.columns]
       .map((column) => ({ ...column, ...resolveColumnSemantics(column) }))
       .sort((a, b) => a.order - b.order || a.id - b.id)
   }
 
-  return [...(pipeline.stages ?? [])]
+  const stages = Array.isArray(pipeline.stages) ? pipeline.stages : []
+  return [...stages]
     .sort((a, b) => a.order - b.order || a.id - b.id)
     .map((stage) => ({
       id: stage.id,
@@ -815,8 +817,8 @@ export function useCRM() {
       const targetPipeline = targetColumn
         ? pipelines.find((pipeline) => pipeline.id === targetColumn.pipeline)
         : undefined
-      const targetStage = updatedDeal.stage
-        ? pipelines.flatMap((pipeline) => pipeline.stages).find((stage) => stage.id === updatedDeal.stage)
+      const targetStage = updatedDeal.stage && Array.isArray(pipelines)
+        ? pipelines.flatMap((pipeline) => Array.isArray(pipeline.stages) ? pipeline.stages : []).find((stage) => stage.id === updatedDeal.stage)
         : targetPipeline && targetColumn
           ? getPipelineStageFromColumn(targetPipeline, targetColumn.id)
           : undefined

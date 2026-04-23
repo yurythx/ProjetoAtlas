@@ -250,7 +250,7 @@ export default function CRMAnalyticsPage() {
                     <Activity className="h-6 w-6 animate-spin text-primary" />
                     <span className="text-xs font-black uppercase tracking-[0.3em]">Calculando Matrix VSM...</span>
                   </div>
-                ) : vsmData?.residence_times?.length > 0 ? (
+                ) : (Array.isArray(vsmData?.residence_times) && vsmData.residence_times.length > 0) ? (
                   vsmData.residence_times.map((res: any, idx: number) => (
                     <div key={idx} className="flex-1 flex flex-col items-center group relative min-w-[180px]">
                       {idx < vsmData.residence_times.length - 1 && (
@@ -432,7 +432,7 @@ export default function CRMAnalyticsPage() {
               </div>
 
               <div className="space-y-4 max-h-[360px] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-white/10 custom-scrollbar">
-                {csiData?.results?.length > 0 ? (
+                {(Array.isArray(csiData?.results) && csiData.results.length > 0) ? (
                   csiData.results.map((item: any) => (
                     <div key={item.id} className="group p-6 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 transition-all shadow-xl">
                       <div className="flex items-start gap-5">

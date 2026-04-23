@@ -55,11 +55,12 @@ type PipelineOverviewColumnMetric = {
 }
 
 function getOverviewColumns(overview: PipelineOverviewData): PipelineOverviewColumnMetric[] {
-  if (overview.columns && overview.columns.length > 0) {
+  if (Array.isArray(overview.columns) && overview.columns.length > 0) {
     return overview.columns
   }
 
-  return (overview.stages || []).map((stage) => ({
+  const stages = Array.isArray(overview.stages) ? overview.stages : []
+  return stages.map((stage) => ({
     ...stage,
     column_id: stage.column_id ?? stage.stage_id,
     column_title: stage.column_title ?? stage.name,
