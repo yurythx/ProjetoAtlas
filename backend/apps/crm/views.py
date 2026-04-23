@@ -1393,6 +1393,7 @@ class XLAFeedbackViewSet(viewsets.ModelViewSet):
     queryset = XLAFeedback.all_objects.all()
     serializer_class = XLAFeedbackSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ["deal", "contact"]
 
     def get_queryset(self):
         company = getattr(self.request, "company", None)
@@ -1958,40 +1959,40 @@ class IntegrationEvolutionWebhookAPIView(APIView):
             event.save()
             return Response({"status": "processed_query"})
 
-        # 4. Criar Nova Solicitação (Modo Padrão)
-        if config.default_pipeline and config.default_column:
-            new_deal = Deal.objects.create(
-                company=config.company,
-                title=f"Chamado via WhatsApp: {text_content[:30]}...",
-                description=text_content,
-                contact=contact,
-                pipeline=config.default_pipeline,
-                stage=Stage.objects.filter(pipeline=config.default_pipeline).first(), # Fallback se necessário
-                column=config.default_column,
-                owner=config.company.users.first(), # Simplificação: atribui ao admin da empresa
-                integration_source="whatsapp_evolution",
-                external_id=key.get("id")
-            )
-            
-            client.send_text(sender_number, f"Recebemos sua solicitação! ✅\n\nIdentificador: #{new_deal.id}\nStatus: {new_deal.column.title}\n\nEntraremos em contato em breve.")
-            
-            event.processed_deal = new_deal
-            event.status = IntegrationInboundStatus.PROCESSED
+        try:
+            # 4. Criar Nova Solicitação (Modo Padrão)
+            if config.default_pipeline and config.default_column:
+                new_deal = Deal.objects.create(
+                    company=config.company,
+                    title=f"Chamado via WhatsApp: {text_content[:30]}...",
+                    description=text_content,
+                    contact=contact,
+                    pipeline=config.default_pipeline,
+                    stage=Stage.objects.filter(pipeline=config.default_pipeline).first(), # Fallback se necessário
+                    column=config.default_column,
+                    owner=config.company.users.first(), # Simplificação: atribui ao admin da empresa
+                    integration_source="whatsapp_evolution",
+                    external_id=key.get("id")
+                )
+                
+                client.send_text(sender_number, f"Recebemos sua solicitação! ✅\n\nIdentificador: #{new_deal.id}\nStatus: {new_deal.column.title}\n\nEntraremos em contato em breve.")
+                
+                event.processed_deal = new_deal
+                event.status = IntegrationInboundStatus.PROCESSED
+                event.save()
+                return Response({"status": "created_deal"})
+
+            event.status = IntegrationInboundStatus.FAILED
+            event.error = "EvolutionConfig sem Pipeline/Coluna padrão."
             event.save()
-            return Response({"status": "created_deal"})
+            return Response({"status": "error", "detail": event.error}, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            event.status = IntegrationInboundStatus.FAILED
+            event.error = str(e)
+            event.save()
+            return Response({"status": "error", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        event.status = IntegrationInboundStatus.FAILED
-        event.error = "EvolutionConfig sem Pipeline/Coluna padrão."
-        event.save()
-        return Response({"status": "error", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class XLAFeedbackViewSet(viewsets.ModelViewSet):
-    serializer_class = XLAFeedbackSerializer
-    queryset = XLAFeedback.objects.all()
-    filterset_fields = ["deal", "contact"]
-
-    def get_queryset(self):
-        return super().get_queryset().filter(company=self.request.company)
 
 class CSIEntryViewSet(viewsets.ModelViewSet):
     serializer_class = CSIEntrySerializer

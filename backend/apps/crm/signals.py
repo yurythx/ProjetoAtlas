@@ -133,15 +133,14 @@ def sync_deal_with_calendar(sender, instance, created, **kwargs):
             company=instance.company,
             deal=instance,
             actor=instance.owner,
-            activity_type="creation",
-            description=f"Card criado na coluna {column_name}.",
+            description=f"Card criado na coluna '{column_name}'.",
             new_value={"column": column_name}
         )
         Notification.objects.create(
             recipient=instance.owner,
             company=instance.company,
             title="Novo Card Criado",
-            message=f"O card '{instance.title}' foi adicionado a coluna {column_name}.",
+            message=f"O card '{instance.title}' foi adicionado à coluna '{column_name}'.",
             notification_type=Notification.TYPE_SYSTEM,
             metadata={"deal_uuid": str(instance.uuid)},
         )
@@ -152,15 +151,14 @@ def sync_deal_with_calendar(sender, instance, created, **kwargs):
             company=instance.company,
             deal=instance,
             actor=instance.owner,
-            activity_type="column_change",
-            description=f"Card movido para a coluna {column_name}.",
+            description=f"Card movido para a coluna '{column_name}'.",
             new_value={"column": column_name}
         )
         Notification.objects.create(
             recipient=instance.owner,
             company=instance.company,
             title="Card Movimentado",
-            message=f"O card '{instance.title}' foi movido para a coluna {column_name}.",
+            message=f"O card '{instance.title}' foi movido para a coluna '{column_name}'.",
             notification_type=Notification.TYPE_SYSTEM,
             metadata={"deal_uuid": str(instance.uuid)},
         )
@@ -204,11 +202,11 @@ def trigger_xla_survey(sender, instance, created, **kwargs):
             # Envia a mensagem de texto inicial
             client.send_text(instance.contact.phone, message_text)
             
-            # Envia a enquete de XLA (1 a 5)
+            # Envia a enquete de XLA (1 a 10) para alinhar com o modelo Atlas Premium
             client.send_poll(
                 number=instance.contact.phone,
                 name="Avaliação de Experiência (XLA)",
-                options=["1 - Muito Insatisfeito", "2", "3", "4", "5 - Excelente"]
+                options=["1", "2", "3", "4", "5", "6", "7", "8", "9", "10 - Excelente"]
             )
 
 def check_wip_and_sla_risks(sender, instance, created, **kwargs):

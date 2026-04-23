@@ -403,7 +403,7 @@ export function MessengerView() {
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl border-white/10 bg-background/95 backdrop-blur-xl">
                       <SelectItem value="all" className="rounded-xl font-bold">Toda a Rede</SelectItem>
-                      <SelectItem value="media" className="rounded-xl font-bold">Mídia Visuais</SelectItem>
+                      <SelectItem value="media" className="rounded-xl font-bold">Mídias Visuais</SelectItem>
                       <SelectItem value="files" className="rounded-xl font-bold">Documentos & Binários</SelectItem>
                     </SelectContent>
                   </Select>

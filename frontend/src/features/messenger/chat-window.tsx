@@ -91,6 +91,84 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
   const [isMuted, setIsMuted] = React.useState(false)
   const [isPinned, setIsPinned] = React.useState(false)
   const { userStatuses, onlineUsers } = usePresence()
+  const queryClient = useQueryClient()
+
+  const toggleMute = async () => {
+    if (!conversation) return
+    const newState = !isMuted
+    try {
+      if (newState) {
+        await api.post(`/api/messenger/conversations/${conversation.id}/mute/`)
+        toast.success("Notificações silenciadas")
+      } else {
+        await api.post(`/api/messenger/conversations/${conversation.id}/unmute/`)
+        toast.success("Notificações reativadas")
+      }
+      setIsMuted(newState)
+      queryClient.invalidateQueries({ queryKey: ['conversation', contact.id] })
+    } catch {
+      toast.error("Falha ao atualizar preferências")
+    }
+  }
+
+  const togglePin = async () => {
+    if (!conversation) return
+    const newState = !isPinned
+    try {
+      if (newState) {
+        await api.post(`/api/messenger/conversations/${conversation.id}/pin/`)
+        toast.success("Conversa fixada no topo")
+      } else {
+        await api.post(`/api/messenger/conversations/${conversation.id}/unpin/`)
+        toast.success("Conversa desafixada")
+      }
+      setIsPinned(newState)
+      queryClient.invalidateQueries({ queryKey: ['contacts'] })
+    } catch {
+      toast.error("Falha ao atualizar preferências")
+    }
+  }
+
+  const deleteConversation = async () => {
+    if (!conversation) return
+    try {
+      await api.post(`/api/messenger/conversations/${conversation.id}/delete_for_me/`)
+      toast.success("Histórico removido para você")
+      onBack?.()
+    } catch {
+      toast.error("Erro ao excluir conversa")
+    }
+  }
+
+  const clearConversation = async () => {
+    if (!conversation) return
+    try {
+      await api.post(`/api/messenger/conversations/${conversation.id}/clear_for_me/`)
+      toast.success("Mensagens limpas")
+      queryClient.invalidateQueries({ queryKey: ['messages', conversation.id] })
+    } catch {
+      toast.error("Erro ao limpar mensagens")
+    }
+  }
+
+  const archiveConversation = async () => {
+    if (!conversation) return
+    try {
+      await api.post(`/api/messenger/conversations/${conversation.id}/archive_for_me/`)
+      toast.success("Conversa arquivada")
+      onBack?.()
+    } catch {
+      toast.error("Erro ao arquivar")
+    }
+  }
+
+  React.useEffect(() => {
+    if (conversation?.prefetched_pref?.[0]) {
+      const p = conversation.prefetched_pref[0]
+      setIsMuted(!!p.is_muted)
+      setIsPinned(!!p.is_pinned)
+    }
+  }, [conversation])
 
   const { data: blocks } = useQuery<{ id: number; blocked: number }[]>({
     queryKey: ["messenger-blocks"],
@@ -215,7 +293,14 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
   }
 
   React.useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const el = scrollRef.current
+    if (!el) return
+    // Only scroll if user is already near the bottom (within 300px) 
+    // or if it's the very first load/message
+    const isNearBottom = el.parentElement!.scrollHeight - el.parentElement!.scrollTop <= el.parentElement!.clientHeight + 300
+    if (isNearBottom || messages.length <= 1) {
+      el.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages.length])
 
   return (
@@ -242,9 +327,9 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
            <div className="flex flex-col">
               <h3 className="font-black text-sm tracking-tight text-foreground/90 uppercase">{contact.username}</h3>
               <div className="flex items-center gap-2">
-                 <span className={cn("text-[9px] font-black uppercase tracking-widest", (onlineUsers.has(contact.id) || contact.is_online) ? "text-emerald-500" : "text-muted-foreground/40")}>
-                    {(onlineUsers.has(contact.id) || contact.is_online) ? "Transmissão Ativa" : "Offline / Offline"}
-                 </span>
+                  <span className={cn("text-[9px] font-black uppercase tracking-widest", (onlineUsers.has(contact.id) || contact.is_online) ? "text-emerald-500" : "text-muted-foreground/40")}>
+                    {(onlineUsers.has(contact.id) || contact.is_online) ? "Transmissão Ativa" : "Offline"}
+                  </span>
                  {typingUsers.size > 0 && (
                    <span className="text-[9px] font-black uppercase tracking-widest text-primary animate-pulse">Digitando...</span>
                  )}
@@ -464,10 +549,13 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
                <section className="space-y-4">
                   <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Ações Críticas</h4>
                   <div className="grid gap-2">
-                     <Button variant="ghost" className="h-12 w-full rounded-2xl hover:bg-rose-500/10 text-rose-500 justify-start px-6 font-bold text-sm gap-3">
-                        <Ban className="h-4 w-4" /> Bloquear @{contact.username}
+                      <Button variant="ghost" className="h-12 w-full rounded-2xl hover:bg-rose-500/10 text-rose-500 justify-start px-6 font-bold text-sm gap-3" onClick={archiveConversation}>
+                        <Archive className="h-4 w-4" /> Arquivar Conversa
                      </Button>
-                     <Button variant="ghost" className="h-12 w-full rounded-2xl hover:bg-rose-500/10 text-rose-500 justify-start px-6 font-bold text-sm gap-3">
+                     <Button variant="ghost" className="h-12 w-full rounded-2xl hover:bg-rose-500/10 text-rose-500 justify-start px-6 font-bold text-sm gap-3" onClick={clearConversation}>
+                        <X className="h-4 w-4" /> Limpar Mensagens
+                     </Button>
+                     <Button variant="ghost" className="h-12 w-full rounded-2xl hover:bg-rose-500/10 text-rose-500 justify-start px-6 font-bold text-sm gap-3" onClick={deleteConversation}>
                         <Trash2 className="h-4 w-4" /> Excluir Histórico de Transmissão
                      </Button>
                   </div>

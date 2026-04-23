@@ -686,10 +686,6 @@ class CRMIntegrationUserOptionSerializer(serializers.ModelSerializer):
         return 0
 
 
-class XLAFeedbackSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = XLAFeedback
-        fields = "__all__"
 
 
 class CRMIntegrationContactOptionSerializer(serializers.ModelSerializer):

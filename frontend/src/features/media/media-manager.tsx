@@ -217,7 +217,7 @@ export function MediaManager({ onSelect, onSelectItem, selectable }: MediaManage
                             className="h-8 px-3 rounded-md shadow-none"
                             onClick={() => setFilterType("document")}
                         >
-                            Docs
+                            Documentos
                         </Button>
                     </div>
                 </div>
@@ -413,7 +413,7 @@ export function MediaManager({ onSelect, onSelectItem, selectable }: MediaManage
                                         disabled={deleteMutation.isPending}
                                     >
                                         <Trash2 className="h-3 w-3 mr-2" />
-                                        Excluir Permanente
+                                        Excluir Permanentemente
                                     </Button>
                                 </div>
                             </div>
