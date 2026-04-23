@@ -241,7 +241,7 @@ export default function CRMPage() {
       if (deal.column_data?.pipeline) {
         return deal.column_data.pipeline === currentPipeline.id
       }
-      if (deal.stage) {
+      if (deal.stage && Array.isArray(currentPipeline.stages)) {
         return currentPipeline.stages.some((stage) => stage.id === deal.stage)
       }
       return false

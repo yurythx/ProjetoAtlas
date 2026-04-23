@@ -614,14 +614,14 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
               </div>
             </div>
             <div className="flex -space-x-2">
-              {currentDeal.swarm.participant_names.slice(0, 5).map((name, i) => (
+              {(currentDeal.swarm.participant_names || []).slice(0, 5).map((name, i) => (
                 <Avatar key={i} className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-white shadow-sm">
                   <AvatarFallback className="text-[8px] sm:text-[10px] bg-amber-100 text-amber-900 font-bold">{getUserInitials(name)}</AvatarFallback>
                 </Avatar>
               ))}
-              {currentDeal.swarm.participant_names.length > 5 && (
+              {(currentDeal.swarm.participant_names || []).length > 5 && (
                 <div className="h-7 w-7 sm:h-8 sm:w-8 border-2 border-white bg-amber-200 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold text-amber-900 z-10">
-                  +{currentDeal.swarm.participant_names.length - 5}
+                  +{(currentDeal.swarm.participant_names || []).length - 5}
                 </div>
               )}
             </div>
@@ -2000,10 +2000,10 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                      </div>
                    ) : (
                      <div className="relative border border-white/10 rounded-3xl bg-black/40 backdrop-blur-xl p-10 min-h-[400px]">
-                        {topologyData?.nodes && topologyData.nodes.length > 0 ? (
+                        {(topologyData?.nodes || []).length > 0 ? (
                           <div className="flex flex-col items-center gap-12">
                              {/* Central Node: The Deal */}
-                             {topologyData.nodes.filter(n => n.type === 'deal').map(node => (
+                             {(topologyData?.nodes || []).filter(n => n.type === 'deal').map(node => (
                                <motion.div 
                                  key={node.id}
                                  initial={{ scale: 0.8, opacity: 0 }}
@@ -2021,7 +2021,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
                              {/* Branches: Directly Affected CIs */}
                              <div className="flex flex-wrap justify-center gap-8 w-full mt-12 px-4">
-                                {topologyData.nodes.filter(n => n.type === 'ci').map(node => (
+                                {(topologyData?.nodes || []).filter(n => n.type === 'ci').map(node => (
                                   <motion.div 
                                     key={node.id}
                                     initial={{ y: 20, opacity: 0 }}

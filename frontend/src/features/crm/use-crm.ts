@@ -237,10 +237,10 @@ export function useXLA(dealId?: number) {
   const query = useQuery<XLAFeedback[]>({
     queryKey: ["xla-feedbacks", dealId],
     queryFn: async () => {
-      const { data } = await api.get<XLAFeedback[]>(`/api/crm/xla-feedbacks/`, {
+      const response = await api.get<XLAFeedback[] | { results?: XLAFeedback[] }>(`/api/crm/xla-feedbacks/`, {
         params: dealId ? { deal: dealId } : {}
       })
-      return data
+      return normalizeListResponse(response.data)
     },
     enabled: !!dealId,
   })
@@ -270,8 +270,11 @@ export function useDealTopology(dealId?: number) {
   return useQuery<{ nodes: any[]; links: any[] }>({
     queryKey: ["deal-topology", dealId],
     queryFn: async () => {
-      const { data } = await api.get(`/api/crm/deals/${dealId}/topology/`)
-      return data
+      const { data } = await api.get<{ nodes?: any[]; links?: any[] }>(`/api/crm/deals/${dealId}/topology/`)
+      return {
+        nodes: Array.isArray(data?.nodes) ? data.nodes : [],
+        links: Array.isArray(data?.links) ? data.links : []
+      }
     },
     enabled: !!dealId,
   })
@@ -414,7 +417,7 @@ export interface Deal {
   swarm?: Swarm | null
 }
 
-function normalizeListResponse<T>(data: T[] | { results?: T[] } | undefined): T[] {
+export function normalizeListResponse<T>(data: T[] | { results?: T[] } | undefined): T[] {
   if (Array.isArray(data)) return data
   if (data && Array.isArray(data.results)) return data.results
   return []
@@ -1064,8 +1067,8 @@ export function useEvolutionConfig() {
   const { data: configs = [], isLoading } = useQuery<EvolutionConfig[]>({
     queryKey: ["evolution-config"],
     queryFn: async () => {
-      const r = await api.get("/api/crm/evolution-config/")
-      return r.data.results ?? r.data
+      const response = await api.get<EvolutionConfig[] | { results?: EvolutionConfig[] }>("/api/crm/evolution-config/")
+      return normalizeListResponse(response.data)
     },
   })
 
