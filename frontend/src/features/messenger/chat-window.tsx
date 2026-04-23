@@ -91,84 +91,6 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
   const [isMuted, setIsMuted] = React.useState(false)
   const [isPinned, setIsPinned] = React.useState(false)
   const { userStatuses, onlineUsers } = usePresence()
-  const queryClient = useQueryClient()
-
-  const toggleMute = async () => {
-    if (!conversation) return
-    const newState = !isMuted
-    try {
-      if (newState) {
-        await api.post(`/api/messenger/conversations/${conversation.id}/mute/`)
-        toast.success("Notificações silenciadas")
-      } else {
-        await api.post(`/api/messenger/conversations/${conversation.id}/unmute/`)
-        toast.success("Notificações reativadas")
-      }
-      setIsMuted(newState)
-      queryClient.invalidateQueries({ queryKey: ['conversation', contact.id] })
-    } catch {
-      toast.error("Falha ao atualizar preferências")
-    }
-  }
-
-  const togglePin = async () => {
-    if (!conversation) return
-    const newState = !isPinned
-    try {
-      if (newState) {
-        await api.post(`/api/messenger/conversations/${conversation.id}/pin/`)
-        toast.success("Conversa fixada no topo")
-      } else {
-        await api.post(`/api/messenger/conversations/${conversation.id}/unpin/`)
-        toast.success("Conversa desafixada")
-      }
-      setIsPinned(newState)
-      queryClient.invalidateQueries({ queryKey: ['contacts'] })
-    } catch {
-      toast.error("Falha ao atualizar preferências")
-    }
-  }
-
-  const deleteConversation = async () => {
-    if (!conversation) return
-    try {
-      await api.post(`/api/messenger/conversations/${conversation.id}/delete_for_me/`)
-      toast.success("Histórico removido para você")
-      onBack?.()
-    } catch {
-      toast.error("Erro ao excluir conversa")
-    }
-  }
-
-  const clearConversation = async () => {
-    if (!conversation) return
-    try {
-      await api.post(`/api/messenger/conversations/${conversation.id}/clear_for_me/`)
-      toast.success("Mensagens limpas")
-      queryClient.invalidateQueries({ queryKey: ['messages', conversation.id] })
-    } catch {
-      toast.error("Erro ao limpar mensagens")
-    }
-  }
-
-  const archiveConversation = async () => {
-    if (!conversation) return
-    try {
-      await api.post(`/api/messenger/conversations/${conversation.id}/archive_for_me/`)
-      toast.success("Conversa arquivada")
-      onBack?.()
-    } catch {
-      toast.error("Erro ao arquivar")
-    }
-  }
-
-  React.useEffect(() => {
-    if (conversation?.prefetched_pref?.[0]) {
-      const p = conversation.prefetched_pref[0]
-      setIsMuted(!!p.is_muted)
-      setIsPinned(!!p.is_pinned)
-    }
-  }, [conversation])
 
   const { data: blocks } = useQuery<{ id: number; blocked: number }[]>({
     queryKey: ["messenger-blocks"],
@@ -261,6 +183,85 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
       })
     }
   })
+
+  const toggleMute = async () => {
+    if (!conversation) return
+    const newState = !isMuted
+    try {
+      if (newState) {
+        await api.post(`/api/messenger/conversations/${conversation.id}/mute/`)
+        toast.success("Notificações silenciadas")
+      } else {
+        await api.post(`/api/messenger/conversations/${conversation.id}/unmute/`)
+        toast.success("Notificações reativadas")
+      }
+      setIsMuted(newState)
+      queryClient.invalidateQueries({ queryKey: ['conversation', contact.id] })
+    } catch {
+      toast.error("Falha ao atualizar preferências")
+    }
+  }
+
+  const togglePin = async () => {
+    if (!conversation) return
+    const newState = !isPinned
+    try {
+      if (newState) {
+        await api.post(`/api/messenger/conversations/${conversation.id}/pin/`)
+        toast.success("Conversa fixada no topo")
+      } else {
+        await api.post(`/api/messenger/conversations/${conversation.id}/unpin/`)
+        toast.success("Conversa desafixada")
+      }
+      setIsPinned(newState)
+      queryClient.invalidateQueries({ queryKey: ['contacts'] })
+    } catch {
+      toast.error("Falha ao atualizar preferências")
+    }
+  }
+
+  const deleteConversation = async () => {
+    if (!conversation) return
+    try {
+      await api.post(`/api/messenger/conversations/${conversation.id}/delete_for_me/`)
+      toast.success("Histórico removido para você")
+      onBack?.()
+    } catch {
+      toast.error("Erro ao excluir conversa")
+    }
+  }
+
+  const clearConversation = async () => {
+    if (!conversation) return
+    try {
+      await api.post(`/api/messenger/conversations/${conversation.id}/clear_for_me/`)
+      toast.success("Mensagens limpas")
+      queryClient.invalidateQueries({ queryKey: ['messages', conversation.id] })
+    } catch {
+      toast.error("Erro ao limpar mensagens")
+    }
+  }
+
+  const archiveConversation = async () => {
+    if (!conversation) return
+    try {
+      await api.post(`/api/messenger/conversations/${conversation.id}/archive_for_me/`)
+      toast.success("Conversa arquivada")
+      onBack?.()
+    } catch {
+      toast.error("Erro ao arquivar")
+    }
+  }
+
+  React.useEffect(() => {
+    if (conversation?.prefetched_pref?.[0]) {
+      const p = conversation.prefetched_pref[0]
+      setIsMuted(!!p.is_muted)
+      setIsPinned(!!p.is_pinned)
+    }
+  }, [conversation])
+
+
 
   const handleSend = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
