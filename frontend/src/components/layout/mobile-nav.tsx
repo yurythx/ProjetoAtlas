@@ -1,3 +1,19 @@
+"use client"
+
+import * as React from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Menu, LogOut, User, ChevronRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { cn, fixImageUrl } from "@/lib/utils"
+import { useModules } from "@/hooks/use-modules"
+import { useTheme } from "@/components/theme-provider"
+import { useAuth } from "@/hooks/use-auth"
+import { usePermission } from "@/hooks/use-permission"
+import { api } from "@/lib/axios"
+import { clearClientSession } from "@/lib/session"
+import Image from "next/image"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import {
   Sheet,
   SheetContent,
@@ -5,9 +21,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { ChevronRight } from "lucide-react"
+
+import { SIDEBAR_CONFIG, HEADER_NAV_ITEMS } from "@/config/navigation"
 
 export function MobileNav() {
+  const [mounted, setMounted] = React.useState(false)
   const [isOpen, setIsOpen] = React.useState(false)
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
   const pathname = usePathname()
@@ -15,6 +33,10 @@ export function MobileNav() {
   const { logo, companyName } = useTheme()
   const { user } = useAuth()
   const { hasPermission } = usePermission()
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const navItems = user 
     ? SIDEBAR_CONFIG.flatMap(section => section.items)
@@ -33,6 +55,14 @@ export function MobileNav() {
       clearClientSession()
       window.location.href = "/"
     }
+  }
+
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" className="rounded-xl">
+        <Menu className="h-6 w-6" />
+      </Button>
+    )
   }
 
   return (
