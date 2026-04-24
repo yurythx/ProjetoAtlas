@@ -31,7 +31,7 @@ export function PipelineDetail({ pipelineId }: { pipelineId: number }) {
   const queryClient = useQueryClient()
   const { pipelines, isLoading, updatePipeline, deletePipeline } = useCRM()
   
-  const pipeline = pipelines.find((item) => item.id === pipelineId)
+  const pipeline = useMemo(() => pipelines.find((item) => item.id === pipelineId), [pipelines, pipelineId])
   
   // Estados para edição
   const [name, setName] = useState("")
@@ -44,6 +44,21 @@ export function PipelineDetail({ pipelineId }: { pipelineId: number }) {
       setName(pipeline.name)
     }
   }, [pipeline])
+
+  if (isLoading || (pipelines.length > 0 && !pipeline && !isLoading)) {
+    // Se ainda está carregando ou se temos pipelines mas o específico ainda não apareceu 
+    // (pode ser delay de cache), mostramos o skeleton brevemente
+    return (
+        <div className="max-w-5xl mx-auto space-y-8 animate-pulse">
+            <div className="h-10 w-48 rounded-xl bg-muted/20" />
+            <div className="h-24 w-full rounded-[2.5rem] bg-muted/10" />
+            <div className="grid gap-8 md:grid-cols-[1fr_400px]">
+                <div className="h-96 rounded-[2.5rem] bg-muted/5" />
+                <div className="h-64 rounded-[2.5rem] bg-muted/5" />
+            </div>
+        </div>
+    )
+  }
 
   const sortedColumns = useMemo(() => {
     return [...(pipeline?.columns || [])].sort((a, b) => a.order - b.order || a.id - b.id)

@@ -29,10 +29,9 @@ import { ColumnGovernanceSheet } from "./column-governance-sheet"
 import { CRMTableView } from "./crm-table-view"
 import { CRMTriageInbox } from "./crm-triage-inbox"
 import { CRMPipelineOverview, PipelineOverviewData } from "./crm-pipeline-overview"
-import { PipelineManagerModal } from "./pipeline-manager-modal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { BarChart3, BookOpen, ChevronDown, ChevronUp, Inbox, LayoutGrid, List, Loader2, PanelsTopLeft, Search, TrendingUp } from "lucide-react"
+import { BarChart3, BookOpen, ChevronDown, ChevronUp, Inbox, LayoutGrid, List, Loader2, PanelsTopLeft, Search, Settings2, TrendingUp } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -595,7 +594,18 @@ export default function CRMPage() {
                 )}
               </Button>
 
-              {canManagePipelines && <PipelineManagerModal />}
+              {canManagePipelines && currentPipeline && (
+                <Link href={`/crm/pipelines/${currentPipeline.id}`}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-12 px-6 rounded-2xl gap-3 font-black uppercase tracking-widest text-[10px] border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 shadow-lg transition-all"
+                  >
+                    <Settings2 className="h-5 w-5" />
+                    <span className="hidden sm:inline">Colunas</span>
+                  </Button>
+                </Link>
+              )}
               {currentPipeline && <ColumnGovernanceSheet pipeline={currentPipeline} deals={deals} />}
               {canDealEdit && <CreateDealModal pipeline={currentPipeline} />}
             </div>

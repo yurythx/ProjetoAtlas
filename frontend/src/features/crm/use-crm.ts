@@ -799,12 +799,33 @@ export function useCRM() {
 
   const createPipeline = useMutation({
     mutationFn: async (payload: { name: string; visibility: "company" | "group"; groups: number[] }) => {
+      // 1. Cria o Pipeline
       const response = await api.post<Pipeline>("/api/crm/pipelines/", payload)
-      return response.data
+      const pipeline = response.data
+
+      // 2. Cria Colunas Padrão (Essencial para não dar erro de 'não encontrado' ou 'vazio')
+      const defaultColumns = [
+        { pipeline: pipeline.id, title: "Novo", order: 0, column_kind: "backlog" as const },
+        { pipeline: pipeline.id, title: "Em Andamento", order: 10, column_kind: "active" as const },
+        { pipeline: pipeline.id, title: "Concluído", order: 20, column_kind: "done" as const, marks_done: true },
+      ]
+      
+      for (const col of defaultColumns) {
+        await api.post("/api/crm/columns/", col)
+      }
+
+      return pipeline
     },
-    onSuccess: (pipeline) => {
-      queryClient.invalidateQueries({ queryKey: ['crm-pipelines'] })
-      toast.success(`Pipeline "${pipeline.name}" criado!`)
+    onSuccess: async (pipeline) => {
+      // Atualização imediata do cache para evitar delay no redirecionamento
+      queryClient.setQueryData<Pipeline[]>(['crm-pipelines'], (old) => {
+        const list = old || []
+        if (list.some(p => p.id === pipeline.id)) return list
+        return [...list, pipeline]
+      })
+      
+      await queryClient.invalidateQueries({ queryKey: ['crm-pipelines'] })
+      toast.success(`Pipeline "${pipeline.name}" criado com colunas padrão!`)
     }
   })
 
