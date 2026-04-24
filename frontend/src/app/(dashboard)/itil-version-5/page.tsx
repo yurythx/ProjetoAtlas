@@ -27,7 +27,8 @@ import {
   Radio,
   Globe,
   Waves,
-  Lock
+  Lock,
+  TrendingUp
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ModuleGuard } from "@/components/module-guard"
