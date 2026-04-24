@@ -32,7 +32,7 @@ import {
 import { cn } from "@/lib/utils"
 import { ModuleGuard } from "@/components/module-guard"
 
-export default function ITILVersion5Page() {
+function ITILVersion5Page() {
   const [activeModule, setActiveModule] = useState<string | null>(null)
 
   const container = {
