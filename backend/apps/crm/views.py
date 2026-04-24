@@ -251,7 +251,7 @@ class PipelineViewSet(viewsets.ModelViewSet):
         created_count = 0
         for col_data in itil_columns:
             if not Column.objects.filter(pipeline=pipeline, title=col_data["title"]).exists():
-                Column.objects.create(
+                column = Column.objects.create(
                     pipeline=pipeline,
                     company=pipeline.company,
                     title=col_data["title"],
@@ -260,6 +260,15 @@ class PipelineViewSet(viewsets.ModelViewSet):
                     order=col_data["order"],
                     marks_done=col_data.get("marks_done", False)
                 )
+                # ITIL Version 5: Garantir que o esquema legado (Stage) acompanhe o novo (Column)
+                legacy_stage = Stage.objects.create(
+                    company=pipeline.company,
+                    pipeline=pipeline,
+                    name=col_data["title"],
+                    order=col_data["order"]
+                )
+                column.legacy_stage = legacy_stage
+                column.save(update_fields=["legacy_stage"])
                 created_count += 1
                 
         return Response({
@@ -417,14 +426,19 @@ class ColumnViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         column = serializer.save(company=self.request.company)
         if column.legacy_stage_id is None:
-            legacy_stage = Stage.objects.create(
-                company=self.request.company,
-                pipeline=column.pipeline,
-                name=column.title,
-                order=column.order,
-            )
-            column.legacy_stage = legacy_stage
-            column.save(update_fields=["legacy_stage"])
+            # Garante persistência da compatibilidade com o esquema legado de Deals (ForeignKey para Stage)
+            try:
+                legacy_stage = Stage.objects.create(
+                    company=self.request.company,
+                    pipeline=column.pipeline,
+                    name=column.title,
+                    order=column.order,
+                )
+                column.legacy_stage = legacy_stage
+                column.save(update_fields=["legacy_stage"])
+            except Exception as e:
+                logger.error(f"Erro ao criar legacy_stage para coluna {column.id}: {e}")
+                # Não falhamos a criação da coluna, mas registramos o erro
 
     def perform_update(self, serializer):
         column = serializer.save()

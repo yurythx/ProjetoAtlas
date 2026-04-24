@@ -84,7 +84,7 @@ export function Header() {
   const showGuestAuthCta = !isDashboardArea
 
   return (
-    <header className="h-20 sticky top-0 z-50 px-4 sm:px-6 lg:px-8 flex items-center justify-between border-b glass shadow-sm transition-all duration-500" role="banner" aria-label="Cabeçalho">
+    <header className="h-20 sticky top-0 z-50 px-4 sm:px-6 lg:px-8 flex items-center justify-between border-b bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 shadow-sm transition-all duration-500" role="banner" aria-label="Cabeçalho">
       <div className="flex items-center gap-4 sm:gap-12 min-w-0">
         <div className="flex items-center gap-4 sm:gap-12 min-w-0 animate-in fade-in slide-in-from-bottom-1 duration-300">
           <Link

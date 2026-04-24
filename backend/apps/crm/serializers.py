@@ -452,8 +452,21 @@ class DealSerializer(serializers.ModelSerializer):
 
         if legacy_stage is None and column is not None:
             legacy_stage = getattr(column, "legacy_stage", None)
-            if legacy_stage is not None:
-                attrs["stage"] = legacy_stage
+            if legacy_stage is None:
+                # Recuperação crítica: tenta encontrar um Stage com o mesmo nome na pipeline ou cria um
+                from .models import Stage
+                legacy_stage = Stage.objects.filter(pipeline=column.pipeline, name=column.title).first()
+                if not legacy_stage:
+                    legacy_stage = Stage.objects.create(
+                        company=column.company,
+                        pipeline=column.pipeline,
+                        name=column.title,
+                        order=column.order
+                    )
+                column.legacy_stage = legacy_stage
+                column.save(update_fields=["legacy_stage"])
+            
+            attrs["stage"] = legacy_stage
 
         if instance is not None:
             instance_legacy_stage = instance.stage

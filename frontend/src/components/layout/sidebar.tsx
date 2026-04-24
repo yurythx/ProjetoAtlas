@@ -111,7 +111,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "border-r fixed left-0 top-20 hidden md:flex flex-col transition-all duration-300 z-40 glass h-[calc(100vh-5rem)]",
+        "border-r fixed left-0 top-20 hidden md:flex flex-col transition-all duration-500 z-40 bg-background/60 backdrop-blur-2xl h-[calc(100vh-5rem)] shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
         isSidebarCollapsed ? "w-20" : "w-72"
       )}
     >
@@ -160,10 +160,10 @@ export function Sidebar() {
                         <Link
                           href={item.href}
                           className={cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all group relative focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                            "flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-bold tracking-tight transition-all duration-300 group relative overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                             isActive
-                              ? "text-primary bg-primary/10 shadow-sm"
-                              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                              ? "text-primary bg-primary/5 border border-primary/10 shadow-sm"
+                              : "text-muted-foreground/80 hover:bg-muted/50 hover:text-foreground",
                             isSidebarCollapsed && "justify-center px-2"
                           )}
                           aria-current={isActive ? "page" : undefined}
@@ -204,8 +204,10 @@ export function Sidebar() {
 
                           {isActive && (
                             <motion.div
-                              layoutId="sidebar-active"
-                              className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary rounded-full"
+                              layoutId="sidebar-active-glow"
+                              className="absolute left-0 top-2 bottom-2 w-1.5 bg-primary rounded-full shadow-[0_0_12px_rgba(var(--primary),0.6)]"
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
                               transition={{ type: "spring", stiffness: 300, damping: 30 }}
                             />
                           )}
