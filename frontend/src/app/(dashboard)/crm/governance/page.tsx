@@ -11,7 +11,8 @@ import {
   Search,
   Settings2,
   ChevronRight,
-  Info
+  Info,
+  TrendingUp
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
