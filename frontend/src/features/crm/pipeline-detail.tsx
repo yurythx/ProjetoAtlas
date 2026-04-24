@@ -30,7 +30,12 @@ import { useQueryClient, useMutation } from "@tanstack/react-query"
 export function PipelineDetail({ pipelineId }: { pipelineId: number }) {
   const queryClient = useQueryClient()
   const { pipelines, isLoading, updatePipeline, deletePipeline } = useCRM()
+  const [mounted, setMounted] = useState(false)
   
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const pipeline = useMemo(() => pipelines.find((item) => item.id === pipelineId), [pipelines, pipelineId])
   
   // Estados para edição
@@ -45,11 +50,11 @@ export function PipelineDetail({ pipelineId }: { pipelineId: number }) {
     }
   }, [pipeline])
 
-  if (isLoading || (pipelines.length > 0 && !pipeline && !isLoading)) {
-    // Se ainda está carregando ou se temos pipelines mas o específico ainda não apareceu 
+  if (!mounted || isLoading || (pipelines.length > 0 && !pipeline && !isLoading)) {
+    // Se ainda não montou, está carregando ou se temos pipelines mas o específico ainda não apareceu 
     // (pode ser delay de cache), mostramos o skeleton brevemente
     return (
-        <div className="max-w-5xl mx-auto space-y-8 animate-pulse">
+        <div className="max-w-5xl mx-auto space-y-8 animate-pulse p-4">
             <div className="h-10 w-48 rounded-xl bg-muted/20" />
             <div className="h-24 w-full rounded-[2.5rem] bg-muted/10" />
             <div className="grid gap-8 md:grid-cols-[1fr_400px]">

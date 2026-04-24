@@ -460,7 +460,11 @@ class DealSerializer(serializers.ModelSerializer):
                 legacy_stage = Stage.all_objects.filter(pipeline=column.pipeline, name=column.title).first()
                 if not legacy_stage:
                     # Se não existir, criamos. Usamos o company do column para garantir consistência
-                    target_company = column.company if hasattr(column, 'company') else company
+                    request = self.context.get("request")
+                    target_company = getattr(request, "company", None)
+                    if not target_company and hasattr(column, "company"):
+                        target_company = column.company
+                    
                     legacy_stage = Stage.objects.create(
                         company=target_company,
                         pipeline=column.pipeline,

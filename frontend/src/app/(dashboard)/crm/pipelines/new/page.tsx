@@ -16,6 +16,11 @@ export default function NewPipelinePage() {
   const { createPipeline } = useCRM()
   const [name, setName] = useState("")
   const [isCreating, setIsCreating] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleCreate = async () => {
     if (name.length < 3) {
@@ -39,6 +44,8 @@ export default function NewPipelinePage() {
       setIsCreating(false)
     }
   }
+
+  if (!mounted) return null
 
   return (
     <ModuleGuard moduleCode="crm">

@@ -643,7 +643,10 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 {hasChanges && <Badge className="bg-amber-500 text-white border-none rounded-full px-3 text-[9px] font-black uppercase tracking-widest animate-pulse">Editando</Badge>}
               </div>
               <DialogTitle className="text-2xl font-semibold">{currentDeal.title}</DialogTitle>
-              <DialogDescription className="flex flex-wrap items-center gap-3 text-sm">
+              <DialogDescription className="sr-only">
+                Detalhes e gestão do card {currentDeal.title}
+              </DialogDescription>
+              <div className="flex flex-wrap items-center gap-3 text-sm">
                 <span className="rounded-full bg-background px-3 py-1 text-foreground shadow-sm">
                   {currentDeal.contact_name}
                 </span>
@@ -664,7 +667,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                     SLA: {currentDeal.sla_status === "breached" ? "Violado" : currentDeal.sla_status === "at_risk" ? "Em Risco" : "OK"}
                   </Badge>
                 )}
-              </DialogDescription>
+              </div>
             </div>
 
             <div className="flex flex-col gap-4 xl:min-w-[320px] xl:items-end justify-center">
