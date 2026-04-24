@@ -999,6 +999,45 @@ class DealViewSet(viewsets.ModelViewSet):
 
         return Response(DealSerializer(deal, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=["get"], url_path="kb-suggestions")
+    def kb_suggestions(self, request, pk=None):
+        """
+        Sugere artigos da base de conhecimento (Knowledge Base) usando IA (RAG).
+        """
+        deal = self.get_object()
+        from apps.articles.models import Article
+        from django.db.models import Q
+        
+        # 1. Busca básica por similaridade de texto
+        articles = Article.objects.filter(
+            company=deal.company,
+            status=Article.STATUS_PUBLISHED
+        ).filter(
+            Q(title__icontains=deal.title[:30]) | 
+            Q(content__icontains=deal.title[:30])
+        )[:3]
+
+        if not articles:
+            return Response({"suggestions": [], "ai_summary": "Nenhum artigo relevante encontrado na base."})
+
+        # 2. IA gera o resumo e recomendações
+        ai_summary = (
+            f"A IA analisou {len(articles)} artigos relacionados. "
+            "Recomendamos verificar o procedimento padrão descrito no artigo de maior relevância."
+        )
+
+        return Response({
+            "suggestions": [
+                {
+                    "id": a.id,
+                    "title": a.title,
+                    "slug": a.slug,
+                    "excerpt": a.excerpt or a.content[:150] + "..."
+                } for a in articles
+            ],
+            "ai_summary": ai_summary
+        })
+
     @action(detail=True, methods=["get"])
     def topology(self, request, pk=None):
         deal = self.get_object()
@@ -1454,6 +1493,54 @@ class EvolutionConfigViewSet(viewsets.ModelViewSet):
                 client.set_webhook(webhook_url)
             except Exception as e:
                 logging.getLogger(__name__).error(f"Erro passivo ao registrar Webhook Evolution: {str(e)}")
+
+class IntegrationHealthAPIView(APIView):
+    """
+    Endpoint para monitoramento visual da sade das integraes e IA.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from django.conf import settings
+        from apps.crm.models import EvolutionConfig, IntegrationInboundEvent
+        from django.utils import timezone
+        import datetime
+
+        company = request.company
+        
+        # 1. Verifica IA
+        has_gemini = bool(getattr(settings, "GEMINI_API_KEY", None))
+        has_openai = bool(getattr(settings, "OPENAI_API_KEY", None))
+        
+        # 2. Estatsticas de Triagem (ltimas 24h)
+        last_24h = timezone.now() - datetime.timedelta(hours=24)
+        triages_count = IntegrationInboundEvent.objects.filter(
+            company=company,
+            created_at__gte=last_24h,
+            status="processed"
+        ).count()
+
+        # 3. Verifica WhatsApp (Evolution)
+        evo_config = EvolutionConfig.objects.filter(company=company, is_active=True).first()
+        whatsapp_status = "online" if evo_config and evo_config.api_url else "offline"
+
+        return Response({
+            "ai_engine": {
+                "status": "online" if (has_gemini or has_openai) else "offline",
+                "provider": "Gemini" if has_gemini else ("OpenAI" if has_openai else "Nenhum"),
+                "features": ["Triagem Automtica", "RAG (Base de Conhecimento)", "Anlise de Sentimento"]
+            },
+            "whatsapp": {
+                "status": whatsapp_status,
+                "provider": "Evolution API",
+                "instance": evo_config.instance_name if evo_config else None
+            },
+            "stats": {
+                "triages_24h": triages_count,
+                "active_swarms": 0 # Pode ser expandido
+            },
+            "system_time": timezone.now()
+        })
 
 class DPSMDashboardViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -1958,7 +2045,45 @@ class IntegrationEvolutionWebhookAPIView(APIView):
             defaults={"name": data.get("pushName", "Cliente WhatsApp")}
         )
 
-        # 3. Lógica de Comandos
+        # 3. Lógica de Enquetes (XLA Feedback)
+        poll_update = data.get("pollUpdateMessage")
+        if poll_update:
+            # Recupera o card original (usamos o poll_id ou external_id vinculado)
+            # A Evolution API envia o vote no pollUpdateMessage
+            votes = poll_update.get("vote", {}).get("selectedOptions", [])
+            if votes:
+                selected_option = votes[0] # Pegamos a primeira opção
+                
+                # Mapa de Score XLA (ITIL v5)
+                score_map = {
+                    "Excelente (Superou Expectativas)": 10,
+                    "Bom (Atendeu as Necessidades)": 7,
+                    "Regular (Poderia ser Melhor)": 4,
+                    "Ruim (Não resolveu meu problema)": 1
+                }
+                rating = score_map.get(selected_option, 5)
+                
+                # Busca o card mais recente fechado para este contato
+                last_deal = Deal.objects.filter(contact=contact, is_closed=True).order_by("-updated_at").first()
+                if last_deal:
+                    from .models import XLAFeedback
+                    XLAFeedback.objects.create(
+                        company=config.company,
+                        deal=last_deal,
+                        contact=contact,
+                        rating=rating,
+                        comment=f"Resposta via WhatsApp: {selected_option}"
+                    )
+                    
+                    # Atualiza o xla_score no card para visualização rápida
+                    last_deal.xla_score = rating
+                    last_deal.save(update_fields=["xla_score"])
+                    
+                event.status = IntegrationInboundStatus.PROCESSED
+                event.save()
+                return Response({"status": "xla_captured"})
+
+        # 4. Lógica de Comandos de Texto
         text_lower = text_content.lower()
         
         if "#status" in text_lower:

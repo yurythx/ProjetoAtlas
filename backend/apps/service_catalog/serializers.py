@@ -5,6 +5,7 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceCategory
         fields = "__all__"
+        read_only_fields = ["company"]
 
 class ServiceDefinitionSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source="category.name")
@@ -12,6 +13,7 @@ class ServiceDefinitionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceDefinition
         fields = "__all__"
+        read_only_fields = ["company"]
 
 class ServiceItemSerializer(serializers.ModelSerializer):
     definition_name = serializers.ReadOnlyField(source="definition.name")
@@ -21,3 +23,4 @@ class ServiceItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceItem
         fields = "__all__"
+        read_only_fields = ["company"]

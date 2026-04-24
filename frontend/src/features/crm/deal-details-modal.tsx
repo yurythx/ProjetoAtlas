@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { format, formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Box, Camera, Loader2, Search, Trash2, X, Zap, TrendingUp, BookOpen, Layers, Sparkles, ShieldCheck } from "lucide-react"
+import { Box, Camera, Loader2, Search, Trash2, X, Zap, TrendingUp, BookOpen, Layers, Sparkles, ShieldCheck, Activity } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion"
 
-import { Deal, DealActivity, isCRMNetworkError, useCRM, useServiceCatalog, useCMDB, useXLA, useDealTopology } from "./use-crm"
+import { Deal, DealActivity, isCRMNetworkError, useCRM, useServiceCatalog, useCMDB, useXLA, useDealTopology, useKBSuggestions } from "./use-crm"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -112,7 +112,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
   const [draftUpdateNote, setDraftUpdateNote] = useState("")
   const [activityFilter, setActivityFilter] = useState<ActivityFilterId>("all")
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
-  const [activeTab, setActiveTab] = useState<"overview" | "details" | "images" | "history" | "cis" | "governance" | "xla" | "topology">("details")
+  const [activeTab, setActiveTab] = useState<"overview" | "details" | "images" | "history" | "cis" | "governance" | "xla" | "topology" | "kb" | "ai_assistant">("details")
   const { data: xlaFeedbacks = [], createFeedback: submitXla } = useXLA(currentDeal.id)
   const { data: topologyData, isLoading: isLoadingTopology } = useDealTopology(currentDeal.id)
   const [imagesFilter, setImagesFilter] = useState<"all" | "before" | "during" | "after">("all")
@@ -781,6 +781,14 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                       Experiência (XLA)
                       {currentDeal.xla_score && <Badge variant="outline" className="ml-1">{currentDeal.xla_score}</Badge>}
                     </TabsTrigger>
+                    <TabsTrigger value="kb" className="gap-2">
+                      <BookOpen className="h-3.5 w-3.5" />
+                      Base de Conhecimento
+                    </TabsTrigger>
+                    <TabsTrigger value="ai_assistant" className="gap-2 text-emerald-400 data-[state=active]:text-emerald-500">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Assistente IA
+                    </TabsTrigger>
                     <TabsTrigger value="history" className="gap-2">
                       Histórico
                       <Badge variant="secondary" className="ml-1">
@@ -791,6 +799,14 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 </div>
               </div>
             </div>
+
+            <TabsContent value="kb" className="mt-0 space-y-6 p-4 sm:p-6">
+              <KnowledgeBaseTab dealId={currentDeal.id} />
+            </TabsContent>
+
+            <TabsContent value="ai_assistant" className="mt-0 space-y-6 p-4 sm:p-6">
+              <AIAssistantTab dealId={currentDeal.id} />
+            </TabsContent>
 
             <TabsContent value="overview" className="mt-0 space-y-6 p-4 sm:p-6">
               <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -2071,5 +2087,111 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function KnowledgeBaseTab({ dealId }: { dealId: number }) {
+  const { data, isLoading } = useKBSuggestions(dealId)
+
+  if (isLoading) {
+    return <div className="space-y-4 animate-pulse">
+      {[1, 2, 3].map(i => <div key={i} className="h-24 w-full rounded-xl bg-white/5" />)}
+    </div>
+  }
+
+  if (!data || data.suggestions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <BookOpen className="mb-4 h-12 w-12 text-white/10" />
+        <h3 className="text-lg font-medium text-white/40">Nenhum artigo encontrado</h3>
+        <p className="mt-2 text-sm text-white/20">Não há artigos relacionados a este card na base.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Artigos da Base de Conhecimento</h4>
+      <div className="grid gap-3">
+        {data.suggestions.map((article) => (
+          <Link
+            key={article.id}
+            href={`/articles/${article.slug}`}
+            target="_blank"
+            className="group block rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-primary/30 hover:bg-white/8"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-white group-hover:text-primary">{article.title}</span>
+              <BookOpen className="h-4 w-4 text-white/20" />
+            </div>
+            <p className="mt-2 text-xs text-white/40 line-clamp-2">{article.excerpt}</p>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function AIAssistantTab({ dealId }: { dealId: number }) {
+  const { data, isLoading } = useKBSuggestions(dealId)
+
+  if (isLoading) {
+    return <div className="space-y-4 animate-pulse">
+      <div className="h-40 w-full rounded-2xl bg-white/5" />
+      <div className="h-20 w-full rounded-xl bg-white/5" />
+    </div>
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* AI Strategy Card */}
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6">
+        <div className="absolute -right-4 -top-4 text-emerald-500/10">
+          <Sparkles className="h-24 w-24" />
+        </div>
+        <div className="relative space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 shadow-inner">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-widest">Recomendação Estratégica</h4>
+              <p className="text-[10px] text-emerald-600/60 font-medium">Análise de contexto realizada pela IA Atlas</p>
+            </div>
+          </div>
+          
+          <div className="rounded-xl bg-black/20 p-4 border border-white/5">
+            <p className="text-sm leading-relaxed text-white/90">
+              {data?.ai_summary || "A IA está processando as informações deste card para sugerir a melhor abordagem."}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Suggested Action */}
+      {data?.suggestions?.[0] && (
+        <div className="space-y-3">
+          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Solução Principal Recomendada</h4>
+          <Link
+            href={`/articles/${data.suggestions[0].slug}`}
+            target="_blank"
+            className="group flex items-center gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 transition-all hover:bg-emerald-500/20"
+          >
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 group-hover:scale-110 transition-transform">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-white group-hover:text-emerald-400">{data.suggestions[0].title}</p>
+              <p className="text-xs text-white/50">Clique para abrir o procedimento padrão</p>
+            </div>
+          </Link>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-[10px] font-medium text-white/30">
+        <Activity className="h-3 w-3" />
+        AIOps Powered by Atlas AI Ecosystem (ITIL v5)
+      </div>
+    </div>
   )
 }

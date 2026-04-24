@@ -393,6 +393,14 @@ class Deal(BaseTenantModel):
         return self.title
 
     def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        old_instance = None
+        if not is_new:
+            try:
+                old_instance = Deal.objects.get(pk=self.pk)
+            except Deal.DoesNotExist:
+                pass
+
         # Cálculo automático de progresso baseado na coluna
         resolved_column = self.column or getattr(self.stage, "column", None)
         if resolved_column:
@@ -401,14 +409,11 @@ class Deal(BaseTenantModel):
             if all_columns:
                 try:
                     current_index = all_columns.index(resolved_column)
-                    # Progresso = (índice_atual / (total - 1)) * 100
-                    # Se for a última coluna (ou marks_done), garante 100%
                     if resolved_column.marks_done or current_index == len(all_columns) - 1:
                         progress = 100
                     else:
                         progress = int((current_index / (len(all_columns) - 1)) * 100)
 
-                    # Se progresso é 100% ou a coluna marca como concluído, fecha o card
                     if progress >= 100 or resolved_column.marks_done:
                         self.is_closed = True
                         progress = 100
@@ -418,7 +423,6 @@ class Deal(BaseTenantModel):
                     if self.custom_fields is None:
                         self.custom_fields = {}
 
-                    # Garante que o Django detecte a mudança no JSONField reatribuindo o dicionário
                     updated_custom_fields = dict(self.custom_fields)
                     updated_custom_fields["progress_percentage"] = progress
                     self.custom_fields = updated_custom_fields
@@ -426,6 +430,22 @@ class Deal(BaseTenantModel):
                     pass
 
         super().save(*args, **kwargs)
+
+        # --- Gatilhos ITIL Version 5 (Assíncronos via Celery) ---
+        from django.db import transaction
+        from .tasks import analyze_deal_with_ai, orchestrate_swarming, send_xla_whatsapp_poll
+
+        # 1. Triagem Inteligente (IA) na criação
+        if is_new:
+            transaction.on_commit(lambda: analyze_deal_with_ai.delay(self.id))
+
+        # 2. Orquestração de Swarming para Urgências
+        if self.priority == "URGENT" and (is_new or (old_instance and old_instance.priority != "URGENT")):
+            transaction.on_commit(lambda: orchestrate_swarming.delay(self.id))
+
+        # 3. Automação de XLA no fechamento
+        if self.is_closed and (is_new or (old_instance and not old_instance.is_closed)):
+            transaction.on_commit(lambda: send_xla_whatsapp_poll.delay(self.id))
 
 
 class DealActivity(BaseTenantModel):

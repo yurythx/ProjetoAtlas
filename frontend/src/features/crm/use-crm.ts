@@ -754,6 +754,31 @@ export function getColumnTransitionGuard(
 
 const DEALS_FUTURE_PAYLOAD_QUERY = "?omit_legacy_stage_fields=1"
 
+export interface KBSuggestion {
+  id: number
+  title: string
+  slug: string
+  excerpt: string
+}
+
+export interface KBSuggestionsResponse {
+  suggestions: KBSuggestion[]
+  ai_summary: string
+}
+
+export function useKBSuggestions(dealId: number | null) {
+  return useQuery<KBSuggestionsResponse>({
+    queryKey: ["crm-deal-kb-suggestions", dealId],
+    queryFn: async () => {
+      if (!dealId) return { suggestions: [], ai_summary: "" }
+      const res = await api.get(`/api/crm/deals/${dealId}/kb-suggestions/`)
+      return res.data
+    },
+    enabled: !!dealId,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  })
+}
+
 export function useCRM() {
   const queryClient = useQueryClient()
 

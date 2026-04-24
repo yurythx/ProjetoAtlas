@@ -54,14 +54,15 @@ def get_crm_integration_config(company):
 
 
 def send_column_change_webhook(card, previous_column, new_column):
+    from .tasks import async_send_column_change_webhook
+    
     config = get_crm_integration_config(card.company)
     webhook_url = (
         config.get("integration", {}).get("n8n_webhook_url")
         or config.get("n8n_webhook_url")
     )
-    safe_url = sanitize_url(webhook_url, allowed_protocols=["http", "https"])
-
-    if not safe_url:
+    
+    if not webhook_url:
         return False
 
     payload = {
@@ -73,16 +74,11 @@ def send_column_change_webhook(card, previous_column, new_column):
         "integration_source": card.integration_source,
     }
 
-    try:
-        requests.post(safe_url, json=payload, timeout=10)
-        return True
-    except requests.RequestException:
-        logger.exception(
-            "crm_column_change_webhook_failed",
-            extra={
-                "deal_id": card.id,
-                "company_id": str(card.company_id),
-                "webhook_url": safe_url,
-            },
-        )
-        return False
+    # Dispara a tarefa assíncrona
+    async_send_column_change_webhook.delay(
+        webhook_url, 
+        payload, 
+        card.id, 
+        str(card.company_id)
+    )
+    return True

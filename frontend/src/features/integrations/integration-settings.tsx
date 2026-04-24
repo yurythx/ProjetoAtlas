@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Check, Copy, KeyRound, PlugZap, RefreshCw, Trash2, ToggleLeft, ToggleRight } from "lucide-react"
+import { Check, Copy, KeyRound, PlugZap, RefreshCw, Trash2, ToggleLeft, ToggleRight, Sparkles, Activity, ShieldCheck, MessageSquare } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { EvolutionConfigPanel } from "@/features/crm/evolution-config-panel"
+import { cn } from "@/lib/utils"
 
 type ApiKey = {
   id: number
@@ -413,8 +414,95 @@ export function IntegrationSettings() {
     },
   })
 
+  const { data: health, isLoading: isLoadingHealth } = useQuery({
+    queryKey: ["crm-integration-health"],
+    queryFn: async () => {
+      const res = await api.get("/api/crm/integrations/health/")
+      return res.data
+    },
+    refetchInterval: 30000, // Atualiza a cada 30s
+    enabled: canManageIntegrations,
+  })
+
   return (
     <div className="space-y-6">
+      {canManageIntegrations && health && (
+        <Card className="overflow-hidden border-emerald-500/20 bg-emerald-500/5 shadow-lg shadow-emerald-500/5">
+          <CardHeader className="border-b border-emerald-500/10 bg-emerald-500/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-emerald-500/10 p-2 text-emerald-500">
+                  <Activity className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Monitor de AIOps & Governança</CardTitle>
+                  <CardDescription className="text-emerald-600/60">Estado vital do ecossistema inteligente (ITIL v5)</CardDescription>
+                </div>
+              </div>
+              <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 animate-pulse">
+                SISTEMA OPERACIONAL
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="grid divide-y divide-emerald-500/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              {/* AI Status */}
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800/40">Motor de IA</span>
+                  <div className={cn(
+                    "h-2 w-2 rounded-full",
+                    health.ai_engine.status === "online" ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-300"
+                  )} />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Sparkles className="h-8 w-8 text-emerald-500/40" />
+                  <div>
+                    <p className="text-xl font-bold text-emerald-900">{health.ai_engine.provider}</p>
+                    <p className="text-xs text-emerald-600/60">{health.ai_engine.status === "online" ? "Operando normalmente" : "Chave não configurada"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Messaging Status */}
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800/40">Mensageria & XLA</span>
+                  <div className={cn(
+                    "h-2 w-2 rounded-full",
+                    health.whatsapp.status === "online" ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-300"
+                  )} />
+                </div>
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="h-8 w-8 text-emerald-500/40" />
+                  <div>
+                    <p className="text-xl font-bold text-emerald-900">{health.whatsapp.provider}</p>
+                    <p className="text-xs text-emerald-600/60">{health.whatsapp.instance || "Instância Inativa"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Triage Stats */}
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800/40">Atividade (24h)</span>
+                  <ShieldCheck className="h-4 w-4 text-emerald-500/40" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10">
+                    <RefreshCw className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-emerald-900">{health.stats.triages_24h}</p>
+                    <p className="text-xs text-emerald-600/60">Cards triados pela IA</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {canManageIntegrations ? (
         <EvolutionConfigPanel />
       ) : null}

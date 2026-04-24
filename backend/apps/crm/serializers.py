@@ -460,16 +460,18 @@ class DealSerializer(serializers.ModelSerializer):
                     # Usamos all_objects para garantir que não sejamos limitados por filtros de tenant se o contexto estiver instável
                     legacy_stage = Stage.all_objects.filter(pipeline=column.pipeline, name=column.title).first()
                     if not legacy_stage:
-                        # Se não existir, criamos.
+                        # Recuperamos o contexto de forma segura
                         request = self.context.get("request")
-                        target_company = getattr(request, "company", None)
+                        target_company = getattr(request, "company", None) if request else None
                         
                         # Fallback robusto para empresa
                         if not target_company:
-                            if hasattr(column, "company"):
+                            if column and hasattr(column, "company"):
                                 target_company = column.company
-                            elif instance and instance.company:
+                            elif instance and hasattr(instance, "company"):
                                 target_company = instance.company
+                            elif instance and hasattr(instance, "contact") and instance.contact:
+                                target_company = instance.contact.company
                         
                         if not target_company:
                             logger.error(f"Não foi possível determinar a empresa para criar Stage na coluna {column.id}")

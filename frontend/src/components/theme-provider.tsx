@@ -6,6 +6,7 @@ import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from "n
 import { api } from "@/lib/axios"
 import { usePathname } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
+import { hexToHSL, getContrastColor, adjustHSLForDarkMode } from "@/lib/color-utils"
 
 // --- Types ---
 interface TenantTheme {
@@ -79,16 +80,7 @@ export function useBranding() {
 // but we should eventually rename them to useBranding
 export { useBranding as useTheme }
 
-// --- Internal Implementation ---
-
-function getContrastColor(hex: string) {
-  if (!hex) return '#FFFFFF'
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000
-  return brightness > 128 ? '#000000' : '#FFFFFF'
-}
+// getContrastColor removed as it's now in @/lib/color-utils
 
 function useThemeHooks(): ThemeConfigShape {
   const pathname = usePathname()
@@ -275,15 +267,17 @@ function ThemeEffects({ themeConfig }: { themeConfig: ThemeConfigShape }) {
       const shouldUseTenantColor = !themeConfig.isPublicRoute && themeConfig.userTheme?.use_tenant_theme !== false
       
       if (shouldUseTenantColor && themeConfig.tenantTheme?.primary_color) {
-        if (resolvedTheme !== 'dark') {
-          const primaryHex = themeConfig.tenantTheme.primary_color
-          root.style.setProperty('--primary', primaryHex)
-          const foregroundHex = getContrastColor(primaryHex)
-          root.style.setProperty('--primary-foreground', foregroundHex)
-        } else {
-          root.style.removeProperty('--primary')
-          root.style.removeProperty('--primary-foreground')
+        const primaryHex = themeConfig.tenantTheme.primary_color
+        let hsl = hexToHSL(primaryHex)
+        
+        // Ajuste inteligente para Dark Mode
+        if (resolvedTheme === 'dark') {
+          hsl = adjustHSLForDarkMode(hsl.h, hsl.s, hsl.l)
         }
+        
+        root.style.setProperty('--primary', `oklch(${hsl.l / 100} ${hsl.s / 500} ${hsl.h})`) // Usando OKLCH aproximado para manter consistência com globals.css
+        const foregroundHex = getContrastColor(primaryHex)
+        root.style.setProperty('--primary-foreground', foregroundHex)
       } else {
         root.style.removeProperty('--primary')
         root.style.removeProperty('--primary-foreground')
@@ -291,7 +285,8 @@ function ThemeEffects({ themeConfig }: { themeConfig: ThemeConfigShape }) {
 
       if (!themeConfig.isPublicRoute && themeConfig.secondaryColor) {
         const secondaryHex = themeConfig.secondaryColor
-        root.style.setProperty('--secondary', secondaryHex)
+        const hsl = hexToHSL(secondaryHex)
+        root.style.setProperty('--secondary', `oklch(${hsl.l / 100} ${hsl.s / 500} ${hsl.h})`)
         const foregroundHex = getContrastColor(secondaryHex)
         root.style.setProperty('--secondary-foreground', foregroundHex)
       } else {

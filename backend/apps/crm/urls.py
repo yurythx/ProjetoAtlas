@@ -17,6 +17,7 @@ from .views import (
     SLAPolicyViewSet,
     XLAFeedbackViewSet,
     CSIEntryViewSet,
+    IntegrationHealthAPIView,
 )
 
 router = DefaultRouter()
@@ -37,5 +38,6 @@ urlpatterns = [
     path("integrations/inbound/", CRMIntegrationInboundEventsAPIView.as_view(), name="crm-integration-inbound"),
     path("integrations/evolution/<str:webhook_token>/", IntegrationEvolutionWebhookAPIView.as_view(), name="crm-evolution-webhook"),
     path("integrations/inbound/<int:event_id>/replay/", CRMIntegrationInboundEventReplayAPIView.as_view(), name="crm-integration-inbound-replay"),
+    path("integrations/health/", IntegrationHealthAPIView.as_view(), name="crm-integration-health"),
     path("", include(router.urls)),
 ]

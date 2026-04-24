@@ -84,6 +84,12 @@ export const SIDEBAR_CONFIG: NavSection[] = [
         module: "crm",
       },
       {
+        title: "Governança ITIL",
+        href: "/crm/governance",
+        icon: Shield,
+        module: "crm",
+      },
+      {
         title: "Financeiro",
         href: "/finance",
         icon: DollarSign,
