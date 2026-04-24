@@ -21,10 +21,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { useGovernance } from "@/features/crm/use-governance"
 import { ModuleGuard } from "@/components/module-guard"
+import { SLAPolicyDialog } from "@/features/crm/sla-policy-dialog"
+import { ServiceItemDialog } from "@/features/crm/service-item-dialog"
+import { toast } from "sonner"
 
 export default function GovernancePage() {
   const { slaPolicies, serviceItems, isLoading } = useGovernance()
   const [searchTerm, setSearchTerm] = useState("")
+  
+  const [slaDialogOpen, setSlaDialogOpen] = useState(false)
+  const [itemDialogOpen, setItemDialogOpen] = useState(false)
 
   return (
     <ModuleGuard moduleCode="crm">
@@ -47,7 +53,11 @@ export default function GovernancePage() {
           </div>
           
           <div className="flex items-center gap-3">
-             <Button variant="outline" className="h-12 rounded-xl font-bold uppercase tracking-widest text-[10px]">
+             <Button 
+                variant="outline" 
+                className="h-12 rounded-xl font-bold uppercase tracking-widest text-[10px]"
+                onClick={() => toast.info("Painel de Configurações em desenvolvimento.")}
+              >
                 <Settings2 className="mr-2 h-4 w-4" />
                 Configurações Globais
              </Button>
@@ -156,7 +166,10 @@ export default function GovernancePage() {
                </table>
             </div>
 
-            <Button className="h-14 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs px-10 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+            <Button 
+              onClick={() => setItemDialogOpen(true)}
+              className="h-14 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs px-10 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+            >
                <Plus className="mr-2 h-4 w-4" />
                Novo Item de Serviço
             </Button>
@@ -193,7 +206,10 @@ export default function GovernancePage() {
                   </Card>
                 ))}
                 
-                <button className="border-2 border-dashed border-primary/20 rounded-[2rem] p-8 flex flex-col items-center justify-center gap-4 hover:border-primary/50 hover:bg-primary/5 transition-all group group">
+                <button 
+                  onClick={() => setSlaDialogOpen(true)}
+                  className="border-2 border-dashed border-primary/20 rounded-[2rem] p-8 flex flex-col items-center justify-center gap-4 hover:border-primary/50 hover:bg-primary/5 transition-all group group w-full"
+                >
                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Plus className="h-8 w-8 text-primary" />
                    </div>
@@ -248,6 +264,9 @@ export default function GovernancePage() {
              </div>
           </TabsContent>
         </Tabs>
+
+        <SLAPolicyDialog open={slaDialogOpen} onOpenChange={setSlaDialogOpen} />
+        <ServiceItemDialog open={itemDialogOpen} onOpenChange={setItemDialogOpen} />
       </div>
     </ModuleGuard>
   )

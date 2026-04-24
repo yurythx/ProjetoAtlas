@@ -59,7 +59,7 @@ export function useGovernance() {
   const { data: serviceCategories = [], isLoading: isLoadingCategories } = useQuery<ServiceCategory[]>({
     queryKey: ["service-catalog-categories"],
     queryFn: async () => {
-      const res = await api.get("/api/service_catalog/categories/")
+      const res = await api.get("/api/service-catalog/categories/")
       return res.data?.results || res.data || []
     }
   })
@@ -67,7 +67,15 @@ export function useGovernance() {
   const { data: serviceItems = [], isLoading: isLoadingItems } = useQuery<ServiceItem[]>({
     queryKey: ["service-catalog-items"],
     queryFn: async () => {
-      const res = await api.get("/api/service_catalog/items/")
+      const res = await api.get("/api/service-catalog/items/")
+      return res.data?.results || res.data || []
+    }
+  })
+
+  const { data: serviceDefinitions = [], isLoading: isLoadingDefinitions } = useQuery<ServiceDefinition[]>({
+    queryKey: ["service-catalog-definitions"],
+    queryFn: async () => {
+      const res = await api.get("/api/service-catalog/definitions/")
       return res.data?.results || res.data || []
     }
   })
@@ -84,7 +92,7 @@ export function useGovernance() {
 
   // Mutations - Catalog
   const createServiceItem = useMutation({
-    mutationFn: (data: Partial<ServiceItem>) => api.post("/api/service_catalog/items/", data),
+    mutationFn: (data: Partial<ServiceItem>) => api.post("/api/service-catalog/items/", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service-catalog-items"] })
       toast.success("Item de serviço criado!")
@@ -95,8 +103,9 @@ export function useGovernance() {
   return {
     slaPolicies,
     serviceCategories,
+    serviceDefinitions,
     serviceItems,
-    isLoading: isLoadingSLA || isLoadingCategories || isLoadingItems,
+    isLoading: isLoadingSLA || isLoadingCategories || isLoadingItems || isLoadingDefinitions,
     createSLAPolicy,
     createServiceItem
   }
