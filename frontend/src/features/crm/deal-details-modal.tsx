@@ -188,14 +188,14 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
       )
     })
   }, [userSearch, users])
-  const ownerUser = users.find((user) => user.id === currentDeal.owner)
+  const ownerUser = (Array.isArray(users) ? users : []).find((user) => user.id === currentDeal.owner)
   const selectedColumn = columns.find((column) => column.id.toString() === draftColumnId)
   const selectedColumnSemantics = resolveColumnSemantics(selectedColumn)
   const draftPriorityMeta = getPriorityMeta(draftPriority)
   const currentPriorityMeta = getPriorityMeta(currentDeal.priority)
   const deadlineMeta = getDeadlineMeta(currentDeal.closing_date, isDealDone(currentDeal, pipelines))
-  const activities = currentDeal.activities || EMPTY_ACTIVITIES
-  const latestActivity = activities[0]
+  const activities = Array.isArray(currentDeal.activities) ? currentDeal.activities : EMPTY_ACTIVITIES
+  const latestActivity = Array.isArray(activities) ? activities[0] : undefined
   const latestManualUpdate = useMemo(
     () =>
       activities
@@ -598,8 +598,8 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "w-full sm:w-auto max-h-[95vh] overflow-hidden border border-white/10 bg-background/30 p-0 backdrop-blur-3xl rounded-[3rem] shadow-2xl grid grid-rows-[auto_1fr] animate-in zoom-in-95 duration-300",
-          activeTab === "images" ? "sm:max-w-[1440px]" : "sm:max-w-[1120px]"
+          "w-[calc(100vw-1.5rem)] sm:w-[95vw] lg:w-[1120px] max-h-[95vh] overflow-hidden border border-white/10 bg-background/30 p-0 backdrop-blur-3xl rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl grid grid-rows-[auto_1fr] animate-in zoom-in-95 duration-300",
+          activeTab === "images" ? "lg:max-w-[1440px]" : "lg:max-w-[1120px]"
         )}
       >
         {currentDeal.swarm?.is_active && (
@@ -631,17 +631,16 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{selectedColumn?.title || getDealColumnTitle(currentDeal)}</Badge>
-                <Badge variant="outline" className="uppercase font-bold border-primary/20">
+                <Badge variant="secondary" className="rounded-full px-3">{selectedColumn?.title || getDealColumnTitle(currentDeal)}</Badge>
+                <Badge variant="outline" className="uppercase font-black text-[9px] tracking-widest border-primary/20 rounded-full px-3">
                   {draftRecordType === 'service_request' ? 'Requisição' : 
                    draftRecordType === 'incident' ? 'Incidente' :
                    draftRecordType === 'problem' ? 'Problema' :
                    draftRecordType === 'change' ? 'Mudança' : 'Oportunidade'}
                 </Badge>
-                <Badge className={draftPriorityMeta.className}>{draftPriorityMeta.label}</Badge>
-                <Badge className={draftProgressMeta.badgeClassName}>{safeDraftProgress}%</Badge>
-                <Badge className={deadlineMeta.badgeClassName}>{deadlineMeta.label}</Badge>
-                {hasChanges && <Badge>Alterações pendentes</Badge>}
+                <Badge className={cn(draftPriorityMeta.className, "rounded-full px-3 text-[9px] font-black uppercase tracking-widest")}>{draftPriorityMeta.label}</Badge>
+                <Badge className={cn(deadlineMeta.badgeClassName, "rounded-full px-3 text-[9px] font-black uppercase tracking-widest")}>{deadlineMeta.label}</Badge>
+                {hasChanges && <Badge className="bg-amber-500 text-white border-none rounded-full px-3 text-[9px] font-black uppercase tracking-widest animate-pulse">Editando</Badge>}
               </div>
               <DialogTitle className="text-2xl font-semibold">{currentDeal.title}</DialogTitle>
               <DialogDescription className="flex flex-wrap items-center gap-3 text-sm">
@@ -668,31 +667,25 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
               </DialogDescription>
             </div>
 
-            <div className="flex flex-col gap-4 xl:min-w-[320px] xl:items-end">
-              <div className="text-left xl:text-right">
-                <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                  Valor do card
-                </div>
-                <div className="text-3xl font-bold text-primary">
-                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(currentDeal.value))}
-                </div>
+            <div className="flex flex-col gap-4 xl:min-w-[320px] xl:items-end justify-center">
+              <div className="hidden sm:block text-right">
                 {currentDeal.closing_date && (
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    Fechamento: {format(new Date(currentDeal.closing_date), "dd/MM/yyyy", { locale: ptBR })}
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+                    SLA Estimado: {format(new Date(currentDeal.closing_date), "dd MMM, yyyy", { locale: ptBR })}
                   </div>
                 )}
-                <div className="mt-3 space-y-2 rounded-2xl border bg-background/80 p-4 xl:min-w-[280px]">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Progresso</span>
-                    <Badge className={draftProgressMeta.badgeClassName}>{draftProgressMeta.label}</Badge>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className={cn("h-full rounded-full transition-all", draftProgressMeta.barClassName)}
-                      style={{ width: `${safeDraftProgress}%` }}
-                    />
-                  </div>
-                  <div className="text-sm font-semibold">{safeDraftProgress}% concluído</div>
+              </div>
+              
+              <div className="grid gap-2 rounded-2xl border bg-background/40 p-3 xl:min-w-[280px]">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Health & Delivery</span>
+                  <span className={cn("text-xs font-black", draftProgressMeta.barClassName.includes('emerald') ? 'text-emerald-500' : 'text-primary')}>{safeDraftProgress}%</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/5 border border-white/5 shadow-inner">
+                  <div
+                    className={cn("h-full rounded-full transition-all duration-700", draftProgressMeta.barClassName)}
+                    style={{ width: `${safeDraftProgress}%` }}
+                  />
                 </div>
               </div>
 

@@ -148,7 +148,7 @@ export function CRMTableView({
         cell: ({ row }) => {
           const deal = row.original
           return (
-            <div className="flex items-center py-1">
+            <div className="flex items-center py-1 min-w-[180px]">
                <Badge className="rounded-xl px-4 h-7 font-black uppercase tracking-widest text-[9px] bg-primary/10 text-primary border-primary/20 shadow-sm">
                  {deal.column_title || "Backlog Geral"}
                </Badge>
@@ -165,7 +165,7 @@ export function CRMTableView({
           const name = owner ? getUserDisplayName(owner) : "Nção atribuído"
 
           return (
-            <div className="flex items-center gap-3 py-1">
+            <div className="flex items-center gap-3 py-1 min-w-[180px]">
               <Avatar className="h-8 w-8 border-2 border-white/5 rounded-xl shadow-lg transition-transform group-hover:scale-110">
                 <AvatarFallback className="text-[10px] font-black bg-primary/10 text-primary">
                   {getUserInitials(name)}
@@ -188,7 +188,7 @@ export function CRMTableView({
           const deadline = getDeadlineMeta(deal.closing_date, deal.is_closed)
 
           return (
-            <div className="flex flex-col gap-1 py-1 min-w-[140px]">
+            <div className="flex flex-col gap-1 py-1 min-w-[150px]">
               <div className="flex items-center gap-2">
                  <Calendar className="h-3 w-3 text-muted-foreground/40" />
                  <span className="text-xs font-black uppercase tracking-widest">

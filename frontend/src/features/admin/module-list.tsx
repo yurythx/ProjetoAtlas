@@ -51,7 +51,7 @@ export function ModuleList() {
       } else {
         // Bug M2: encontra o TenantModule pelo module ID (não pelo code)
         // Correção: Agora verifica se o módulo existe e se está ativo na lista do tenant
-        const tm = tenantModules.find(tm => tm.module === moduleId) || tenantModules.find(tm => tm.module_code === code)
+        const tm = tenantModules.find(tm => String(tm.module) === String(moduleId)) || tenantModules.find(tm => tm.module_code === code)
         if (!tm) {
           // Se não existir, tenta criar inativo ou ativar primeiro
           // Mas como estamos desativando, deve existir. Se não, erro.
@@ -106,7 +106,7 @@ export function ModuleList() {
       {(Array.isArray(allModules) ? allModules : []).map((module: Module) => {
         // Check if active
         const activeList = Array.isArray(tenantModules) ? tenantModules : []
-        const isActive = activeList.some((tm: TenantModule) => tm.module === module.id && tm.is_active)
+        const isActive = activeList.some((tm: TenantModule) => String(tm.module) === String(module.id) && tm.is_active)
 
         return (
           <Card key={module.code} className={isActive ? "border-primary" : ""}>

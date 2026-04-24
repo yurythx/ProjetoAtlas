@@ -60,7 +60,6 @@ def invalidate_tenant_cache(key_prefix, company_slug):
     else:
         # Fallback for LocMemCache/DummyCache: delete the most common list key
         # if the prefix matches our module manager conventions.
-        if key_prefix == "modules":
-            cache.delete(f"modules:list:{company_slug}")
-            # Also common for lists in other viewsets if they use this pattern
+        if "modules" in key_prefix:
             cache.delete(f"{key_prefix}:list:{company_slug}")
+            cache.delete(f"modules:list:{company_slug}")

@@ -545,48 +545,34 @@ function DealCard({
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2">
-                  {statusBadge && (
-                    <Badge variant="outline" className={cn("w-fit text-[9px] font-black px-1.5 h-4 tracking-wider", statusBadge.className)}>
-                      {statusBadge.label}
-                    </Badge>
-                  )}
-                  {/* AI Suggestion Indicator */}
-                  {deal.priority === "URGENT" || isCritical ? (
-                    <motion.div
-                      animate={{ opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="flex items-center gap-1 bg-violet-600 text-white text-[8px] px-1.5 h-4 rounded-full font-black uppercase tracking-tighter shadow-sm"
-                    >
-                      <span className="animate-pulse">✨ AI Insight</span>
-                    </motion.div>
-                  ) : null}
-                </div>
-                {deal.record_type && (
-                  <Badge variant="secondary" className="w-fit text-[8px] px-1.5 h-3.5 uppercase font-bold bg-slate-100 text-slate-600 border-slate-200">
-                    {deal.record_type === 'service_request' ? 'Requisição' : 
-                     deal.record_type === 'incident' ? 'Incidente' :
-                     deal.record_type === 'problem' ? 'Problema' :
-                     deal.record_type === 'change' ? 'Mudança' : 'Oportunidade'}
-                  </Badge>
-                )}
+                  <div className="flex items-center gap-1.5">
+                    {deal.record_type && (
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                        {deal.record_type === 'service_request' ? 'Req' : 
+                         deal.record_type === 'incident' ? 'Inc' :
+                         deal.record_type === 'problem' ? 'Prb' :
+                         deal.record_type === 'change' ? 'Chg' : 'Op'}
+                      </span>
+                    )}
+                    <span className="h-1 w-1 rounded-full bg-muted-foreground/20" />
+                    <span className={cn("text-[10px] font-black uppercase tracking-widest", priorityColors[deal.priority].split(' ')[1])}>
+                      {deal.priority}
+                    </span>
+                  </div>
                 <h4 className={`font-bold text-[15px] leading-tight line-clamp-2 ${isCompleted ? 'text-muted-foreground' : ''}`}>
                   {deal.title}
                 </h4>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <Badge className={`text-[10px] uppercase font-bold shrink-0 ${priorityColors[deal.priority]}`}>
-                  {deal.priority}
-                </Badge>
                 {deal.swarm && deal.swarm.is_active && (
-                  <Badge className="text-[10px] uppercase font-bold shrink-0 bg-amber-500 text-white border-amber-600 animate-pulse">
-                    🔥 Swarm
-                  </Badge>
+                  <div className="h-6 w-6 rounded-full bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/40 animate-pulse">
+                    <Zap className="h-3 w-3 text-white fill-white" />
+                  </div>
                 )}
                 {isCritical && (
-                  <Badge className="text-[10px] uppercase font-bold shrink-0 border-rose-300 bg-rose-100 text-rose-800">
-                    Crítico
-                  </Badge>
+                  <div className="h-6 w-6 rounded-full bg-rose-500 flex items-center justify-center shadow-lg shadow-rose-500/40">
+                    <AlertTriangle className="h-3 w-3 text-white" />
+                  </div>
                 )}
                 {/* Sentiment (XLA) - ITIL Version 5 Focus */}
                 <div className="flex items-center gap-1 mt-1 bg-muted/50 px-1.5 py-0.5 rounded-full border border-primary/5">

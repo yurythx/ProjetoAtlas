@@ -488,7 +488,7 @@ export function PipelineManagerModal({
                     <SelectValue placeholder="Selecione um pipeline" />
                   </SelectTrigger>
                   <SelectContent>
-                    {pipelines.map((pipeline) => (
+                    {(Array.isArray(pipelines) ? pipelines : []).map((pipeline) => (
                       <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
                         {pipeline.name}
                       </SelectItem>
@@ -742,7 +742,8 @@ export function PipelineManagerModal({
                       disabled={newColumnTitle.trim().length < 2 || createColumn.isPending}
                       onClick={() => {
                         if (!selectedPipeline) return
-                        const maxOrder = Math.max(-1, ...(selectedPipeline.columns || []).map((c) => c.order))
+                        const columns = Array.isArray(selectedPipeline.columns) ? selectedPipeline.columns : []
+                        const maxOrder = Math.max(-1, ...columns.map((c) => c.order))
                         createColumn.mutate({
                           pipeline: selectedPipeline.id,
                           title: newColumnTitle.trim(),
@@ -968,7 +969,8 @@ export function PipelineManagerModal({
                   const wipLimit = Number.isFinite(numericWip) ? numericWip : null
 
                   const isDone = draftColumnKind === "done" ? true : draftMarksDone
-                  const pipelineColumnIds = new Set((selectedPipeline?.columns || []).map((column) => column.id))
+                  const columns = Array.isArray(selectedPipeline?.columns) ? selectedPipeline.columns : []
+                  const pipelineColumnIds = new Set(columns.map((column) => column.id))
                   const allowedSources = draftAllowedSourceColumns.filter((columnId) => pipelineColumnIds.has(columnId))
                   updateColumnSettings.mutate({
                     id: columnToConfigure.id,

@@ -19,6 +19,7 @@ class ModuleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Module.objects.all().order_by("name")
     serializer_class = ModuleSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
 class TenantModuleViewSet(viewsets.ModelViewSet):
@@ -27,7 +28,7 @@ class TenantModuleViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = TenantModuleSerializer
-    pagination_class = DefaultPagination
+    pagination_class = None
     required_permission = "admin.settings_manage"
 
     def _get_company(self):

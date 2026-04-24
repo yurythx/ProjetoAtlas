@@ -34,7 +34,8 @@ export function CreateDealModal({ pipeline }: CreateDealModalProps) {
 
   const availableColumns = useMemo(() => {
     if (pipeline) return getPipelineColumns(pipeline)
-    return pipelines.flatMap((item) => getPipelineColumns(item))
+    const list = Array.isArray(pipelines) ? pipelines : []
+    return list.flatMap((item) => getPipelineColumns(item))
   }, [pipeline, pipelines])
   const defaultColumn = availableColumns[0]?.id.toString() || ""
   const defaultValues = useMemo<DealFormValues>(() => ({

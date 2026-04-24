@@ -660,7 +660,7 @@ export function getDealColumnMeta(
   }
 
   const columnId = deal.column ?? deal.column_id
-  if (columnId && pipelines) {
+  if (columnId && Array.isArray(pipelines)) {
     const resolvedColumn = pipelines
       .flatMap((pipeline) => getPipelineColumns(pipeline))
       .find((column) => column.id === columnId)
@@ -703,7 +703,7 @@ export function getColumnOccupancy(
     const dealColumnId = getDealColumnId(deal as Pick<Deal, "column" | "column_id" | "stage">)
     if (dealColumnId) return dealColumnId === columnId
 
-    if (!pipelines) return false
+    if (!Array.isArray(pipelines)) return false
     const resolvedColumn = pipelines
       .flatMap((pipeline) => getPipelineColumns(pipeline))
       .find((column) => isDealInColumn(deal, column))
@@ -723,7 +723,7 @@ export function getColumnTransitionGuard(
 
   const sourceColumnId = getDealColumnId(deal as Pick<Deal, "column" | "column_id" | "stage">)
   const semantics = resolveColumnSemantics(targetColumn)
-  const pipelineColumns = pipelines?.flatMap((pipeline) => getPipelineColumns(pipeline)) ?? []
+  const pipelineColumns = Array.isArray(pipelines) ? pipelines.flatMap((pipeline) => getPipelineColumns(pipeline)) : []
   const sourceColumn = sourceColumnId ? pipelineColumns.find((column) => column.id === sourceColumnId) : null
 
   if (sourceColumnId && sourceColumnId === targetColumn.id) {
@@ -809,7 +809,7 @@ export function useCRM() {
       // 2. Snapshot do estado anterior para permitir rollback
       const previousDeals = queryClient.getQueryData<Deal[]>(['crm-deals'])
       const pipelines = queryClient.getQueryData<Pipeline[]>(['crm-pipelines']) || []
-      const targetColumn = updatedDeal.column
+      const targetColumn = updatedDeal.column && Array.isArray(pipelines)
         ? pipelines
             .flatMap((pipeline) => getPipelineColumns(pipeline))
             .find((column) => column.id === updatedDeal.column)

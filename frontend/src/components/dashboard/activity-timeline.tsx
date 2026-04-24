@@ -44,7 +44,9 @@ const resourceIcons = {
 }
 
 export function ActivityTimeline({ activities }: ActivityTimelineProps) {
-    if (!activities?.length) {
+    const list = Array.isArray(activities) ? activities : []
+    
+    if (list.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-center opacity-50">
                 <Activity className="h-12 w-12 mb-4" aria-hidden="true" />
@@ -55,7 +57,7 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
 
     return (
         <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-primary/20 before:via-primary/5 before:to-transparent" role="list" aria-label="Linha do tempo de atividades">
-            {activities.map((activity, index) => {
+            {list.map((activity, index) => {
                 const config = actionConfig[activity.action as keyof typeof actionConfig] || actionConfig.default
                 const ResourceIcon = resourceIcons[activity.resource as keyof typeof resourceIcons] || Circle
                 const ActionIcon = config.icon

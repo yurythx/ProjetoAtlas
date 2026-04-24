@@ -508,7 +508,7 @@ export default function CRMPage() {
 
               <div className="h-12 w-[1px] bg-white/10 hidden sm:block mx-2" />
 
-              {pipelines && pipelines.length > 0 ? (
+              {(Array.isArray(pipelines) && pipelines.length > 0) ? (
                 <div className="space-y-2">
                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Fluxo Ativo</p>
                   <Select 

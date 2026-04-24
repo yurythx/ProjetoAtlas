@@ -99,7 +99,7 @@ export default function ITILVersion5Page() {
         
         {/* Animated Background Mesh */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
-           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-50 contrast-150" />
+           <div className="absolute top-0 left-0 w-full h-full bg-slate-900/50 brightness-50 contrast-150" />
         </div>
 
         <div className="relative z-10 space-y-10">
@@ -377,7 +377,7 @@ export default function ITILVersion5Page() {
       >
         <div className="absolute top-0 right-0 h-full w-full bg-[radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.2),transparent_60%)]" />
         <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/20 blur-[120px] animate-pulse" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 pointer-events-none" />
+        <div className="absolute inset-0 bg-primary/5 opacity-5 pointer-events-none" />
         
         <div className="relative z-10 space-y-12">
           <motion.div

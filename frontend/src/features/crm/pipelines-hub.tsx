@@ -91,7 +91,8 @@ export function PipelinesHub({ autoRedirect = false }: { autoRedirect?: boolean 
 
   const pipelineCards = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
-    const rows = pipelines.map((pipeline) => {
+    const list = Array.isArray(pipelines) ? pipelines : []
+    const rows = list.map((pipeline) => {
       const stats = getPipelineStats(pipeline, deals)
       const columns = getPipelineColumns(pipeline)
       const pipelineDeals = deals.filter((deal) => isDealInPipeline(deal, pipeline))
@@ -244,7 +245,7 @@ export function PipelinesHub({ autoRedirect = false }: { autoRedirect?: boolean 
 
         {/* Pipeline Responsive Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-          {pipelineCards.map(({ pipeline, stats, owners, ownerCount, focusCards }) => {
+          {(Array.isArray(pipelineCards) ? pipelineCards : []).map(({ pipeline, stats, owners, ownerCount, focusCards }) => {
             const isAtRisk = stats.overdue > 0;
             const progressColor = isAtRisk ? "text-rose-500" : stats.averageProgress >= 80 ? "text-emerald-500" : "text-primary";
             

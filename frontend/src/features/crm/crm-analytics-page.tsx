@@ -152,7 +152,7 @@ export default function CRMAnalyticsPage() {
                 <SelectValue placeholder="SELECIONAR PIPELINE" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl border-white/10 bg-slate-900 text-white backdrop-blur-3xl">
-                {pipelines.map(p => (
+                {(Array.isArray(pipelines) ? pipelines : []).map(p => (
                   <SelectItem key={p.id} value={p.id.toString()} className="focus:bg-primary focus:text-white uppercase text-[10px] font-black tracking-widest h-12">
                     {p.name}
                   </SelectItem>

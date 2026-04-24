@@ -198,7 +198,7 @@ function ConfigFormModal({
               className="w-full rounded-lg border border-white/10 bg-[#0f1117] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
             >
               <option value="">— Nenhum —</option>
-              {pipelines.map((p) => (
+              {(Array.isArray(pipelines) ? pipelines : []).map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
