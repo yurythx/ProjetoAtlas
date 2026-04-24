@@ -456,25 +456,41 @@ class DealSerializer(serializers.ModelSerializer):
             if legacy_stage is None:
                 # Tenta encontrar um Stage com o mesmo nome na pipeline ou cria um novo para manter a integridade
                 from .models import Stage
-                # Usamos all_objects para garantir que não sejamos limitados por filtros de tenant se o contexto estiver instável
-                legacy_stage = Stage.all_objects.filter(pipeline=column.pipeline, name=column.title).first()
-                if not legacy_stage:
-                    # Se não existir, criamos. Usamos o company do column para garantir consistência
-                    request = self.context.get("request")
-                    target_company = getattr(request, "company", None)
-                    if not target_company and hasattr(column, "company"):
-                        target_company = column.company
+                try:
+                    # Usamos all_objects para garantir que não sejamos limitados por filtros de tenant se o contexto estiver instável
+                    legacy_stage = Stage.all_objects.filter(pipeline=column.pipeline, name=column.title).first()
+                    if not legacy_stage:
+                        # Se não existir, criamos.
+                        request = self.context.get("request")
+                        target_company = getattr(request, "company", None)
+                        
+                        # Fallback robusto para empresa
+                        if not target_company:
+                            if hasattr(column, "company"):
+                                target_company = column.company
+                            elif instance and instance.company:
+                                target_company = instance.company
+                        
+                        if not target_company:
+                            logger.error(f"Não foi possível determinar a empresa para criar Stage na coluna {column.id}")
+                            raise serializers.ValidationError({"column": "Erro de integridade: empresa não identificada para o estágio."})
+
+                        legacy_stage = Stage.objects.create(
+                            company=target_company,
+                            pipeline=column.pipeline,
+                            name=column.title,
+                            order=column.order
+                        )
                     
-                    legacy_stage = Stage.objects.create(
-                        company=target_company,
-                        pipeline=column.pipeline,
-                        name=column.title,
-                        order=column.order
-                    )
-                
-                # Vincula de volta à coluna para futuras referências
-                column.legacy_stage = legacy_stage
-                column.save(update_fields=["legacy_stage"])
+                    # Vincula de volta à coluna para futuras referências (apenas se mudou)
+                    if column.legacy_stage_id != legacy_stage.id:
+                        column.legacy_stage = legacy_stage
+                        column.save(update_fields=["legacy_stage"])
+                        
+                except Exception as e:
+                    logger.exception(f"Falha crítica na sincronização de legacy_stage para coluna {column.id}: {e}")
+                    # Se falhar aqui, não podemos prosseguir pois o Deal exige um Stage no banco
+                    raise serializers.ValidationError({"column": f"Erro interno de sincronização de estágio: {str(e)}"})
             
             attrs["stage"] = legacy_stage
 

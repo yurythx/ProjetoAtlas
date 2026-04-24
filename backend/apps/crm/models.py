@@ -206,6 +206,10 @@ class Column(BaseTenantModel):
         return self.marks_done
 
     def allows_transition_from(self, source_column_id):
+        # Sempre permite permanecer na mesma coluna (atualização de dados)
+        if source_column_id == self.id:
+            return True
+            
         if not self.allowed_source_columns:
             return True
         return source_column_id in self.allowed_source_columns

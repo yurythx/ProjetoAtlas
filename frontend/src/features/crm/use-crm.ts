@@ -803,29 +803,36 @@ export function useCRM() {
       const response = await api.post<Pipeline>("/api/crm/pipelines/", payload)
       const pipeline = response.data
 
-      // 2. Cria Colunas Padrão (Essencial para não dar erro de 'não encontrado' ou 'vazio')
-      const defaultColumns = [
-        { pipeline: pipeline.id, title: "Novo", order: 0, column_kind: "backlog" as const },
-        { pipeline: pipeline.id, title: "Em Andamento", order: 10, column_kind: "active" as const },
-        { pipeline: pipeline.id, title: "Concluído", order: 20, column_kind: "done" as const, marks_done: true },
-      ]
-      
-      for (const col of defaultColumns) {
-        await api.post("/api/crm/columns/", col)
+      try {
+        // 2. Cria Colunas Padrão (Essencial para não dar erro de 'não encontrado' ou 'vazio')
+        const defaultColumns = [
+          { pipeline: pipeline.id, title: "Novo", order: 0, column_kind: "backlog" as const },
+          { pipeline: pipeline.id, title: "Em Andamento", order: 10, column_kind: "active" as const },
+          { pipeline: pipeline.id, title: "Concluído", order: 20, column_kind: "done" as const, marks_done: true },
+        ]
+        
+        for (const col of defaultColumns) {
+          await api.post("/api/crm/columns/", col)
+        }
+      } catch (colError) {
+        console.error("Erro ao criar colunas padrão, mas o pipeline foi criado:", colError)
+        // Não falhamos a mutação inteira se apenas as colunas falharem, mas avisamos
       }
 
       return pipeline
     },
     onSuccess: async (pipeline) => {
-      // Atualização imediata do cache para evitar delay no redirecionamento
+      // Invalidação agressiva primeiro
+      await queryClient.invalidateQueries({ queryKey: ['crm-pipelines'] })
+      
+      // Atualização otimista/imediata do cache
       queryClient.setQueryData<Pipeline[]>(['crm-pipelines'], (old) => {
-        const list = old || []
-        if (list.some(p => p.id === pipeline.id)) return list
-        return [...list, pipeline]
+        const currentList = Array.isArray(old) ? old : []
+        if (currentList.some(p => p.id === pipeline.id)) return currentList
+        return [...currentList, pipeline]
       })
       
-      await queryClient.invalidateQueries({ queryKey: ['crm-pipelines'] })
-      toast.success(`Pipeline "${pipeline.name}" criado com colunas padrão!`)
+      toast.success(`Pipeline "${pipeline.name}" criado com sucesso!`)
     }
   })
 
