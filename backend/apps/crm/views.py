@@ -475,16 +475,20 @@ class DealViewSet(viewsets.ModelViewSet):
         return bool(resolved_column and resolved_column.is_done())
 
     def perform_create(self, serializer):
-        legacy_stage = serializer.validated_data.get("stage")
-        column = serializer.validated_data.get("column") or getattr(legacy_stage, "column", None)
-        serializer.save(
-            owner=serializer.validated_data.get("owner", self.request.user),
-            company=self.request.company,
-            tecnico_responsavel=serializer.validated_data.get("tecnico_responsavel"),
-            record_type=serializer.validated_data.get("record_type", "incident"),
-            column=column,
-            is_closed=self._is_done_column(legacy_stage=legacy_stage, column=column),
-        )
+        try:
+            legacy_stage = serializer.validated_data.get("stage")
+            column = serializer.validated_data.get("column") or getattr(legacy_stage, "column", None)
+            serializer.save(
+                owner=serializer.validated_data.get("owner", self.request.user),
+                company=self.request.company,
+                tecnico_responsavel=serializer.validated_data.get("tecnico_responsavel"),
+                record_type=serializer.validated_data.get("record_type", "incident"),
+                column=column,
+                is_closed=self._is_done_column(legacy_stage=legacy_stage, column=column),
+            )
+        except Exception as e:
+            logger.error(f"Erro crítico na criação de Deal: {str(e)}", exc_info=True)
+            raise
 
     def get_queryset(self):
         company = getattr(self.request, "company", None)

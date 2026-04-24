@@ -1,8 +1,10 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
-import { useMemo, useState } from "react"
-import { ArrowLeft, LayoutGrid } from "lucide-react"
+import { useMemo, useState, useEffect } from "react"
+import { ArrowLeft, Plus, Settings2, Trash2, ChevronUp, ChevronDown, Rocket, Save, LayoutGrid } from "lucide-react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,321 +12,331 @@ import { Input } from "@/components/ui/input"
 import { ModuleGuard } from "@/components/module-guard"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-
-import { getDeadlineMeta, isCriticalDeal } from "./crm-visuals"
-import { getDealColumnTitle, getPipelineColumns, isDealInColumn, resolveColumnSemantics, resolveDealProgress, useCRM, type Deal, type Pipeline } from "./use-crm"
-
-type EnrichedCard = { deal: Deal; progress: number; deadline: ReturnType<typeof getDeadlineMeta> }
-
-const EMPTY_COLUMNS: ReturnType<typeof getPipelineColumns> = []
-const EMPTY_ENRICHED: EnrichedCard[] = []
-
-function isDealInPipeline(deal: Deal, pipeline: Pipeline) {
-  if (deal.column_data?.pipeline) {
-    return deal.column_data.pipeline === pipeline.id
-  }
-  if (deal.stage && Array.isArray(pipeline.stages)) {
-    return pipeline.stages.some((stage) => stage.id === deal.stage)
-  }
-  return false
-}
-
-function getDealProgressForPipeline(deal: Deal, pipeline: Pipeline) {
-  return resolveDealProgress(deal, pipeline)
-}
+import { api } from "@/lib/axios"
+import { useCRM, type Pipeline, type CRMColumn } from "./use-crm"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { useQueryClient, useMutation } from "@tanstack/react-query"
 
 export function PipelineDetail({ pipelineId }: { pipelineId: number }) {
-  const { pipelines, deals, isLoading } = useCRM()
-  const [search, setSearch] = useState("")
-  const [filter, setFilter] = useState<"all" | "open" | "overdue" | "critical" | "closed">("all")
-  const [columnFilterId, setColumnFilterId] = useState<number | "all">("all")
-
+  const queryClient = useQueryClient()
+  const { pipelines, isLoading, updatePipeline, deletePipeline } = useCRM()
+  
   const pipeline = pipelines.find((item) => item.id === pipelineId)
+  
+  // Estados para edição
+  const [name, setName] = useState("")
+  const [newColumnTitle, setNewColumnTitle] = useState("")
+  const [columnToDelete, setColumnToDelete] = useState<CRMColumn | null>(null)
+  const [pipelineToDelete, setPipelineToDelete] = useState<Pipeline | null>(null)
 
-  const data = useMemo(() => {
-    if (!pipeline) return null
-    const columns = getPipelineColumns(pipeline)
-    const pipelineDeals = deals.filter((deal) => isDealInPipeline(deal, pipeline))
-    const enriched = pipelineDeals.map((deal) => {
-      const progress = getDealProgressForPipeline(deal, pipeline)
-      const deadline = getDeadlineMeta(deal.closing_date, deal.is_closed)
-      return {
-        deal,
-        progress,
-        deadline,
+  useEffect(() => {
+    if (pipeline) {
+      setName(pipeline.name)
+    }
+  }, [pipeline])
+
+  const sortedColumns = useMemo(() => {
+    return [...(pipeline?.columns || [])].sort((a, b) => a.order - b.order || a.id - b.id)
+  }, [pipeline?.columns])
+
+  const reorderColumns = useMutation({
+    mutationFn: async (payload: { columns: { id: number; order: number }[] }) => {
+      for (const item of payload.columns) {
+        await api.patch(`/api/crm/columns/${item.id}/`, { order: item.order })
       }
-    })
-    const avg = enriched.length ? Math.round(enriched.reduce((acc, item) => acc + item.progress, 0) / enriched.length) : 0
-    const overdue = enriched.filter((item) => !item.deal.is_closed && item.deadline.risk === "overdue").length
-    return { columns, enriched, avg, overdue }
-  }, [deals, pipeline])
+      return payload
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-pipelines"] })
+      toast.success("Ordem atualizada")
+    }
+  })
 
-  const columns = data ? data.columns : EMPTY_COLUMNS
-  const enriched: EnrichedCard[] = data ? data.enriched : EMPTY_ENRICHED
-  const avg = data ? data.avg : 0
-  const overdueCount = data ? data.overdue : 0
+  const createColumn = useMutation({
+    mutationFn: async (title: string) => {
+      const maxOrder = Math.max(-1, ...sortedColumns.map(c => c.order))
+      const response = await api.post("/api/crm/columns/", {
+        pipeline: pipelineId,
+        title,
+        order: maxOrder + 1,
+        column_kind: "active"
+      })
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-pipelines"] })
+      setNewColumnTitle("")
+      toast.success("Coluna adicionada")
+    }
+  })
 
-  const filteredCards = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase()
-    return enriched.filter(({ deal, deadline }) => {
-      if (normalizedSearch) {
-        const matchesTitle = deal.title.toLowerCase().includes(normalizedSearch)
-        const matchesContact = deal.contact_name?.toLowerCase().includes(normalizedSearch)
-        if (!matchesTitle && !matchesContact) return false
-      }
+  const removeColumn = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/api/crm/columns/${id}/`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-pipelines"] })
+      setColumnToDelete(null)
+      toast.success("Coluna removida")
+    }
+  })
 
-      if (columnFilterId !== "all") {
-        const column = columns.find((c) => c.id === columnFilterId)
-        if (column && !isDealInColumn(deal, column)) return false
-      }
+  const applyITIL = useMutation({
+    mutationFn: async () => {
+      await api.post(`/api/crm/pipelines/${pipelineId}/apply_itil_template/`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-pipelines"] })
+      toast.success("Template ITIL v5 aplicado!")
+    }
+  })
 
-      if (filter === "open") return !deal.is_closed
-      if (filter === "closed") return deal.is_closed
-      if (filter === "overdue") return !deal.is_closed && deadline.risk === "overdue"
-      if (filter === "critical") return isCriticalDeal(deal)
-      return true
-    })
-  }, [columnFilterId, columns, enriched, filter, search])
+  if (isLoading) return <div className="p-8 animate-pulse bg-muted/10 rounded-[2rem] h-96" />
 
-  const counts = useMemo(() => {
-    const all = enriched.length
-    const open = enriched.filter((item) => !item.deal.is_closed).length
-    const closed = enriched.filter((item) => item.deal.is_closed).length
-    const overdue = enriched.filter((item) => !item.deal.is_closed && item.deadline.risk === "overdue").length
-    const critical = enriched.filter((item) => isCriticalDeal(item.deal)).length
-    return { all, open, closed, overdue, critical }
-  }, [enriched])
-
-  if (isLoading) {
+  if (!pipeline) {
     return (
-      <div className="rounded-3xl border bg-card p-6 shadow-sm">
-        <div className="h-6 w-72 rounded bg-muted/30" />
-        <div className="mt-4 h-40 rounded-3xl border bg-muted/10" />
+      <div className="p-12 text-center glass rounded-[2rem] border border-dashed">
+        <h2 className="text-xl font-black uppercase">Pipeline não encontrado</h2>
+        <Link href="/crm/pipelines" className="mt-4 inline-block">
+          <Button variant="outline" className="rounded-xl font-bold uppercase">Voltar ao Hub</Button>
+        </Link>
       </div>
     )
   }
 
-  if (!pipeline || !data) {
-    return (
-      <ModuleGuard moduleCode="crm">
-        <div className="rounded-3xl border bg-card p-6 shadow-sm">
-          <div className="text-lg font-semibold">Pipeline não encontrado</div>
-          <div className="mt-3">
-            <Link href="/crm/pipelines">
-              <Button variant="outline" className="glass">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Voltar
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </ModuleGuard>
-    )
-  }
-
-  const progressClass =
-    avg >= 80 ? "bg-emerald-600" : avg >= 45 ? "bg-blue-600" : "bg-amber-600"
-
   return (
     <ModuleGuard moduleCode="crm">
-      <div className="space-y-6">
-        <div className="rounded-3xl border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <Link href="/crm/pipelines" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Pipelines (Visão Geral)
-              </Link>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-semibold">{pipeline.name}</h1>
-                <Badge variant="secondary" className="rounded-full">{enriched.length} card{enriched.length === 1 ? "" : "s"}</Badge>
-                <Badge variant="outline" className={cn("rounded-full", overdueCount > 0 && "border-rose-200 bg-rose-100 text-rose-800")}>
-                  {overdueCount} vencido{overdueCount === 1 ? "" : "s"}
-                </Badge>
-              </div>
-              <div className="mt-3 rounded-2xl border bg-background p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Progresso médio</div>
-                  <div className="text-sm font-bold">{avg}%</div>
-                </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div className={cn("h-full rounded-full transition-all", progressClass)} style={{ width: `${avg}%` }} />
-                </div>
-              </div>
-            </div>
+      <div className="space-y-8 max-w-5xl mx-auto pb-20">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <Link href="/crm/pipelines" className="group flex items-center text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+              <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+              Voltar ao Hub
+            </Link>
+            <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
+              Configurar Fluxo
+            </h1>
+          </div>
 
-            <div className="flex flex-col gap-2 sm:items-end">
-              <Link href={`/crm?pipeline=${pipeline.id}`} className="w-full sm:w-auto">
-                <Button className="w-full sm:w-auto">
-                  <LayoutGrid className="mr-2 h-4 w-4" />
-                  Abrir Kanban
-                </Button>
-              </Link>
-            </div>
+          <div className="flex items-center gap-3">
+             <Button 
+               variant="outline" 
+               className="h-12 glass border-rose-500/20 text-rose-500 font-black uppercase tracking-widest"
+               onClick={() => setPipelineToDelete(pipeline)}
+             >
+               <Trash2 className="h-4 w-4 mr-2" /> Excluir
+             </Button>
+             <Link href={`/crm?pipeline=${pipeline.id}`}>
+               <Button className="h-12 rounded-xl bg-primary text-white font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                 <LayoutGrid className="h-4 w-4 mr-2" /> Ver no Kanban
+               </Button>
+             </Link>
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-          <div className="rounded-3xl border bg-card p-5 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Colunas</div>
-            <div className="mt-4 space-y-3">
-              {columns.map((column, index) => {
-                const colDeals = enriched.filter((item) => isDealInColumn(item.deal, column))
-                const avg = colDeals.length ? Math.round(colDeals.reduce((acc, item) => acc + item.progress, 0) / colDeals.length) : 0
-                const sem = resolveColumnSemantics(column)
-                return (
-                  <div key={column.id} className="rounded-2xl border bg-background p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold">{column.title}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {colDeals.length} card{colDeals.length === 1 ? "" : "s"} • {avg}% médio
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge variant="outline" className="rounded-full">{sem.column_kind}</Badge>
-                        {sem.marks_done || index === columns.length - 1 ? (
-                          <Badge className="rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
-                            Done
-                          </Badge>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${avg}%` }} />
+        <div className="grid gap-8 md:grid-cols-[1fr_400px]">
+          {/* Main Config */}
+          <div className="space-y-8">
+            <section className="glass rounded-[2.5rem] p-8 space-y-6">
+               <div className="flex items-center justify-between border-b border-primary/5 pb-4">
+                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary">Identidade do Pipeline</h3>
+                  <Badge variant="outline" className="rounded-full font-black text-[10px]">ID: {pipeline.id}</Badge>
+               </div>
+               
+               <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nome do Fluxo</label>
+                    <div className="flex gap-2">
+                      <Input 
+                        value={name} 
+                        onChange={e => setName(e.target.value)} 
+                        className="h-14 glass text-lg font-bold rounded-2xl"
+                      />
+                      <Button 
+                        disabled={name === pipeline.name || name.length < 3 || updatePipeline.isPending}
+                        onClick={() => updatePipeline.mutate({ ...pipeline, name })}
+                        className="h-14 w-14 rounded-2xl"
+                      >
+                        <Save className="h-5 w-5" />
+                      </Button>
                     </div>
                   </div>
-                )
-              })}
-            </div>
+               </div>
+            </section>
+
+            <section className="glass rounded-[2.5rem] p-8 space-y-6">
+               <div className="flex items-center justify-between border-b border-primary/5 pb-4">
+                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary">Arquitetura de Colunas</h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/5"
+                    onClick={() => applyITIL.mutate()}
+                    disabled={applyITIL.isPending}
+                  >
+                    <Rocket className="h-3 w-3 mr-2" /> Aplicar ITIL v5
+                  </Button>
+               </div>
+
+               <div className="space-y-3">
+                  {sortedColumns.map((col, idx) => (
+                    <div key={col.id} className="flex items-center gap-4 p-4 rounded-3xl bg-background/40 border border-primary/5 hover:bg-background/60 transition-colors group">
+                       <div className="flex flex-col gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-0"
+                            disabled={idx === 0}
+                            onClick={() => {
+                              const next = [...sortedColumns]
+                              ;[next[idx-1], next[idx]] = [next[idx], next[idx-1]]
+                              reorderColumns.mutate({ columns: next.map((c, i) => ({ id: c.id, order: i * 10 })) })
+                            }}
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-0"
+                            disabled={idx === sortedColumns.length - 1}
+                            onClick={() => {
+                              const next = [...sortedColumns]
+                              ;[next[idx+1], next[idx]] = [next[idx], next[idx+1]]
+                              reorderColumns.mutate({ columns: next.map((c, i) => ({ id: c.id, order: i * 10 })) })
+                            }}
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                       </div>
+                       
+                       <div className="flex-1 min-w-0">
+                          <Input 
+                            defaultValue={col.title}
+                            className="h-10 bg-transparent border-none font-bold text-base focus-visible:ring-0 p-0"
+                            onBlur={(e) => {
+                              const val = e.target.value.trim()
+                              if (val && val !== col.title) {
+                                api.patch(`/api/crm/columns/${col.id}/`, { title: val })
+                                  .then(() => queryClient.invalidateQueries({ queryKey: ["crm-pipelines"] }))
+                              }
+                            }}
+                          />
+                          <div className="flex items-center gap-2 mt-1">
+                             <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest py-0">{col.column_kind}</Badge>
+                             {col.marks_done && <Badge className="bg-emerald-500 text-white text-[9px] uppercase font-black tracking-widest py-0">Concluído</Badge>}
+                          </div>
+                       </div>
+
+                       <Button 
+                         variant="ghost" 
+                         size="icon" 
+                         className="text-muted-foreground/30 hover:text-rose-500 transition-colors"
+                         onClick={() => setColumnToDelete(col)}
+                       >
+                         <Trash2 className="h-4 w-4" />
+                       </Button>
+                    </div>
+                  ))}
+
+                  <div className="flex gap-2 pt-4">
+                     <Input 
+                       placeholder="NOVA COLUNA..." 
+                       value={newColumnTitle}
+                       onChange={e => setNewColumnTitle(e.target.value)}
+                       className="h-12 glass rounded-2xl font-bold"
+                     />
+                     <Button 
+                       className="h-12 px-6 rounded-2xl bg-primary/10 text-primary hover:bg-primary hover:text-white font-black"
+                       disabled={newColumnTitle.length < 2 || createColumn.isPending}
+                       onClick={() => createColumn.mutate(newColumnTitle)}
+                     >
+                       <Plus className="h-5 w-5" />
+                     </Button>
+                  </div>
+               </div>
+            </section>
           </div>
 
-          <div className="rounded-3xl border bg-card p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Cards</div>
-              <Badge variant="secondary" className="rounded-full">{filteredCards.length}</Badge>
-            </div>
-
-            <div className="mt-4 grid gap-3">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar card/cliente..."
-                  className="glass w-full md:max-w-[340px]"
-                />
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <Select value={filter} onValueChange={(value) => setFilter(value as typeof filter)}>
-                    <SelectTrigger className="glass w-full sm:w-[220px]">
-                      <SelectValue placeholder="Filtro" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos ({counts.all})</SelectItem>
-                      <SelectItem value="open">Abertos ({counts.open})</SelectItem>
-                      <SelectItem value="overdue">Vencidos ({counts.overdue})</SelectItem>
-                      <SelectItem value="critical">Críticos ({counts.critical})</SelectItem>
-                      <SelectItem value="closed">Fechados ({counts.closed})</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={columnFilterId === "all" ? "all" : String(columnFilterId)}
-                    onValueChange={(value) => setColumnFilterId(value === "all" ? "all" : Number(value))}
-                  >
-                    <SelectTrigger className="glass w-full sm:w-[220px]">
-                      <SelectValue placeholder="Coluna" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas as colunas</SelectItem>
-                      {data.columns.map((column) => (
-                        <SelectItem key={column.id} value={String(column.id)}>
-                          {column.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          {/* Sidebar Info */}
+          <div className="space-y-6">
+             <div className="glass rounded-[2.5rem] p-8 space-y-4">
+                <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Estatísticas do Fluxo</h4>
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="p-4 rounded-3xl bg-primary/5 border border-primary/10">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Total Colunas</p>
+                      <p className="text-2xl font-black">{sortedColumns.length}</p>
+                   </div>
+                   <div className="p-4 rounded-3xl bg-primary/5 border border-primary/10">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Visibilidade</p>
+                      <p className="text-xs font-black uppercase truncate">{pipeline.visibility}</p>
+                   </div>
                 </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={filter === "all" ? "default" : "outline"}
-                  className={cn(filter === "all" ? "" : "glass")}
-                  size="sm"
-                  onClick={() => setFilter("all")}
-                >
-                  Todos <Badge variant="secondary" className="ml-2 rounded-full">{counts.all}</Badge>
-                </Button>
-                <Button
-                  variant={filter === "open" ? "default" : "outline"}
-                  className={cn(filter === "open" ? "" : "glass")}
-                  size="sm"
-                  onClick={() => setFilter("open")}
-                >
-                  Abertos <Badge variant="secondary" className="ml-2 rounded-full">{counts.open}</Badge>
-                </Button>
-                <Button
-                  variant={filter === "overdue" ? "default" : "outline"}
-                  className={cn(filter === "overdue" ? "" : "glass")}
-                  size="sm"
-                  onClick={() => setFilter("overdue")}
-                >
-                  Vencidos <Badge variant="secondary" className="ml-2 rounded-full">{counts.overdue}</Badge>
-                </Button>
-                <Button
-                  variant={filter === "critical" ? "default" : "outline"}
-                  className={cn(filter === "critical" ? "" : "glass")}
-                  size="sm"
-                  onClick={() => setFilter("critical")}
-                >
-                  Críticos <Badge variant="secondary" className="ml-2 rounded-full">{counts.critical}</Badge>
-                </Button>
-                <Button
-                  variant={filter === "closed" ? "default" : "outline"}
-                  className={cn(filter === "closed" ? "" : "glass")}
-                  size="sm"
-                  onClick={() => setFilter("closed")}
-                >
-                  Fechados <Badge variant="secondary" className="ml-2 rounded-full">{counts.closed}</Badge>
-                </Button>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-2">
-              {filteredCards
-                .slice()
-                .sort((a, b) => b.progress - a.progress || a.deal.title.localeCompare(b.deal.title))
-                .map(({ deal, progress, deadline }) => {
-                  const deadlineClass =
-                    deadline.risk === "overdue"
-                      ? "border-rose-200 bg-rose-100 text-rose-800"
-                      : deadline.risk === "near"
-                        ? "border-amber-200 bg-amber-100 text-amber-900"
-                        : "border-slate-200 bg-slate-50 text-slate-700"
-
-                  return (
-                    <div key={deal.id} className="rounded-2xl border bg-background p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <div className={cn("truncate font-semibold", deal.is_closed && "text-muted-foreground line-through")}>
-                            {deal.title}
-                          </div>
-                          <div className="mt-1 text-xs text-muted-foreground truncate">{getDealColumnTitle(deal)}</div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge className={cn("rounded-full", deadlineClass)}>{deadline.label}</Badge>
-                          <Badge variant="outline" className="rounded-full">{progress}%</Badge>
-                        </div>
-                      </div>
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
-            </div>
+                <div className="p-6 rounded-3xl bg-slate-900 text-white space-y-2">
+                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Arquitetura Atlas</p>
+                   <p className="text-xs leading-relaxed text-slate-400 font-bold">
+                     Este fluxo utiliza o motor de sincronização ITIL v5, garantindo que cada coluna tenha um estado legado correspondente para máxima compatibilidade.
+                   </p>
+                </div>
+             </div>
           </div>
         </div>
+
+        {/* Dialogs */}
+        <AlertDialog open={!!columnToDelete} onOpenChange={() => setColumnToDelete(null)}>
+           <AlertDialogContent className="glass">
+              <AlertDialogHeader>
+                 <AlertDialogTitle className="font-black uppercase tracking-tight italic">Excluir Coluna?</AlertDialogTitle>
+                 <AlertDialogDescription className="font-bold">
+                    Isso removerá a coluna "{columnToDelete?.title}". Cards nesta coluna podem ficar órfãos ou precisar de realocação manual.
+                 </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                 <AlertDialogCancel className="rounded-xl font-bold uppercase tracking-widest text-xs">Cancelar</AlertDialogCancel>
+                 <AlertDialogAction 
+                    className="bg-rose-500 hover:bg-rose-600 rounded-xl font-bold uppercase tracking-widest text-xs"
+                    onClick={() => columnToDelete && removeColumn.mutate(columnToDelete.id)}
+                 >
+                    Confirmar Exclusão
+                 </AlertDialogAction>
+              </AlertDialogFooter>
+           </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={!!pipelineToDelete} onOpenChange={() => setPipelineToDelete(null)}>
+           <AlertDialogContent className="glass">
+              <AlertDialogHeader>
+                 <AlertDialogTitle className="font-black uppercase tracking-tight italic text-rose-500">EXCLUIR TODO O PIPELINE?</AlertDialogTitle>
+                 <AlertDialogDescription className="font-bold">
+                    ESTA AÇÃO É IRREVERSÍVEL. Todos os dados de configuração deste fluxo serão perdidos. Cards vinculados a este fluxo precisarão ser realocados.
+                 </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                 <AlertDialogCancel className="rounded-xl font-bold uppercase tracking-widest text-xs">Cancelar</AlertDialogCancel>
+                 <AlertDialogAction 
+                    className="bg-rose-500 hover:bg-rose-600 rounded-xl font-bold uppercase tracking-widest text-xs"
+                    onClick={() => {
+                      deletePipeline.mutate(pipelineId, {
+                        onSuccess: () => window.location.href = "/crm/pipelines"
+                      })
+                    }}
+                 >
+                    SIM, EXCLUIR DEFINITIVAMENTE
+                 </AlertDialogAction>
+              </AlertDialogFooter>
+           </AlertDialogContent>
+        </AlertDialog>
       </div>
     </ModuleGuard>
   )

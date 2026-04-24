@@ -451,18 +451,24 @@ class DealSerializer(serializers.ModelSerializer):
                 attrs["column"] = column
 
         if legacy_stage is None and column is not None:
+            # Recuperação crítica: garante que o deal tenha um Stage legado associado (exigido pelo DB)
             legacy_stage = getattr(column, "legacy_stage", None)
             if legacy_stage is None:
-                # Recuperação crítica: tenta encontrar um Stage com o mesmo nome na pipeline ou cria um
+                # Tenta encontrar um Stage com o mesmo nome na pipeline ou cria um novo para manter a integridade
                 from .models import Stage
-                legacy_stage = Stage.objects.filter(pipeline=column.pipeline, name=column.title).first()
+                # Usamos all_objects para garantir que não sejamos limitados por filtros de tenant se o contexto estiver instável
+                legacy_stage = Stage.all_objects.filter(pipeline=column.pipeline, name=column.title).first()
                 if not legacy_stage:
+                    # Se não existir, criamos. Usamos o company do column para garantir consistência
+                    target_company = column.company if hasattr(column, 'company') else company
                     legacy_stage = Stage.objects.create(
-                        company=column.company,
+                        company=target_company,
                         pipeline=column.pipeline,
                         name=column.title,
                         order=column.order
                     )
+                
+                # Vincula de volta à coluna para futuras referências
                 column.legacy_stage = legacy_stage
                 column.save(update_fields=["legacy_stage"])
             

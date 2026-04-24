@@ -233,11 +233,11 @@ export function PipelinesHub({ autoRedirect = false }: { autoRedirect?: boolean 
               </Select>
 
               {canManagePipelines && (
-                <PipelineManagerModal>
-                    <Button className="h-12 md:h-14 px-6 md:px-10 bg-primary hover:bg-white hover:text-primary text-white rounded-xl md:rounded-2xl font-black text-[11px] md:text-[12px] tracking-[0.1em] transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase">
-                      NOVO PIPELINE
-                    </Button>
-                </PipelineManagerModal>
+                <Link href="/crm/pipelines/new">
+                  <Button className="h-12 md:h-14 px-6 md:px-10 bg-primary hover:bg-white hover:text-primary text-white rounded-xl md:rounded-2xl font-black text-[11px] md:text-[12px] tracking-[0.1em] transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase">
+                    NOVO PIPELINE
+                  </Button>
+                </Link>
               )}
             </div>
           </div>
@@ -387,11 +387,11 @@ export function PipelinesHub({ autoRedirect = false }: { autoRedirect?: boolean 
                 <p className="text-slate-500 font-medium">Refine sua busca ou crie uma nova estrutura ITIL agora mesmo.</p>
              </div>
              {canManagePipelines && (
-                <PipelineManagerModal>
+                <Link href="/crm/pipelines/new">
                     <Button variant="outline" className="h-14 px-10 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-primary hover:text-white transition-all">
                       Iniciar Novo Processo
                     </Button>
-                </PipelineManagerModal>
+                </Link>
              )}
           </div>
         )}

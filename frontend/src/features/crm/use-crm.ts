@@ -792,8 +792,42 @@ export function useCRM() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm-deals'] })
-      queryClient.invalidateQueries({ queryKey: ['calendar-events'] }) // Sincronização!
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
       toast.success("Card criado com sucesso!")
+    }
+  })
+
+  const createPipeline = useMutation({
+    mutationFn: async (payload: { name: string; visibility: "company" | "group"; groups: number[] }) => {
+      const response = await api.post<Pipeline>("/api/crm/pipelines/", payload)
+      return response.data
+    },
+    onSuccess: (pipeline) => {
+      queryClient.invalidateQueries({ queryKey: ['crm-pipelines'] })
+      toast.success(`Pipeline "${pipeline.name}" criado!`)
+    }
+  })
+
+  const updatePipeline = useMutation({
+    mutationFn: async (payload: { id: number; name: string; visibility: "company" | "group"; groups: number[] }) => {
+      const response = await api.patch<Pipeline>(`/api/crm/pipelines/${payload.id}/`, payload)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm-pipelines'] })
+      toast.success("Pipeline atualizado!")
+    }
+  })
+
+  const deletePipeline = useMutation({
+    mutationFn: async (pipelineId: number) => {
+      await api.delete(`/api/crm/pipelines/${pipelineId}/`)
+      return pipelineId
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm-pipelines'] })
+      queryClient.invalidateQueries({ queryKey: ['crm-deals'] })
+      toast.success("Pipeline removido.")
     }
   })
 
@@ -1005,7 +1039,10 @@ export function useCRM() {
     addDealAttachment,
     deleteDealAttachment,
     startSwarm,
-    endSwarm
+    endSwarm,
+    createPipeline,
+    updatePipeline,
+    deletePipeline
   }
 }
 
