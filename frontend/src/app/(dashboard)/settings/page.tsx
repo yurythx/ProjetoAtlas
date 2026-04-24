@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Protected } from "@/components/auth/protected"
 import dynamic from "next/dynamic"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useModules } from "@/hooks/use-modules"
 
 const CompanyForm = dynamic(
   () => import("@/features/settings/company-form").then((m) => m.CompanyForm),
@@ -84,6 +85,7 @@ const IntegrationSettings = dynamic(
 function SettingsContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
+    const { isModuleActive } = useModules()
     const tabParam = searchParams.get("tab")
     const allowedTabs = useMemo(() => new Set(["company", "branding", "email", "webhooks", "integrations"]), [])
     const [activeTab, setActiveTab] = useState("company")
@@ -151,15 +153,17 @@ function SettingsContent() {
               </TabsTrigger>
             </Protected>
 
-            <Protected requireStaff>
-              <TabsTrigger
-                value="integrations"
-                className="w-full md:flex-1 justify-start md:justify-center gap-3 px-4 py-3 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary transition-all font-medium"
-              >
-                <PlugZap className="h-4 w-4" aria-hidden="true" />
-                Integrações
-              </TabsTrigger>
-            </Protected>
+            {isModuleActive("crm") && (
+              <Protected requireStaff>
+                <TabsTrigger
+                  value="integrations"
+                  className="w-full md:flex-1 justify-start md:justify-center gap-3 px-4 py-3 rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary transition-all font-medium"
+                >
+                  <PlugZap className="h-4 w-4" aria-hidden="true" />
+                  Integrações
+                </TabsTrigger>
+              </Protected>
+            )}
           </TabsList>
         </div>
 

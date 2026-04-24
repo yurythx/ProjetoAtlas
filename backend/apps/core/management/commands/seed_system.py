@@ -277,6 +277,7 @@ class Command(BaseCommand):
             {"code": "messenger", "name": "Mensagens", "description": "Chat interno"},
             {"code": "crm", "name": "CRM", "description": "Gestão de leads e chamados"},
             {"code": "media", "name": "Mídia", "description": "Biblioteca de arquivos e uploads"},
+            {"code": "ai", "name": "Inteligência Artificial", "description": "IA Generativa, RAG e AIOps (ITIL v5)"},
         ]
 
         for mod_data in modules_data:

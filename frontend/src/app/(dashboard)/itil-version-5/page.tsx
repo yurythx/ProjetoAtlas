@@ -26,9 +26,11 @@ import {
   Fingerprint,
   Radio,
   Globe,
-  Waves
+  Waves,
+  Lock
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ModuleGuard } from "@/components/module-guard"
 
 export default function ITILVersion5Page() {
   const [activeModule, setActiveModule] = useState<string | null>(null)
@@ -413,6 +415,14 @@ export default function ITILVersion5Page() {
         </div>
       </motion.div>
     </div>
+  )
+}
+
+export default function Page() {
+  return (
+    <ModuleGuard moduleCode="academy">
+      <ITILVersion5Page />
+    </ModuleGuard>
   )
 }
 

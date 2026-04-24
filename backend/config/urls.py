@@ -32,6 +32,7 @@ urlpatterns = [
     path("api/crm/", include("apps.crm.urls")),
     path("api/service-catalog/", include("apps.service_catalog.urls")),
     path("api/cmdb/", include("apps.cmdb.urls")),
+    path("api/ai/", include("apps.ai.urls")),
     path("api/v1/integration/sync-card/", IntegrationSyncCardAPIView.as_view(), name="crm-sync-card"),
     path("api/v1/integration/glpi/tickets/", IntegrationGLPITicketWebhookAPIView.as_view(), name="crm-glpi-ticket-webhook"),
     # Documentation

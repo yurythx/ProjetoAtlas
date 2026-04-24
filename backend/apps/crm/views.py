@@ -532,6 +532,22 @@ class DealViewSet(viewsets.ModelViewSet):
             return False
         return TenantModule.all_objects.filter(company=company, module__code="messenger", is_active=True).exists()
 
+    def _ensure_articles_module_enabled(self, request):
+        if getattr(request.user, "is_superuser", False):
+            return True
+        company = getattr(request, "company", None)
+        if not company:
+            return False
+        return TenantModule.all_objects.filter(company=company, module__code="articles", is_active=True).exists()
+
+    def _ensure_cmdb_module_enabled(self, request):
+        if getattr(request.user, "is_superuser", False):
+            return True
+        company = getattr(request, "company", None)
+        if not company:
+            return False
+        return TenantModule.all_objects.filter(company=company, module__code="cmdb", is_active=True).exists()
+
     @staticmethod
     def _extract_mentions(text: str):
         import re
@@ -999,47 +1015,12 @@ class DealViewSet(viewsets.ModelViewSet):
 
         return Response(DealSerializer(deal, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=["get"], url_path="kb-suggestions")
-    def kb_suggestions(self, request, pk=None):
-        """
-        Sugere artigos da base de conhecimento (Knowledge Base) usando IA (RAG).
-        """
-        deal = self.get_object()
-        from apps.articles.models import Article
-        from django.db.models import Q
-        
-        # 1. Busca básica por similaridade de texto
-        articles = Article.objects.filter(
-            company=deal.company,
-            status=Article.STATUS_PUBLISHED
-        ).filter(
-            Q(title__icontains=deal.title[:30]) | 
-            Q(content__icontains=deal.title[:30])
-        )[:3]
-
-        if not articles:
-            return Response({"suggestions": [], "ai_summary": "Nenhum artigo relevante encontrado na base."})
-
-        # 2. IA gera o resumo e recomendações
-        ai_summary = (
-            f"A IA analisou {len(articles)} artigos relacionados. "
-            "Recomendamos verificar o procedimento padrão descrito no artigo de maior relevância."
-        )
-
-        return Response({
-            "suggestions": [
-                {
-                    "id": a.id,
-                    "title": a.title,
-                    "slug": a.slug,
-                    "excerpt": a.excerpt or a.content[:150] + "..."
-                } for a in articles
-            ],
-            "ai_summary": ai_summary
-        })
 
     @action(detail=True, methods=["get"])
     def topology(self, request, pk=None):
+        if not self._ensure_cmdb_module_enabled(request):
+            return Response({"nodes": [], "links": [], "detail": "Módulo CMDB inativo."}, status=status.HTTP_403_FORBIDDEN)
+
         deal = self.get_object()
         from apps.cmdb.models import CI, CIRelationship
         

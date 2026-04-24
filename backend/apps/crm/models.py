@@ -433,11 +433,12 @@ class Deal(BaseTenantModel):
 
         # --- Gatilhos ITIL Version 5 (Assíncronos via Celery) ---
         from django.db import transaction
-        from .tasks import analyze_deal_with_ai, orchestrate_swarming, send_xla_whatsapp_poll
+        from apps.ai.tasks import analyze_deal_ai_metadata
+        from .tasks import orchestrate_swarming, send_xla_whatsapp_poll
 
         # 1. Triagem Inteligente (IA) na criação
         if is_new:
-            transaction.on_commit(lambda: analyze_deal_with_ai.delay(self.id))
+            transaction.on_commit(lambda: analyze_deal_ai_metadata.delay(self.id))
 
         # 2. Orquestração de Swarming para Urgências
         if self.priority == "URGENT" and (is_new or (old_instance and old_instance.priority != "URGENT")):

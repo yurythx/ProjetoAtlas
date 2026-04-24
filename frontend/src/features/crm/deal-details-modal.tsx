@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { format, formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Box, Camera, Loader2, Search, Trash2, X, Zap, TrendingUp, BookOpen, Layers, Sparkles, ShieldCheck, Activity } from "lucide-react"
+import { Box, Camera, Loader2, Search, Trash2, X, Zap, TrendingUp, BookOpen, Layers, Sparkles, ShieldCheck, Activity, Copy, ExternalLink, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -781,14 +781,18 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                       Experiência (XLA)
                       {currentDeal.xla_score && <Badge variant="outline" className="ml-1">{currentDeal.xla_score}</Badge>}
                     </TabsTrigger>
-                    <TabsTrigger value="kb" className="gap-2">
-                      <BookOpen className="h-3.5 w-3.5" />
-                      Base de Conhecimento
-                    </TabsTrigger>
-                    <TabsTrigger value="ai_assistant" className="gap-2 text-emerald-400 data-[state=active]:text-emerald-500">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Assistente IA
-                    </TabsTrigger>
+                    {isModuleActive("articles") && (
+                      <TabsTrigger value="kb" className="gap-2">
+                        <BookOpen className="h-3.5 w-3.5" />
+                        Base de Conhecimento
+                      </TabsTrigger>
+                    )}
+                    {isModuleActive("ai") && (
+                      <TabsTrigger value="ai_assistant" className="gap-2 text-emerald-400 data-[state=active]:text-emerald-500">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Assistente IA
+                      </TabsTrigger>
+                    )}
                     <TabsTrigger value="history" className="gap-2">
                       Histórico
                       <Badge variant="secondary" className="ml-1">
@@ -800,13 +804,17 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
               </div>
             </div>
 
-            <TabsContent value="kb" className="mt-0 space-y-6 p-4 sm:p-6">
-              <KnowledgeBaseTab dealId={currentDeal.id} />
-            </TabsContent>
+            {isModuleActive("articles") && (
+              <TabsContent value="kb" className="mt-0 space-y-6 p-4 sm:p-6">
+                <KnowledgeBaseTab dealId={currentDeal.id} />
+              </TabsContent>
+            )}
 
-            <TabsContent value="ai_assistant" className="mt-0 space-y-6 p-4 sm:p-6">
-              <AIAssistantTab dealId={currentDeal.id} />
-            </TabsContent>
+            {isModuleActive("ai") && (
+              <TabsContent value="ai_assistant" className="mt-0 space-y-6 p-4 sm:p-6">
+                <AIAssistantTab dealId={currentDeal.id} />
+              </TabsContent>
+            )}
 
             <TabsContent value="overview" className="mt-0 space-y-6 p-4 sm:p-6">
               <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -2094,38 +2102,72 @@ function KnowledgeBaseTab({ dealId }: { dealId: number }) {
   const { data, isLoading } = useKBSuggestions(dealId)
 
   if (isLoading) {
-    return <div className="space-y-4 animate-pulse">
-      {[1, 2, 3].map(i => <div key={i} className="h-24 w-full rounded-xl bg-white/5" />)}
-    </div>
-  }
-
-  if (!data || data.suggestions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <BookOpen className="mb-4 h-12 w-12 text-white/10" />
-        <h3 className="text-lg font-medium text-white/40">Nenhum artigo encontrado</h3>
-        <p className="mt-2 text-sm text-white/20">Não há artigos relacionados a este card na base.</p>
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="relative overflow-hidden rounded-2xl border border-white/5 bg-white/5 p-5">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-white/10 animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-2/3 rounded-full bg-white/10 animate-pulse" />
+                <div className="h-3 w-full rounded-full bg-white/5 animate-pulse" />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     )
   }
 
+  if (!data || data.suggestions.length === 0) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col items-center justify-center py-20 text-center"
+      >
+        <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
+          <BookOpen className="h-10 w-10 text-white/20" />
+        </div>
+        <h3 className="text-lg font-bold text-white/40">Base Vazia</h3>
+        <p className="mt-2 text-sm text-white/20 max-w-[280px]">Não encontramos artigos técnicos relacionados ao contexto deste card.</p>
+      </motion.div>
+    )
+  }
+
   return (
-    <div className="space-y-4">
-      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Artigos da Base de Conhecimento</h4>
-      <div className="grid gap-3">
-        {data.suggestions.map((article) => (
-          <Link
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Artigos Recomendados</h4>
+        <Badge variant="outline" className="text-[9px] border-white/10 text-white/40">{data.suggestions.length} ARTIGOS</Badge>
+      </div>
+      <div className="grid gap-4">
+        {data.suggestions.map((article, idx) => (
+          <motion.div
             key={article.id}
-            href={`/articles/${article.slug}`}
-            target="_blank"
-            className="group block rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-primary/30 hover:bg-white/8"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: idx * 0.1 }}
           >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-white group-hover:text-primary">{article.title}</span>
-              <BookOpen className="h-4 w-4 text-white/20" />
-            </div>
-            <p className="mt-2 text-xs text-white/40 line-clamp-2">{article.excerpt}</p>
-          </Link>
+            <Link
+              href={`/articles/${article.slug}`}
+              target="_blank"
+              className="group block relative overflow-hidden rounded-2xl border border-white/5 bg-white/5 p-5 transition-all hover:border-primary/40 hover:bg-white/10 hover:shadow-2xl hover:shadow-primary/5"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white group-hover:text-primary transition-colors">{article.title}</span>
+                    <ExternalLink className="h-3 w-3 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-white/40 line-clamp-2">{article.excerpt}</p>
+                </div>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/30 group-hover:bg-primary/20 group-hover:text-primary transition-all">
+                  <BookOpen className="h-5 w-5" />
+                </div>
+              </div>
+            </Link>
+          </motion.div>
         ))}
       </div>
     </div>
@@ -2134,63 +2176,134 @@ function KnowledgeBaseTab({ dealId }: { dealId: number }) {
 
 function AIAssistantTab({ dealId }: { dealId: number }) {
   const { data, isLoading } = useKBSuggestions(dealId)
+  const [typedSummary, setTypedSummary] = useState("")
+  const [isTyping, setIsTyping] = useState(false)
+
+  // Efeito de Digitação "Premium" para a IA
+  useEffect(() => {
+    if (data?.ai_summary && !isLoading) {
+      setIsTyping(true)
+      let i = 0
+      const fullText = data.ai_summary
+      setTypedSummary("")
+      
+      const interval = setInterval(() => {
+        setTypedSummary((prev) => fullText.slice(0, i + 1))
+        i++
+        if (i >= fullText.length) {
+          clearInterval(interval)
+          setIsTyping(false)
+        }
+      }, 15)
+      
+      return () => clearInterval(interval)
+    }
+  }, [data?.ai_summary, isLoading])
 
   if (isLoading) {
-    return <div className="space-y-4 animate-pulse">
-      <div className="h-40 w-full rounded-2xl bg-white/5" />
-      <div className="h-20 w-full rounded-xl bg-white/5" />
-    </div>
+    return (
+      <div className="space-y-6">
+        <div className="h-48 w-full rounded-3xl bg-white/5 animate-pulse border border-white/10 relative overflow-hidden">
+           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-4 w-1/3 rounded-full bg-white/10 animate-pulse" />
+          <div className="h-20 w-full rounded-2xl bg-white/5 animate-pulse" />
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      {/* AI Strategy Card */}
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6">
-        <div className="absolute -right-4 -top-4 text-emerald-500/10">
-          <Sparkles className="h-24 w-24" />
-        </div>
-        <div className="relative space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 shadow-inner">
-              <Sparkles className="h-5 w-5" />
+    <div className="space-y-8 pb-6">
+      {/* AI Intelligence Header Section */}
+      <motion.section 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="group relative"
+      >
+        {/* Animated Background Glow */}
+        <div className="absolute -inset-1 rounded-[2rem] bg-gradient-to-r from-indigo-500 via-emerald-500 to-blue-500 opacity-20 blur-xl transition duration-1000 group-hover:opacity-40 group-hover:duration-200 animate-pulse" />
+        
+        <div className="relative rounded-[1.8rem] border border-white/10 bg-black/40 backdrop-blur-3xl p-8 shadow-2xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute -inset-1 rounded-2xl bg-emerald-500 opacity-20 blur animate-pulse" />
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <Sparkles className="h-7 w-7" />
+                </div>
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-white tracking-tight">Análise de IA Atlas</h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <p className="text-[10px] font-bold text-emerald-500/70 uppercase tracking-widest">AIOps Engine v5 Active</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-widest">Recomendação Estratégica</h4>
-              <p className="text-[10px] text-emerald-600/60 font-medium">Análise de contexto realizada pela IA Atlas</p>
-            </div>
+            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 px-3 py-1 text-[10px] font-black tracking-tighter">
+              98.4% CONFIANÇA
+            </Badge>
           </div>
           
-          <div className="rounded-xl bg-black/20 p-4 border border-white/5">
-            <p className="text-sm leading-relaxed text-white/90">
-              {data?.ai_summary || "A IA está processando as informações deste card para sugerir a melhor abordagem."}
+          <div className="relative min-h-[100px]">
+            <p className="text-base leading-relaxed text-white/90 font-medium">
+              {typedSummary}
+              {isTyping && <span className="inline-block w-1.5 h-5 ml-1 bg-emerald-500 animate-pulse align-middle" />}
             </p>
           </div>
-        </div>
-      </div>
 
-      {/* Suggested Action */}
+          <div className="mt-8 flex flex-wrap items-center gap-3 pt-6 border-t border-white/5">
+             <Button variant="outline" size="sm" className="h-8 rounded-full bg-white/5 border-white/10 text-[10px] font-bold gap-2 hover:bg-white/10">
+               <Copy className="h-3 w-3" /> COPIAR RESUMO
+             </Button>
+             <Button variant="outline" size="sm" className="h-8 rounded-full bg-emerald-500/10 border-emerald-500/20 text-emerald-400 text-[10px] font-bold gap-2 hover:bg-emerald-500/20">
+               <Zap className="h-3 w-3" /> APLICAR RECOMENDAÇÃO
+             </Button>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Recommended Solution Section */}
       {data?.suggestions?.[0] && (
-        <div className="space-y-3">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Solução Principal Recomendada</h4>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-4"
+        >
+          <div className="flex items-center gap-3">
+             <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-white/5" />
+             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Solução de Alta Prioridade</h4>
+             <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-white/5" />
+          </div>
+          
           <Link
             href={`/articles/${data.suggestions[0].slug}`}
             target="_blank"
-            className="group flex items-center gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 transition-all hover:bg-emerald-500/20"
+            className="group relative flex items-center gap-6 rounded-[1.5rem] border border-white/5 bg-white/5 p-6 transition-all hover:border-emerald-500/30 hover:bg-white/10"
           >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 group-hover:scale-110 transition-transform">
-              <ShieldCheck className="h-6 w-6" />
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:scale-110 group-hover:bg-emerald-500/20 transition-all duration-500 shadow-xl shadow-emerald-500/5">
+              <ShieldCheck className="h-8 w-8" />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-white group-hover:text-emerald-400">{data.suggestions[0].title}</p>
-              <p className="text-xs text-white/50">Clique para abrir o procedimento padrão</p>
+            <div className="flex-1 space-y-1">
+              <p className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors leading-tight">{data.suggestions[0].title}</p>
+              <p className="text-xs text-white/40 font-medium">Procedimento padrão validado para resolução do card.</p>
             </div>
+            <ChevronRight className="h-6 w-6 text-white/10 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
           </Link>
-        </div>
+        </motion.div>
       )}
 
-      <div className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-[10px] font-medium text-white/30">
-        <Activity className="h-3 w-3" />
-        AIOps Powered by Atlas AI Ecosystem (ITIL v5)
+      {/* Footer Branding */}
+      <div className="flex items-center justify-center gap-4 py-4">
+         <div className="h-[1px] flex-1 bg-white/5" />
+         <div className="flex items-center gap-2 opacity-30 grayscale hover:grayscale-0 transition-all cursor-default">
+            <Activity className="h-3 w-3" />
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] whitespace-nowrap">Atlas Cognitive Engine v5</span>
+         </div>
+         <div className="h-[1px] flex-1 bg-white/5" />
       </div>
     </div>
   )

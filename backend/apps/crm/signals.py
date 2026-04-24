@@ -336,7 +336,7 @@ def trigger_ai_analysis(sender, instance, created, **kwargs):
     ITIL Version 5: Dispara a análise de IA em background para atualizar 
     o score de risco e metadados de governança.
     """
-    from .tasks import analyze_deal_ai_metadata
+    from apps.ai.tasks import analyze_deal_ai_metadata
     
     # Executa a tarefa de forma assíncrona (Celery)
     transaction.on_commit(lambda: analyze_deal_ai_metadata.delay(instance.id))

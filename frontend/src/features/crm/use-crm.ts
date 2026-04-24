@@ -771,7 +771,7 @@ export function useKBSuggestions(dealId: number | null) {
     queryKey: ["crm-deal-kb-suggestions", dealId],
     queryFn: async () => {
       if (!dealId) return { suggestions: [], ai_summary: "" }
-      const res = await api.get(`/api/crm/deals/${dealId}/kb-suggestions/`)
+      const res = await api.get(`/api/ai/kb-suggestions/${dealId}/`)
       return res.data
     },
     enabled: !!dealId,

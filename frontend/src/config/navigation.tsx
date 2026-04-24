@@ -76,6 +76,7 @@ export const SIDEBAR_CONFIG: NavSection[] = [
         title: "Atlas Academy",
         href: "/itil-version-5",
         icon: FileText,
+        module: "academy",
       },
       {
         title: "Processos",
@@ -165,7 +166,7 @@ export const SIDEBAR_CONFIG: NavSection[] = [
 export const HEADER_NAV_ITEMS: NavItem[] = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { title: "Service Desk", href: "/crm", icon: Headset, module: "crm" },
-  { title: "Academy", href: "/itil-version-5", icon: FileText },
+  { title: "Academy", href: "/itil-version-5", icon: FileText, module: "academy" },
   { title: "Analytics", href: "/crm/analytics", icon: TrendingUp, module: "crm" },
   { title: "Artigos", href: "/artigos", icon: FileText, module: "articles" },
 ]

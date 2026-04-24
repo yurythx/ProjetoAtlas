@@ -72,7 +72,8 @@ def orchestrate_swarming(self, deal_id):
     Deal = apps.get_model("crm", "Deal")
     Swarm = apps.get_model("crm", "Swarm")
     EvolutionConfig = apps.get_model("crm", "EvolutionConfig")
-    User = apps.get_user_model()
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
     from .integrations import EvolutionClient
 
     try:
@@ -114,41 +115,6 @@ def orchestrate_swarming(self, deal_id):
         logger.warning(f"Failed to orchestrate swarming for {deal_id} (Attempt {self.request.retries + 1}): {e}")
         raise self.retry(exc=e, countdown=60 * (2**self.request.retries))
 
-@shared_task
-def analyze_deal_with_ai(deal_id):
-    """
-    Realiza a triagem inteligente (AIOps) do card usando IA (ITIL v5).
-    """
-    from django.conf import settings
-    Deal = apps.get_model("crm", "Deal")
-    
-    try:
-        deal = Deal.all_objects.get(id=deal_id)
-        if not deal.description or len(deal.description) < 10:
-            return "description_too_short"
-
-        # Mock de integração com IA (Pode ser expandido para chamar Gemini/OpenAI real)
-        # O objetivo aqui é sugerir categoria, impacto e urgência.
-        
-        prompt = f"Analise este ticket de TI: {deal.title}\n{deal.description}"
-        
-        # Simulação de resposta da IA
-        ai_suggestion = {
-            "suggested_record_type": "incident" if "erro" in deal.description.lower() else "service_request",
-            "suggested_priority": "HIGH" if "urgente" in deal.description.lower() else "MEDIUM",
-            "confidence_score": 0.85,
-            "itil_v5_category": "Standard Operation",
-            "summary": "IA detectou um possível incidente de hardware."
-        }
-        
-        deal.ai_metadata = ai_suggestion
-        deal.save(update_fields=["ai_metadata"])
-        
-        return f"AI Analysis complete for deal {deal_id}"
-        
-    except Exception as e:
-        logger.error(f"Error in AI Triage for deal {deal_id}: {str(e)}")
-        return str(e)
 
 @shared_task
 def check_integrations_health(company_id):

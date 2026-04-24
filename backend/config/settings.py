@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "apps.crm",
     "apps.service_catalog",
     "apps.cmdb",
+    "apps.ai",
 ]
 
 MIDDLEWARE = [
