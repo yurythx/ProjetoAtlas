@@ -389,7 +389,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         try:
             target_user = User.objects.get(username=target_username, company=request.company)
         except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         from django.db.models import Count
 

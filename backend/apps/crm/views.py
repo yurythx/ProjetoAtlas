@@ -919,14 +919,15 @@ class DealViewSet(viewsets.ModelViewSet):
                 old_value={"column": prev_name},
                 new_value={"column": next_name},
             )
-            Notification.objects.create(
-                recipient=updated_deal.owner,
-                company=updated_deal.company,
-                title="Card Movimentado",
-                message=f"O card '{updated_deal.title}' foi movido para a coluna {next_name}.",
-                notification_type=Notification.TYPE_SYSTEM,
-                metadata={"deal_uuid": str(updated_deal.uuid)},
-            )
+            if updated_deal.owner:
+                Notification.objects.create(
+                    recipient=updated_deal.owner,
+                    company=updated_deal.company,
+                    title="Card Movimentado",
+                    message=f"O card '{updated_deal.title}' foi movido para a coluna {next_name}.",
+                    notification_type=Notification.TYPE_SYSTEM,
+                    metadata={"deal_uuid": str(updated_deal.uuid)},
+                )
 
         if previous_column != next_column and next_column is not None:
             send_column_change_webhook(updated_deal, previous_column, next_column)

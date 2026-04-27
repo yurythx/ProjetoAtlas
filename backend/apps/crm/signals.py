@@ -136,14 +136,15 @@ def sync_deal_with_calendar(sender, instance, created, **kwargs):
             description=f"Card criado na coluna '{column_name}'.",
             new_value={"column": column_name}
         )
-        Notification.objects.create(
-            recipient=instance.owner,
-            company=instance.company,
-            title="Novo Card Criado",
-            message=f"O card '{instance.title}' foi adicionado à coluna '{column_name}'.",
-            notification_type=Notification.TYPE_SYSTEM,
-            metadata={"deal_uuid": str(instance.uuid)},
-        )
+        if instance.owner:
+            Notification.objects.create(
+                recipient=instance.owner,
+                company=instance.company,
+                title="Novo Card Criado",
+                message=f"O card '{instance.title}' foi adicionado à coluna '{column_name}'.",
+                notification_type=Notification.TYPE_SYSTEM,
+                metadata={"deal_uuid": str(instance.uuid)},
+            )
     elif set(["stage", "column", "column_id"]) & set(kwargs.get("update_fields") or []):
         current_column = (getattr(instance.stage, "column", None) if instance.stage_id else None) or instance.column
         column_name = current_column.title if current_column else (instance.stage.name if instance.stage_id else "sem coluna")
