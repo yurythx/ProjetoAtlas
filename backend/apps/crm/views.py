@@ -907,20 +907,23 @@ class DealViewSet(viewsets.ModelViewSet):
         )
 
         if previous_legacy_stage != next_legacy_stage:
+            prev_name = previous_legacy_stage.name if previous_legacy_stage else "sem coluna"
+            next_name = next_legacy_stage.name if next_legacy_stage else "sem coluna"
+            
             DealActivity.objects.create(
                 company=updated_deal.company,
                 deal=updated_deal,
                 actor=user if getattr(user, "is_authenticated", False) else updated_deal.owner,
                 activity_type="column_change",
-                description=f"Card movido da coluna {previous_legacy_stage.name} para {next_legacy_stage.name}.",
-                old_value={"column": previous_legacy_stage.name},
-                new_value={"column": next_legacy_stage.name},
+                description=f"Card movido da coluna {prev_name} para {next_name}.",
+                old_value={"column": prev_name},
+                new_value={"column": next_name},
             )
             Notification.objects.create(
                 recipient=updated_deal.owner,
                 company=updated_deal.company,
                 title="Card Movimentado",
-                message=f"O card '{updated_deal.title}' foi movido para a coluna {next_legacy_stage.name}.",
+                message=f"O card '{updated_deal.title}' foi movido para a coluna {next_name}.",
                 notification_type=Notification.TYPE_SYSTEM,
                 metadata={"deal_uuid": str(updated_deal.uuid)},
             )
@@ -930,8 +933,14 @@ class DealViewSet(viewsets.ModelViewSet):
 
         if previous_owner != next_owner:
             actor = user if getattr(user, "is_authenticated", False) else updated_deal.owner
-            previous_owner_name = previous_owner.get_full_name().strip() or previous_owner.username
-            next_owner_name = next_owner.get_full_name().strip() or next_owner.username
+            
+            def get_user_display_name(u):
+                if not u: return "Sem responsável"
+                full_name = (u.get_full_name() or "").strip()
+                return full_name or u.username
+
+            previous_owner_name = get_user_display_name(previous_owner)
+            next_owner_name = get_user_display_name(next_owner)
 
             DealActivity.objects.create(
                 company=updated_deal.company,
@@ -942,14 +951,15 @@ class DealViewSet(viewsets.ModelViewSet):
                 old_value={"owner": previous_owner_name},
                 new_value={"owner": next_owner_name},
             )
-            Notification.objects.create(
-                recipient=next_owner,
-                company=updated_deal.company,
-                title="Card Atribuído",
-                message=f"Você agora é o responsável pelo card '{updated_deal.title}'.",
-                notification_type=Notification.TYPE_SYSTEM,
-                metadata={"deal_uuid": str(updated_deal.uuid)},
-            )
+            if next_owner:
+                Notification.objects.create(
+                    recipient=next_owner,
+                    company=updated_deal.company,
+                    title="Card Atribuído",
+                    message=f"Você agora é o responsável pelo card '{updated_deal.title}'.",
+                    notification_type=Notification.TYPE_SYSTEM,
+                    metadata={"deal_uuid": str(updated_deal.uuid)},
+                )
 
     @action(detail=True, methods=["post"], url_path="notes")
     def add_note(self, request, pk=None):
@@ -1038,7 +1048,7 @@ class DealViewSet(viewsets.ModelViewSet):
                 "id": f"ci-{ci.id}", 
                 "label": ci.name, 
                 "type": "ci", 
-                "kind": ci.ci_type.name,
+                "kind": ci.ci_type.name if ci.ci_type else "General",
                 "status": ci.status
             })
             links.append({"source": f"deal-{deal.id}", "target": f"ci-{ci.id}", "label": "afeta"})
@@ -1059,7 +1069,7 @@ class DealViewSet(viewsets.ModelViewSet):
                         "id": node_id, 
                         "label": ci_node.name, 
                         "type": "ci", 
-                        "kind": ci_node.ci_type.name,
+                        "kind": ci_node.ci_type.name if ci_node.ci_type else "General",
                         "status": ci_node.status
                     })
             

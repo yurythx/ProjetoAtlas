@@ -91,7 +91,7 @@ def sync_deal_with_calendar(sender, instance, created, **kwargs):
                 "title": f"[{instance.priority}] {instance.title}",
                 "description": (
                     f"CRM: {instance.description or ''}\n"
-                    f"Cliente: {instance.contact.name}\n"
+                    f"Cliente: {instance.contact.name if instance.contact_id else 'Sem contato'}\n"
                     f"Agendamento: {instance.data_agendamento.isoformat() if instance.data_agendamento else '-'}\n"
                     f"Prazo (SLA): {instance.closing_date.isoformat() if instance.closing_date else '-'}\n"
                     f"Link: /crm?dealId={instance.id}"
@@ -127,8 +127,8 @@ def sync_deal_with_calendar(sender, instance, created, **kwargs):
     from .models import DealActivity
 
     if created:
-        current_column = getattr(instance.stage, "column", None) or instance.column
-        column_name = current_column.title if current_column else instance.stage.name
+        current_column = (getattr(instance.stage, "column", None) if instance.stage_id else None) or instance.column
+        column_name = current_column.title if current_column else (instance.stage.name if instance.stage_id else "sem coluna")
         DealActivity.objects.create(
             company=instance.company,
             deal=instance,
@@ -145,8 +145,8 @@ def sync_deal_with_calendar(sender, instance, created, **kwargs):
             metadata={"deal_uuid": str(instance.uuid)},
         )
     elif set(["stage", "column", "column_id"]) & set(kwargs.get("update_fields") or []):
-        current_column = getattr(instance.stage, "column", None) or instance.column
-        column_name = current_column.title if current_column else instance.stage.name
+        current_column = (getattr(instance.stage, "column", None) if instance.stage_id else None) or instance.column
+        column_name = current_column.title if current_column else (instance.stage.name if instance.stage_id else "sem coluna")
         DealActivity.objects.create(
             company=instance.company,
             deal=instance,
