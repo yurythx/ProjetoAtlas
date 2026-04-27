@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { format, formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Box, Camera, Loader2, Search, Trash2, X, Zap, TrendingUp, BookOpen, Layers, Sparkles, ShieldCheck, Activity, Copy, ExternalLink, ChevronRight } from "lucide-react"
+import { Box, Camera, Loader2, Search, Trash2, X, Zap, TrendingUp, BookOpen, Layers, Sparkles, ShieldCheck, Activity, Copy, ExternalLink, ChevronRight, LayoutDashboard, Clock, User, MessageSquareText, BrainCircuit, Headset, Network, History } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -627,40 +627,16 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
             </div>
           </div>
         )}
-        <DialogHeader className="border-b bg-muted/30 px-4 py-4 text-left sm:px-6 sm:py-5">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <DialogHeader className="border-b bg-muted/20 px-6 py-6 text-left shrink-0">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary" className="rounded-full px-3">{selectedColumn?.title || getDealColumnTitle(currentDeal)}</Badge>
-                <Badge variant="outline" className="uppercase font-black text-[9px] tracking-widest border-primary/20 rounded-full px-3">
-                  {draftRecordType === 'service_request' ? 'Requisição' : 
-                   draftRecordType === 'incident' ? 'Incidente' :
-                   draftRecordType === 'problem' ? 'Problema' :
-                   draftRecordType === 'change' ? 'Mudança' : 'Oportunidade'}
-                </Badge>
                 <Badge className={cn(draftPriorityMeta.className, "rounded-full px-3 text-[9px] font-black uppercase tracking-widest")}>{draftPriorityMeta.label}</Badge>
                 <Badge className={cn(deadlineMeta.badgeClassName, "rounded-full px-3 text-[9px] font-black uppercase tracking-widest")}>{deadlineMeta.label}</Badge>
-                {hasChanges && <Badge className="bg-amber-500 text-white border-none rounded-full px-3 text-[9px] font-black uppercase tracking-widest animate-pulse">Editando</Badge>}
-              </div>
-              <DialogTitle className="text-2xl font-semibold">{currentDeal.title}</DialogTitle>
-              <DialogDescription className="sr-only">
-                Detalhes e gestão do card {currentDeal.title}
-              </DialogDescription>
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                <span className="rounded-full bg-background px-3 py-1 text-foreground shadow-sm">
-                  {currentDeal.contact_name}
-                </span>
-                <span className="rounded-full bg-background px-3 py-1 text-foreground shadow-sm">
-                  {ownerUser ? getUserDisplayName(ownerUser) : `Usuário #${currentDeal.owner}`}
-                </span>
-                <span className="text-muted-foreground">
-                  {latestActivity
-                    ? `Última atividade ${formatDistanceToNow(new Date(latestActivity.created_at), { addSuffix: true, locale: ptBR })}`
-                    : "Sem histórico recente"}
-                </span>
                 {currentDeal.sla_status && (
                   <Badge className={cn(
-                    "uppercase font-black px-2 tracking-widest",
+                    "uppercase font-black px-2 tracking-widest rounded-full",
                     currentDeal.sla_status === "breached" ? "bg-red-600 text-white" : 
                     currentDeal.sla_status === "at_risk" ? "bg-amber-500 text-white" : "bg-emerald-600 text-white"
                   )}>
@@ -668,141 +644,149 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                   </Badge>
                 )}
               </div>
+              <DialogTitle className="text-3xl font-black uppercase italic tracking-tighter">{currentDeal.title}</DialogTitle>
+              <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-3 w-3 text-primary" />
+                  </div>
+                  {currentDeal.contact_name}
+                </div>
+                <div className="h-1 w-1 rounded-full bg-slate-300" />
+                <div className="flex items-center gap-2">
+                  <Activity className="h-3.5 w-3.5" />
+                  {latestActivity ? formatDistanceToNow(new Date(latestActivity.created_at), { addSuffix: true, locale: ptBR }) : "Sem atividade"}
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-4 xl:min-w-[320px] xl:items-end justify-center">
-              <div className="hidden sm:block text-right">
-                {currentDeal.closing_date && (
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
-                    SLA Estimado: {format(new Date(currentDeal.closing_date), "dd MMM, yyyy", { locale: ptBR })}
-                  </div>
-                )}
-              </div>
-              
-              <div className="grid gap-2 rounded-2xl border bg-background/40 p-3 xl:min-w-[280px]">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Health & Delivery</span>
-                  <span className={cn("text-xs font-black", draftProgressMeta.barClassName.includes('emerald') ? 'text-emerald-500' : 'text-primary')}>{safeDraftProgress}%</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/5 border border-white/5 shadow-inner">
-                  <div
-                    className={cn("h-full rounded-full transition-all duration-700", draftProgressMeta.barClassName)}
-                    style={{ width: `${safeDraftProgress}%` }}
-                  />
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col items-end gap-1 mr-4">
+                 <div className="flex items-center gap-3 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Progresso</span>
+                    <span className="text-xs font-black text-primary">{safeDraftProgress}%</span>
+                 </div>
+                 <div className="w-32 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                    <div className={cn("h-full transition-all duration-500", draftProgressMeta.barClassName)} style={{ width: `${safeDraftProgress}%` }} />
+                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
-                 {canOpenMessenger ? (
-                  <Button asChild variant="outline" className="gap-1.5 h-10 rounded-xl px-4 font-bold text-xs">
-                    <Link href={`/messenger?conversation=${currentDeal.messenger_conversation}`} target="_blank" rel="noreferrer">
-                      ABRIR CHAT
-                    </Link>
-                  </Button>
-                ) : null}
-
-                {currentDeal.swarm?.is_active ? (
-                  <Button 
-                    variant="destructive"
-                    onClick={() => endSwarm.mutate(currentDeal.id)}
-                    className="gap-2 h-10 rounded-xl px-4 font-bold text-xs bg-red-600 hover:bg-red-700 border-none shadow-lg shadow-red-500/20"
-                  >
-                    <X className="h-4 w-4" />
-                    ENCERRAR SWARM
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={() => startSwarm.mutate(currentDeal.id)}
-                    className="gap-2 h-10 rounded-xl px-4 font-bold text-xs bg-amber-500 hover:bg-amber-600 border-none text-white shadow-lg shadow-amber-500/20"
-                  >
-                    <Zap className="h-4 w-4 fill-white" />
-                    INICIAR SWARM
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={resetDraft}
-                  disabled={!hasChanges || updateDeal.isPending}
+              {currentDeal.swarm?.is_active ? (
+                <Button 
+                  variant="destructive"
+                  onClick={() => endSwarm.mutate(currentDeal.id)}
+                  className="rounded-xl font-black uppercase tracking-widest text-[10px] bg-red-600"
                 >
-                  Descartar
+                  <X className="mr-2 h-4 w-4" /> Finalizar Swarm
                 </Button>
-                <Button onClick={handleSave} disabled={!hasChanges || updateDeal.isPending}>
-                  {updateDeal.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Salvar alterações
+              ) : (
+                <Button 
+                  onClick={() => startSwarm.mutate(currentDeal.id)}
+                  className="rounded-xl font-black uppercase tracking-widest text-[10px] bg-amber-500 text-white"
+                >
+                  <Zap className="mr-2 h-4 w-4 fill-white" /> Swarming
                 </Button>
-              </div>
+              )}
+
+              <Button 
+                onClick={handleSave} 
+                disabled={!hasChanges || updateDeal.isPending}
+                className="rounded-xl font-black uppercase tracking-widest text-[10px] px-6"
+              >
+                {updateDeal.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar"}
+              </Button>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="min-h-0 h-full overflow-y-auto">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="h-full">
-            <div className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-              <div className="px-4 py-3 sm:px-6">
-                <div className="overflow-x-auto">
-                  <TabsList className="w-max">
-                    <TabsTrigger value="details" className="gap-2">
-                      Detalhes
-                    </TabsTrigger>
-                    <TabsTrigger value="images" className="gap-2">
-                      Imagens
-                      <Badge variant="secondary" className="ml-1">
-                        {attachments.length + totalQueuedAttachments + totalPendingUploads}
-                      </Badge>
-                    </TabsTrigger>
-                    <TabsTrigger value="overview" className="gap-2">
-                      Visão geral
-                    </TabsTrigger>
-                    <TabsTrigger value="cis" className="gap-2">
-                      ICs Afetados
-                      <Badge variant="secondary" className="ml-1">
-                        {draftAffectedCis.length}
-                      </Badge>
-                    </TabsTrigger>
-                    <TabsTrigger value="topology" className="gap-2 group">
-                      <div className="flex items-center gap-1.5">
-                        <span className="group-data-[state=active]:animate-pulse text-primary block w-1.5 h-1.5 rounded-full bg-primary" />
-                        Topologia 360°
-                      </div>
-                    </TabsTrigger>
-                    {draftRecordType === 'change' && (
-                      <TabsTrigger value="governance" className="gap-2">
-                        Governança
-                        {draftRiskLevel !== 'none' && <Badge variant="secondary" className="ml-1 capitalize">{draftRiskLevel}</Badge>}
-                      </TabsTrigger>
-                    )}
-                    {draftRecordType === 'problem' && (
-                      <TabsTrigger value="governance" className="gap-2">
-                        Investigação
-                        {draftIsKnownError && <Badge className="ml-1 bg-amber-500">KEDB</Badge>}
-                      </TabsTrigger>
-                    )}
-                    <TabsTrigger value="xla" className="gap-2">
-                      Experiência (XLA)
-                      {currentDeal.xla_score && <Badge variant="outline" className="ml-1">{currentDeal.xla_score}</Badge>}
-                    </TabsTrigger>
-                    {isModuleActive("articles") && (
-                      <TabsTrigger value="kb" className="gap-2">
-                        <BookOpen className="h-3.5 w-3.5" />
-                        Base de Conhecimento
-                      </TabsTrigger>
-                    )}
-                    {isModuleActive("ai") && (
-                      <TabsTrigger value="ai_assistant" className="gap-2 text-emerald-400 data-[state=active]:text-emerald-500">
-                        <Sparkles className="h-3.5 w-3.5" />
-                        Assistente IA
-                      </TabsTrigger>
-                    )}
-                    <TabsTrigger value="history" className="gap-2">
-                      Histórico
-                      <Badge variant="secondary" className="ml-1">
-                        {activities.length}
-                      </Badge>
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-              </div>
-            </div>
+        <div className="flex-1 min-h-0 flex overflow-hidden">
+          <aside className="w-64 border-r bg-muted/10 p-4 flex flex-col gap-6 overflow-y-auto shrink-0">
+             <div className="space-y-1">
+                <p className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Operação</p>
+                <SidebarItem 
+                  active={activeTab === 'overview'} 
+                  icon={LayoutDashboard} 
+                  label="Visão Geral" 
+                  onClick={() => setActiveTab('overview')} 
+                />
+                <SidebarItem 
+                  active={activeTab === 'details'} 
+                  icon={MessageSquareText} 
+                  label="Atendimento" 
+                  onClick={() => setActiveTab('details')} 
+                />
+                <SidebarItem 
+                  active={activeTab === 'images'} 
+                  icon={Camera} 
+                  label="Galeria de Fotos" 
+                  count={attachments.length + totalQueuedAttachments + totalPendingUploads}
+                  onClick={() => setActiveTab('images')} 
+                />
+             </div>
+
+             <div className="space-y-1">
+                <p className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">ITIL & Ativos</p>
+                <SidebarItem 
+                  active={activeTab === 'governance'} 
+                  icon={ShieldCheck} 
+                  label="Governança" 
+                  onClick={() => setActiveTab('governance')} 
+                />
+                <SidebarItem 
+                  active={activeTab === 'cis'} 
+                  icon={Box} 
+                  label="ICs Afetados" 
+                  count={draftAffectedCis.length}
+                  onClick={() => setActiveTab('cis')} 
+                />
+                <SidebarItem 
+                  active={activeTab === 'topology'} 
+                  icon={Layers} 
+                  label="Topologia 360°" 
+                  onClick={() => setActiveTab('topology')} 
+                />
+             </div>
+
+             <div className="space-y-1">
+                <p className="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Inteligência</p>
+                {isModuleActive("ai") && (
+                  <SidebarItem 
+                    active={activeTab === 'ai_assistant'} 
+                    icon={Sparkles} 
+                    label="Assistente IA" 
+                    highlight
+                    onClick={() => setActiveTab('ai_assistant')} 
+                  />
+                )}
+                {isModuleActive("articles") && (
+                  <SidebarItem 
+                    active={activeTab === 'kb'} 
+                    icon={BookOpen} 
+                    label="Conhecimento" 
+                    onClick={() => setActiveTab('kb')} 
+                  />
+                )}
+             </div>
+
+             <div className="mt-auto pt-4 border-t">
+                <SidebarItem 
+                  active={activeTab === 'xla'} 
+                  icon={TrendingUp} 
+                  label="Experiência XLA" 
+                  onClick={() => setActiveTab('xla')} 
+                />
+                <SidebarItem 
+                  active={activeTab === 'history'} 
+                  icon={Clock} 
+                  label="Linha do Tempo" 
+                  count={activities.length}
+                  onClick={() => setActiveTab('history')} 
+                />
+             </div>
+          </aside>
+
+          <main className="flex-1 overflow-y-auto bg-background/50">
+            <Tabs value={activeTab} className="h-full">
 
             {isModuleActive("articles") && (
               <TabsContent value="kb" className="mt-0 space-y-6 p-4 sm:p-6">
@@ -812,7 +796,81 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
             {isModuleActive("ai") && (
               <TabsContent value="ai_assistant" className="mt-0 space-y-6 p-4 sm:p-6">
-                <AIAssistantTab dealId={currentDeal.id} />
+                <div className="grid gap-6 xl:grid-cols-[1fr_350px]">
+                  <div className="space-y-6">
+                    <section className="rounded-3xl border-2 border-primary/20 bg-primary/5 p-8 relative overflow-hidden group shadow-xl">
+                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <Sparkles className="h-40 w-40 text-primary" />
+                      </div>
+
+                      <div className="relative z-10 space-y-6">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                            <BrainCircuit className="h-6 w-6 text-white" />
+                          </div>
+                          <h3 className="text-xl font-black uppercase italic tracking-tighter">Atlas Predictor Engine</h3>
+                        </div>
+
+                        <div className="grid gap-6">
+                           <div className="p-6 rounded-2xl bg-background/80 border border-primary/10 shadow-sm backdrop-blur-md">
+                              <h4 className="text-[10px] font-black uppercase text-primary mb-3 tracking-[0.2em]">Diagnóstico de Causa Raiz</h4>
+                              <p className="text-lg font-semibold leading-relaxed italic text-slate-700">
+                                "{currentDeal.ai_metadata?.suggested_diagnosis || "O Advisor está analisando as dependências do CMDB e o histórico de incidentes similares para gerar um diagnóstico preciso..."}"
+                              </p>
+                           </div>
+
+                           <div className="space-y-3">
+                              <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] px-1">Logic of Resolution</h4>
+                              <div className="grid gap-3">
+                                {Array.isArray(currentDeal.ai_metadata?.resolution_steps) ? currentDeal.ai_metadata.resolution_steps.map((step: string, idx: number) => (
+                                  <div key={idx} className="flex gap-4 p-4 rounded-xl bg-white/50 border border-slate-100 items-center group/step hover:border-primary/20 transition-all">
+                                    <span className="text-primary font-black text-lg opacity-40 group-hover/step:opacity-100 transition-opacity">0{idx + 1}</span>
+                                    <span className="text-sm font-medium text-slate-600">{step}</span>
+                                  </div>
+                                )) : (
+                                  <div className="p-4 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-sm text-slate-400 italic">
+                                    Aguardando processamento de telemetria para sugerir passos...
+                                  </div>
+                                )}
+                              </div>
+                           </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <AIAssistantTab dealId={currentDeal.id} />
+                  </div>
+
+                  <div className="space-y-6">
+                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                       <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">Métricas Predictivas</h4>
+                       <div className="space-y-8">
+                          <div className="space-y-3">
+                             <div className="flex justify-between items-end">
+                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-tighter">Probabilidade de SLA Breach</span>
+                                <span className={cn(
+                                  "text-2xl font-black",
+                                  (currentDeal.ai_metadata?.risk_score || 0) > 70 ? "text-rose-500" : "text-emerald-500"
+                                )}>
+                                  {currentDeal.ai_metadata?.risk_score || "12"}%
+                                </span>
+                             </div>
+                             <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div 
+                                  className={cn("h-full transition-all duration-1000", (currentDeal.ai_metadata?.risk_score || 0) > 70 ? "bg-rose-500" : "bg-emerald-500")} 
+                                  style={{ width: `${currentDeal.ai_metadata?.risk_score || 12}%` }} 
+                                />
+                             </div>
+                          </div>
+
+                          <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 text-center">
+                             <span className="text-[10px] font-black uppercase text-primary/60 block mb-1">Impacto XLA Sugerido</span>
+                             <span className="text-3xl font-black text-primary tracking-tighter">{currentDeal.ai_metadata?.xla_impact || "ALTO"}</span>
+                          </div>
+                       </div>
+                    </section>
+                  </div>
+                </div>
               </TabsContent>
             )}
 
@@ -924,44 +982,85 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                     </span>
                   </div>
                   <p className="mt-3 text-sm text-foreground">{latestManualUpdate.description}</p>
-                  <div className="mt-4">
-                    <Button type="button" variant="outline" size="sm" onClick={() => setActiveTab("history")}>
-                      Ver histórico completo
-                    </Button>
-                  </div>
                 </section>
               ) : null}
+
+              <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Parâmetros de Governança</h3>
+                <div className="grid gap-6 md:grid-cols-3">
+                  <div className="rounded-2xl border bg-background p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Coluna</p>
+                    <Select value={draftColumnId} onValueChange={setDraftColumnId}>
+                      <SelectTrigger className="h-11 rounded-xl">
+                        <SelectValue placeholder="Selecione uma coluna" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {columns.map((column) => (
+                          <SelectItem
+                            key={column.id}
+                            value={column.id.toString()}
+                            disabled={!getColumnTransitionGuard(currentDeal, column, deals, pipelines).allowed}
+                          >
+                            {column.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="rounded-2xl border bg-background p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Catálogo de Serviços</p>
+                    <Select value={draftServiceItemId} onValueChange={setDraftServiceItemId}>
+                      <SelectTrigger className="h-11 rounded-xl">
+                        <SelectValue placeholder="Selecione um serviço" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum serviço</SelectItem>
+                        {items.map((item) => (
+                          <SelectItem key={item.id} value={String(item.id)}>
+                            {item.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="rounded-2xl border bg-background p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Tipo ITIL v5</p>
+                    <Select value={draftRecordType} onValueChange={(value) => setDraftRecordType(value as Deal["record_type"])}>
+                      <SelectTrigger className="h-11 rounded-xl">
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="incident">Incidente</SelectItem>
+                        <SelectItem value="service_request">Requisição</SelectItem>
+                        <SelectItem value="problem">Problema</SelectItem>
+                        <SelectItem value="change">Mudança</SelectItem>
+                        <SelectItem value="opportunity">Oportunidade</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </section>
             </TabsContent>
 
             <TabsContent value="details" className="mt-0 space-y-6 p-4 sm:p-6">
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_380px]">
-                <div className="space-y-6">
-                  <section className="rounded-2xl border bg-card p-5 shadow-sm">
-                    <div className="mb-4 flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Atualização do trabalho</h3>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Escreva como se fosse a atualização principal do item no board: contexto, andamento, bloqueios e próximos passos.
-                        </p>
+               <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+                 <div className="space-y-6">
+                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                      <div className="mb-6">
+                        <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">Descrição do Trabalho</h3>
+                        <p className="mt-1 text-xs text-muted-foreground">Relate o andamento, bloqueios e contexto operacional.</p>
                       </div>
-                      <Badge variant={hasChanges ? "default" : "outline"}>
-                        {hasChanges ? "Pronto para salvar" : "Sem alterações"}
-                      </Badge>
-                    </div>
 
-                    <div className="space-y-4">
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-sm font-medium">Descrição do que está sendo feito</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Este campo funciona como o update central do card, semelhante ao painel lateral do Monday.com.
-                        </p>
-                        <Textarea
-                          value={draftDescription}
-                          onChange={(event) => setDraftDescription(event.target.value)}
-                          placeholder="Descreva o andamento, bloqueios, próximos passos e contexto do card..."
-                          className="mt-4 min-h-[320px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                        />
-                      </div>
+                      <Textarea
+                        value={draftDescription}
+                        onChange={(event) => setDraftDescription(event.target.value)}
+                        placeholder="Descreva o andamento aqui..."
+                        className="min-h-[450px] resize-none rounded-2xl border-slate-200 bg-slate-50/30 p-6 text-sm leading-relaxed focus-visible:ring-primary/20"
+                      />
+                    </section>
+                 </div>
 
                       <div className="grid gap-3 md:grid-cols-2">
                         <div className="rounded-2xl border bg-background p-4">
@@ -993,271 +1092,84 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                       </div>
                     </div>
                   </section>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Atlas AI Advisor - ITIL Version 5 Autonomic Intelligence */}
-                  <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 space-y-3 relative overflow-hidden group shadow-lg shadow-primary/5">
-                    <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-20 transition-opacity">
-                      <Sparkles className="h-16 w-16 text-primary" />
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center animate-pulse">
-                        <Zap className="h-3 w-3 text-primary-foreground fill-current" />
-                      </div>
-                      <Badge className="bg-primary hover:bg-primary/90 text-[10px] h-5 font-black uppercase tracking-wider">Atlas AI Advisor</Badge>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="p-3 rounded-xl bg-background/60 border border-primary/10 shadow-inner">
-                        <h4 className="text-[10px] font-black uppercase text-primary/80 mb-2 flex items-center gap-2 tracking-widest">
-                          Diagnóstico Sugerido
-                        </h4>
-                        <p className="text-sm text-foreground font-medium leading-relaxed italic">
-                          "{currentDeal.ai_metadata?.suggested_diagnosis || "Analisando padrões históricos e fluxos VSM para este chamado..."}"
-                        </p>
-                      </div>
-
-                      {currentDeal.ai_metadata?.resolution_steps && (
-                        <div className="space-y-2">
-                           <h4 className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2 tracking-widest">
-                             <ShieldCheck className="h-3 w-3 text-emerald-500" /> Resolution Logic
-                           </h4>
-                           <div className="space-y-1">
-                             {Array.isArray(currentDeal.ai_metadata.resolution_steps) ? currentDeal.ai_metadata.resolution_steps.map((step: string, idx: number) => (
-                               <div key={idx} className="flex gap-2 items-start text-xs text-muted-foreground group/step">
-                                 <span className="text-primary font-bold">0{idx + 1}.</span>
-                                 <span className="group-hover/step:text-foreground transition-colors">{step}</span>
-                               </div>
-                             )) : (
-                               <p className="text-xs text-muted-foreground">{currentDeal.ai_metadata.resolution_steps}</p>
-                             )}
-                           </div>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-3 pt-2">
-                        <div className="p-2 rounded-xl bg-background/50 border border-primary/5 text-center">
-                          <p className="text-[9px] uppercase font-black text-muted-foreground tracking-tighter">SLA Breach Risk</p>
-                          <p className={cn(
-                            "text-xl font-black tracking-tighter",
-                            (currentDeal.ai_metadata?.risk_score || 0) > 70 ? "text-rose-500" : "text-emerald-500"
-                          )}>
-                            {currentDeal.ai_metadata?.risk_score || "12"}%
-                          </p>
-                        </div>
-                        <div className="p-2 rounded-xl bg-background/50 border border-primary/5 text-center">
-                          <p className="text-[9px] uppercase font-black text-muted-foreground tracking-tighter">Market Value XLA</p>
-                          <p className="text-xl font-black text-primary tracking-tighter">
-                            {currentDeal.ai_metadata?.xla_impact || "HIGH"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <section className="rounded-2xl border bg-card p-5 shadow-sm">
-                    <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Campos principais</h3>
-
-                    <div className="space-y-4">
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Coluna</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Atualize o andamento do card sem sair do painel.</p>
-                        <Select value={draftColumnId} onValueChange={setDraftColumnId}>
-                          <SelectTrigger className="mt-3">
-                            <SelectValue placeholder="Selecione uma coluna" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {columns.map((column) => (
-                              <SelectItem
-                                key={column.id}
-                                value={column.id.toString()}
-                                disabled={!getColumnTransitionGuard(currentDeal, column, deals, pipelines).allowed}
-                              >
-                                {column.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {!selectedColumnGuard.allowed && (
-                          <p className="mt-3 text-xs font-medium text-amber-700">
-                            {selectedColumnGuard.reason}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Catálogo de Serviços</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Vincule este card a um serviço do catálogo para aplicar SLAs e fluxos automáticos.</p>
-                        <Select value={draftServiceItemId} onValueChange={setDraftServiceItemId}>
-                          <SelectTrigger className="mt-3">
-                            <SelectValue placeholder="Selecione um serviço" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Nenhum serviço</SelectItem>
-                            {items.map((item) => (
-                              <SelectItem key={item.id} value={String(item.id)}>
-                                {item.category_name && <span className="text-[10px] text-muted-foreground block uppercase">{item.category_name}</span>}
-                                {item.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {draftServiceItemId !== "none" && (
-                          <div className="mt-2 text-[10px] text-muted-foreground flex items-center gap-1">
-                            <div className="h-1 w-1 rounded-full bg-primary/40" />
-                            SLA Padrão: {items.find((item: { id: number | string }) => String(item.id) === draftServiceItemId)?.sla_policy_name || "Conforme modalidade"}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Tipo de registro (ITIL version 5)</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Classifique o card conforme o processo ITIL version 5.</p>
-                        <Select value={draftRecordType} onValueChange={(value) => setDraftRecordType(value as Deal["record_type"])}>
-                          <SelectTrigger className="mt-3">
-                            <SelectValue placeholder="Selecione o tipo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="incident">Incidente</SelectItem>
-                            <SelectItem value="service_request">Requisição de Serviço</SelectItem>
-                            <SelectItem value="problem">Problema</SelectItem>
-                            <SelectItem value="change">Mudança</SelectItem>
-                            <SelectItem value="opportunity">Oportunidade (Vendas)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Prioridade</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Destaque rápido para urgência e foco do time.</p>
-                        <Select value={draftPriority} onValueChange={(value) => setDraftPriority(value as Deal["priority"])}>
-                          <SelectTrigger className="mt-3">
-                            <SelectValue placeholder="Selecione a prioridade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="LOW">Baixa</SelectItem>
-                            <SelectItem value="MEDIUM">Média</SelectItem>
-                            <SelectItem value="HIGH">Alta</SelectItem>
-                            <SelectItem value="URGENT">Urgente</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Progresso</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Defina o percentual de conclusão do trabalho em andamento.</p>
-                        <div className="mt-3 flex items-center gap-3">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={draftProgress}
-                            onChange={(event) => setDraftProgress(event.target.value)}
-                            className="max-w-[120px] font-semibold"
-                            aria-label="Editar progresso do card no painel"
-                          />
-                          <Badge className={draftProgressMeta.badgeClassName}>{safeDraftProgress}%</Badge>
-                        </div>
-                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                          <div
-                            className={cn("h-full rounded-full transition-all", draftProgressMeta.barClassName)}
-                            style={{ width: `${safeDraftProgress}%` }}
-                          />
-                        </div>
                       </div>
                     </div>
                   </section>
 
-                  <section className="rounded-2xl border bg-card p-5 shadow-sm">
-                    <div className="mb-4">
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Pessoas</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">Organize responsáveis relacionados ao card em um painel editável no estilo Monday.</p>
-                    </div>
+                 <div className="space-y-6">
+                    <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Stakeholders</h4>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                           <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                             <AvatarFallback className="text-xs font-black bg-primary/10 text-primary">
+                               {getUserInitials(ownerUser ? getUserDisplayName(ownerUser) : "U")}
+                             </AvatarFallback>
+                           </Avatar>
+                           <div className="flex-1 min-w-0">
+                             <p className="text-xs font-black truncate">{ownerUser ? getUserDisplayName(ownerUser) : "Sem Dono"}</p>
+                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Responsável</p>
+                           </div>
+                        </div>
 
-                    <div className="space-y-4">
-                      {selectedUsers.length > 0 && (
-                        <div className="rounded-2xl border bg-background p-4">
-                          <p className="text-sm font-medium">Time relacionado</p>
-                          <div className="mt-3 flex flex-wrap gap-3">
-                            {selectedUsers.map((user) => {
-                              const displayName = getUserDisplayName(user)
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                           <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center border-2 border-white shadow-sm">
+                              <User className="h-5 w-5 text-slate-400" />
+                           </div>
+                           <div className="flex-1 min-w-0">
+                             <p className="text-xs font-black truncate">{currentDeal.contact_name || "Nenhum"}</p>
+                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Solicitante</p>
+                           </div>
+                        </div>
+                      </div>
+                    </section>
 
+                    <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Equipe Relacionada</h4>
+                      <div className="flex -space-x-3 overflow-hidden p-1">
+                        {selectedUsers.map((user) => (
+                          <Avatar key={user.id} className="h-10 w-10 border-4 border-card ring-1 ring-slate-100 shadow-sm">
+                            <AvatarFallback className="text-[10px] font-black">{getUserInitials(getUserDisplayName(user))}</AvatarFallback>
+                          </Avatar>
+                        ))}
+                        {selectedUsers.length === 0 && <p className="text-xs text-muted-foreground italic">Ninguém vinculado</p>}
+                      </div>
+                      
+                      <div className="mt-4 pt-4 border-t border-slate-100">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Gestão de Equipe</p>
+                        <div className="relative mb-3">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                          <Input
+                            value={userSearch}
+                            onChange={(event) => setUserSearch(event.target.value)}
+                            placeholder="Buscar especialistas..."
+                            className="pl-9 h-9 text-xs rounded-xl border-slate-100 bg-slate-50/50"
+                          />
+                        </div>
+
+                        <ScrollArea className="h-48">
+                          <div className="space-y-2">
+                            {filteredUsers.map((user) => {
+                              const checked = draftRelatedUsers.includes(user.id)
                               return (
-                                <div key={user.id} className="flex items-center gap-2 rounded-full border bg-card px-2 py-1">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="text-[11px] font-semibold">
-                                      {getUserInitials(displayName)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-sm">{displayName}</span>
+                                <div key={user.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                   <Checkbox 
+                                     checked={checked} 
+                                     onCheckedChange={(val) => handleToggleRelatedUser(user.id, val === true)}
+                                     className="rounded-md border-slate-200"
+                                   />
+                                   <div className="flex-1 min-w-0">
+                                      <p className="text-[11px] font-bold truncate">{getUserDisplayName(user)}</p>
+                                   </div>
                                 </div>
                               )
                             })}
                           </div>
-                        </div>
-                      )}
-
-                      <div className="rounded-2xl border bg-background p-4">
-                        <p className="text-sm font-medium">Usuários relacionados</p>
-                        <div className="relative mt-3">
-                          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            value={userSearch}
-                            onChange={(event) => setUserSearch(event.target.value)}
-                            placeholder="Buscar por nome, usuário ou e-mail"
-                            className="pl-9"
-                          />
-                        </div>
-
-                        <ScrollArea className="mt-4 h-72 rounded-2xl border">
-                          <div className="space-y-2 p-3">
-                            {filteredUsers.length > 0 ? (
-                              filteredUsers.map((user) => {
-                                const checked = draftRelatedUsers.includes(user.id)
-                                const displayName = getUserDisplayName(user)
-
-                                return (
-                                  <label
-                                    key={user.id}
-                                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${checked ? "border-primary/30 bg-primary/5" : "bg-background/70 hover:bg-muted/40"}`}
-                                  >
-                                    <Checkbox
-                                      checked={checked}
-                                      onClick={(event) => {
-                                        event.preventDefault()
-                                        handleToggleRelatedUser(user.id, !checked)
-                                      }}
-                                      onCheckedChange={(value) => handleToggleRelatedUser(user.id, value === true)}
-                                    />
-                                    <Avatar className="h-10 w-10">
-                                      <AvatarFallback className="text-xs font-semibold">
-                                        {getUserInitials(displayName)}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div className="space-y-1">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <p className="text-sm font-medium">{displayName}</p>
-                                        {checked && <Badge variant="secondary">Selecionado</Badge>}
-                                      </div>
-                                      <p className="text-xs text-muted-foreground">{user.email || user.username}</p>
-                                    </div>
-                                  </label>
-                                )
-                              })
-                            ) : (
-                              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                                Nenhum usuário encontrado para a busca atual.
-                              </div>
-                            )}
-                          </div>
                         </ScrollArea>
                       </div>
-                    </div>
-                  </section>
-                </div>
-              </div>
+                    </section>
+                 </div>
+               </div>
             </TabsContent>
 
             <TabsContent value="images" className="mt-0 space-y-6 p-4 sm:p-6">
@@ -1531,6 +1443,381 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                     Nenhuma imagem anexada ainda.
                   </div>
                 )}
+              </section>
+            </TabsContent>
+
+            <TabsContent value="cis" className="mt-0 space-y-6 p-4 sm:p-6">
+              <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Itens de Configuração (CMDB)</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Escolha os ativos ou serviços de TI impactados por este card para manter a rastreabilidade ITIL version 5.</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-2xl border bg-background p-4">
+                    <p className="text-sm font-medium">Buscar ICs</p>
+                    <div className="relative mt-3">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        placeholder="Buscar por nome, tag ou número de série"
+                        className="pl-9"
+                      />
+                    </div>
+
+                    <ScrollArea className="mt-4 h-96 rounded-2xl border">
+                      <div className="space-y-2 p-3">
+                        {cis.filter((ci: any) => 
+                          ci.name.toLowerCase().includes(userSearch.toLowerCase()) || 
+                          (ci.asset_tag || "").toLowerCase().includes(userSearch.toLowerCase()) ||
+                          (ci.serial_number || "").toLowerCase().includes(userSearch.toLowerCase())
+                        ).length > 0 ? (
+                          cis.filter((ci: any) => 
+                            ci.name.toLowerCase().includes(userSearch.toLowerCase()) || 
+                            (ci.asset_tag || "").toLowerCase().includes(userSearch.toLowerCase()) ||
+                            (ci.serial_number || "").toLowerCase().includes(userSearch.toLowerCase())
+                          ).map((ci: any) => {
+                            const checked = draftAffectedCis.includes(ci.id)
+                            return (
+                              <label
+                                key={ci.id}
+                                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${checked ? "border-primary/30 bg-primary/5" : "bg-background/70 hover:bg-muted/40"}`}
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(value) => {
+                                    setDraftAffectedCis(prev => 
+                                      value ? [...prev, ci.id] : prev.filter(id => id !== ci.id)
+                                    )
+                                  }}
+                                />
+                                <div className="space-y-1 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-sm font-medium">{ci.name}</p>
+                                    <Badge variant="outline" className="text-[10px]">{ci.ci_type_name}</Badge>
+                                    {ci.status === 'broken' && <Badge variant="destructive" className="text-[10px]">Falha</Badge>}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {ci.asset_tag ? `Tag: ${ci.asset_tag}` : ""} {ci.serial_number ? ` | SN: ${ci.serial_number}` : ""}
+                                    {ci.location ? ` | Local: ${ci.location}` : ""}
+                                  </p>
+                                </div>
+                              </label>
+                            )
+                          })
+                        ) : (
+                          <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground text-center">
+                            Nenhum Item de Configuração encontrado.
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  {draftAffectedCis.length > 0 && (
+                    <div className="rounded-2xl border bg-muted/20 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-3">Selecionados</p>
+                      <div className="flex flex-wrap gap-2">
+                        {draftAffectedCis.map(id => {
+                          const ci = cis.find((c: any) => c.id === id)
+                          if (!ci) return null
+                          return (
+                            <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                              {ci.name}
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-4 w-4 rounded-full p-0 hover:bg-muted" 
+                                onClick={() => setDraftAffectedCis(prev => prev.filter(i => i !== id))}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </Badge>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </TabsContent>
+
+            <TabsContent value="governance" className="mt-0 space-y-6 p-4 sm:p-6">
+              {draftRecordType === 'change' && (
+                <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                  <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Governança de Mudança</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Documentação obrigatória para requisições de mudança (RFC) conforme ITIL version 5.
+                      </p>
+                    </div>
+                    <Badge variant={draftRiskLevel === 'critical' || draftRiskLevel === 'high' ? 'destructive' : 'outline'}>
+                      Risco: {draftRiskLevel === 'none' || !draftRiskLevel ? 'Não definido' : draftRiskLevel.toUpperCase()}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="rounded-2xl border bg-background p-4">
+                      <p className="text-sm font-medium">Nível de Risco</p>
+                      <Select value={draftRiskLevel || "none"} onValueChange={(v) => setDraftRiskLevel(v as any)}>
+                        <SelectTrigger className="mt-3">
+                          <SelectValue placeholder="Selecione o risco" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Selecione o risco</SelectItem>
+                          <SelectItem value="low">Baixo (Standard Change)</SelectItem>
+                          <SelectItem value="medium">Médio (Normal Change)</SelectItem>
+                          <SelectItem value="high">Alto (High Impact)</SelectItem>
+                          <SelectItem value="critical">Crítico (Emergency/Critical)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium">Justificativa da Mudança</p>
+                        <Textarea 
+                          value={draftChangeJustification}
+                          onChange={(e) => setDraftChangeJustification(e.target.value)}
+                          placeholder="Por que esta mudança é necessária?"
+                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium">Plano de Implementação</p>
+                        <Textarea 
+                          value={draftImplementationPlan}
+                          onChange={(e) => setDraftImplementationPlan(e.target.value)}
+                          placeholder="Passo a passo da execução..."
+                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium">Plano de Recuo (Backout)</p>
+                        <Textarea 
+                          value={draftBackoutPlan}
+                          onChange={(e) => setDraftBackoutPlan(e.target.value)}
+                          placeholder="Como reverter em caso de falha?"
+                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+                      <div className="rounded-2xl border bg-background p-4">
+                        <p className="text-sm font-medium">Plano de Testes</p>
+                        <Textarea 
+                          value={draftTestPlan}
+                          onChange={(e) => setDraftTestPlan(e.target.value)}
+                          placeholder="Como validar o sucesso?"
+                          className="mt-3 min-h-[120px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {draftRecordType === 'problem' && (
+                <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                  <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Investigação de Problema</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Análise de Causa Raiz (RCA) e definição de Error Conhecido.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-full border bg-background px-3 py-1">
+                      <span className="text-xs font-semibold text-muted-foreground mr-2">PUBLICAR NO KEDB</span>
+                      <Switch 
+                        checked={draftIsKnownError} 
+                        onCheckedChange={setDraftIsKnownError} 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="rounded-2xl border bg-background p-4">
+                      <p className="text-sm font-medium">Análise de Causa Raiz (RCA)</p>
+                      <p className="mt-1 text-xs text-muted-foreground mb-3">Identifique o motivo fundamental da falha encontrada.</p>
+                      <Textarea 
+                        value={draftRootCause}
+                        onChange={(e) => setDraftRootCause(e.target.value)}
+                        placeholder="Ex: Falha no disco rígido por desgaste físico após 5 anos..."
+                        className="mt-3 min-h-[160px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      />
+                    </div>
+
+                    <div className="rounded-2xl border bg-background p-4">
+                      <p className="text-sm font-medium">Solução Definitiva / Workaround</p>
+                      <p className="mt-1 text-xs text-muted-foreground mb-3">Estes passos serão visíveis para o Service Desk como erro conhecido.</p>
+                      <Textarea 
+                        value={draftResolutionSteps}
+                        onChange={(e) => setDraftResolutionSteps(e.target.value)}
+                        placeholder="Passos para resolver ou contornar..."
+                        className="mt-3 min-h-[160px] resize-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
+            </TabsContent>
+
+            <TabsContent value="xla" className="mt-0 space-y-6 p-4 sm:p-6">
+              <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                <div className="mb-6 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Experiência do Usuário (XLA)</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Acordos de Nível de Experiência medem a satisfação subjetiva e a percepção de valor do produto digital.
+                    </p>
+                  </div>
+                  {currentDeal.xla_score && (
+                    <div className="flex flex-col items-end">
+                      <span className="text-2xl font-bold text-primary">{currentDeal.xla_score}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase">Score Médio</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  {currentDeal.is_closed && (
+                    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                      <p className="text-sm font-semibold">Como foi sua experiência com este item?</p>
+                      <div className="mt-4 flex flex-wrap gap-4">
+                         <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground uppercase">Geral</p>
+                            <div className="flex gap-1">
+                               {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                                 <button 
+                                   key={n} 
+                                   onClick={() => submitXla.mutate({ rating: n, deal: currentDeal.id, contact: currentDeal.contact ?? undefined })}
+                                   className="h-8 w-8 rounded-lg border bg-background hover:bg-primary hover:text-primary-foreground transition-colors text-xs font-medium"
+                                 >
+                                   {n}
+                                 </button>
+                               ))}
+                            </div>
+                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Histórico de Feedback</p>
+                    {xlaFeedbacks.length > 0 ? (
+                      xlaFeedbacks.map((f: any) => (
+                        <div key={f.id} className="rounded-2xl border p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-2">
+                               <Badge variant="secondary">{f.rating}/10</Badge>
+                               <span className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleDateString()}</span>
+                             </div>
+                          </div>
+                          {f.comment && <p className="text-sm italic text-muted-foreground">"{f.comment}"</p>}
+                          <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground uppercase">
+                             <div>Uso: {f.ease_of_use}/10</div>
+                             <div>Velocidade: {f.speed_satisfaction}/10</div>
+                             <div>Resultado: {f.outcome_satisfaction}/10</div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                        Nenhum feedback XLA registrado ainda.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            </TabsContent>
+
+            <TabsContent value="topology" className="mt-0 p-4 sm:p-6">
+              <section className="rounded-3xl border bg-slate-950 p-8 shadow-2xl relative overflow-hidden min-h-[500px] flex flex-col items-center justify-center">
+                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+                
+                <div className="relative z-10 w-full max-w-4xl space-y-8">
+                   <div className="text-center space-y-2">
+                     <h3 className="text-xl font-black text-white tracking-widest uppercase">Análise de Impacto 360°</h3>
+                     <p className="text-blue-400/70 text-xs font-semibold tracking-tight uppercase">CMDB Topology Analytics Engine</p>
+                   </div>
+
+                   {isLoadingTopology ? (
+                     <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                        <p className="text-white/50 text-xs animate-pulse">Rastreando dependências em cascata...</p>
+                     </div>
+                   ) : (
+                     <div className="relative border border-white/10 rounded-3xl bg-black/40 backdrop-blur-xl p-10 min-h-[400px]">
+                        {(Array.isArray(topologyData?.nodes) ? topologyData.nodes : []).length > 0 ? (
+                          <div className="flex flex-col items-center gap-12">
+                             {(Array.isArray(topologyData?.nodes) ? topologyData.nodes : []).filter(n => n.type === 'deal').map(node => (
+                               <motion.div 
+                                 key={node.id}
+                                 initial={{ scale: 0.8, opacity: 0 }}
+                                 animate={{ scale: 1, opacity: 1 }}
+                                 className="relative"
+                               >
+                                 <div className="h-20 w-20 rounded-2xl bg-primary flex items-center justify-center shadow-[0_0_30px_rgba(59,130,246,0.5)] border-2 border-primary-foreground/20">
+                                   <Zap className="h-10 w-10 text-white fill-current" />
+                                 </div>
+                                 <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 text-white font-black text-sm whitespace-nowrap bg-primary px-3 py-1 rounded-full uppercase tracking-tighter">
+                                   ITEM CENTRAL: {node.label}
+                                 </div>
+                               </motion.div>
+                             ))}
+
+                             <div className="flex flex-wrap justify-center gap-8 w-full mt-12 px-4">
+                                {(Array.isArray(topologyData?.nodes) ? topologyData.nodes : []).filter(n => n.type === 'ci').map(node => (
+                                  <motion.div 
+                                    key={node.id}
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    className="flex flex-col items-center space-y-4"
+                                  >
+                                    <div className="h-[2px] w-12 bg-gradient-to-t from-primary to-transparent" />
+                                    <div className={cn(
+                                       "h-16 w-16 rounded-xl border-2 flex items-center justify-center transition-all",
+                                       node.status === 'broken' ? "bg-rose-500/20 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.3)]" : "bg-blue-500/10 border-blue-500/50"
+                                    )}>
+                                       <Box className={cn("h-8 w-8", node.status === 'broken' ? "text-rose-500" : "text-blue-400")} />
+                                    </div>
+                                    <div className="text-center">
+                                       <p className="text-[10px] font-black text-white/90 uppercase tracking-tighter">{node.label}</p>
+                                       <Badge variant="outline" className="text-[8px] h-4 mt-1 border-white/10 text-white/50">{node.kind}</Badge>
+                                    </div>
+                                  </motion.div>
+                                ))}
+                             </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                             <div className="h-16 w-16 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center opacity-30">
+                                <Search className="h-8 w-8 text-white" />
+                             </div>
+                             <p className="text-white/40 text-sm max-w-[250px]">Nenhum IC (Item de Configuração) vinculado a este card para análise de topologia.</p>
+                          </div>
+                        )}
+                     </div>
+                   )}
+
+                   <div className="flex justify-center gap-10">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-primary" />
+                        <span className="text-[10px] font-bold text-white/50 uppercase">Ponto de Falha</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-rose-500" />
+                        <span className="text-[10px] font-bold text-white/50 uppercase">Impacto Crítico</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-blue-500/30 border border-blue-500/50" />
+                        <span className="text-[10px] font-bold text-white/50 uppercase">Dependência Ativa</span>
+                      </div>
+                   </div>
+                </div>
               </section>
             </TabsContent>
 
@@ -2091,7 +2378,8 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 </div>
               </section>
             </TabsContent>
-          </Tabs>
+            </Tabs>
+          </main>
         </div>
       </DialogContent>
     </Dialog>
