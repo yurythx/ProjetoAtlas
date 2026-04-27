@@ -31,6 +31,7 @@ import { notify } from "@/lib/notifications"
 import { ArticleHistory } from "@/features/articles/article-history"
 import { ArticleComments } from "@/features/articles/article-comments"
 import { VisibilityToggle } from "@/components/articles/visibility-toggle"
+import { usePermission } from "@/hooks/use-permission"
 import { slugify, fixImageUrl } from "@/lib/utils"
 import {
   AlertDialog,
@@ -68,6 +69,8 @@ interface ArticleFormProps {
 
 export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormProps) {
   const queryClient = useQueryClient()
+  const { hasPermission } = usePermission()
+  const canPublish = hasPermission("articles.article_publish")
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -194,7 +197,7 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
         notify.warning("Checklist incompleto", "Complete os itens obrigatórios para publicar.")
         return
       }
-      if (currentStatus !== "pending") {
+      if (currentStatus !== "pending" && !canPublish) {
         notify.warning("Ação indisponível", "Apenas artigos pendentes podem ser aprovados.")
         return
       }
@@ -276,10 +279,19 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const payload = {
+    const payload: any = {
       ...values,
       published_at: values.published_at ? new Date(values.published_at).toISOString() : null
     }
+
+    // Se o usuário marcar como público e tiver permissão, já envia como publicado
+    if (values.is_public && canPublish) {
+      payload.status = 'published'
+      if (!payload.published_at) {
+        payload.published_at = new Date().toISOString()
+      }
+    }
+
     mutation.mutate(payload)
   }
 
@@ -303,13 +315,25 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
           {initialData && (
             <>
               {initialData.status === 'draft' && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleReviewAction("submit")}
-                  disabled={reviewMutation.isPending || !isReadyForReview}
-                >
-                  <Send className="mr-2 h-4 w-4" /> Enviar para Revisão
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleReviewAction("submit")}
+                    disabled={reviewMutation.isPending || !isReadyForReview}
+                  >
+                    <Send className="mr-2 h-4 w-4" /> Enviar para Revisão
+                  </Button>
+                  {canPublish && (
+                    <Button
+                      variant="default"
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => handleReviewAction("publish")}
+                      disabled={reviewMutation.isPending || !isReadyForPublish}
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" /> Publicar Agora
+                    </Button>
+                  )}
+                </>
               )}
               {initialData.status === 'pending' && (
                 <>
@@ -629,12 +653,17 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
                         <VisibilityToggle
                           isPublic={field.value}
                           onChange={field.onChange}
-                          disabled={initialData?.status !== 'published'}
+                          disabled={!canPublish && initialData?.status !== 'published'}
                         />
                       </FormControl>
-                      {initialData?.status !== 'published' && field.value && (
+                      {(!canPublish && initialData?.status !== 'published') && field.value && (
                         <p className="text-[10px] text-orange-600 mt-1 font-medium">
                           Nota: Apenas artigos publicados podem ser marcados como públicos.
+                        </p>
+                      )}
+                      {(canPublish && initialData?.status !== 'published' && field.value) && (
+                        <p className="text-[10px] text-primary mt-1 font-medium italic">
+                          Ao salvar como público, o artigo será publicado automaticamente.
                         </p>
                       )}
                       <FormMessage />
