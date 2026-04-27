@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, Calendar, Clock, Minus, MoreHorizontal, Plus, User } from "lucide-react"
+import { AlertTriangle, Calendar, Clock, Minus, MoreHorizontal, Plus, User, Zap } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { useEffect, useMemo, useState } from "react"
@@ -609,7 +609,7 @@ function DealCard({
                     <div className={cn(
                       "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border",
                       deadlineMeta.risk === "overdue" ? "bg-rose-500 text-white border-rose-600 animate-pulse" : 
-                      deadlineMeta.risk === "warning" ? "bg-amber-100 text-amber-700 border-amber-200" :
+                      deadlineMeta.risk === "near" ? "bg-amber-100 text-amber-700 border-amber-200" :
                       "bg-emerald-50 text-emerald-700 border-emerald-100"
                     )}>
                        <Clock className="h-3 w-3" />

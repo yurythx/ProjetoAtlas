@@ -38,6 +38,65 @@ interface DealDetailsModalProps {
   onOpenChange: (open: boolean) => void
 }
 
+function SidebarItem({ 
+  active, 
+  icon: Icon, 
+  label, 
+  onClick, 
+  badge,
+  count,
+  highlight
+}: { 
+  active: boolean; 
+  icon: any; 
+  label: string; 
+  onClick: () => void;
+  badge?: string | number;
+  count?: number;
+  highlight?: boolean;
+}) {
+  const displayBadge = badge ?? count
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex w-full items-center justify-between rounded-xl px-3 py-2.5 transition-all duration-200 group relative overflow-hidden",
+        active 
+          ? "bg-primary/10 text-primary shadow-sm" 
+          : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+        highlight && "border border-amber-500/20 bg-amber-500/5"
+      )}
+    >
+      {highlight && (
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 animate-shimmer" />
+      )}
+      <div className="flex items-center gap-3 relative z-10">
+        <Icon className={cn(
+          "h-4 w-4 transition-transform group-hover:scale-110",
+          active ? "text-primary" : "text-slate-400 group-hover:text-slate-600",
+          highlight && "text-amber-500"
+        )} />
+        <span className={cn(
+          "text-[11px] font-bold uppercase tracking-widest",
+          active ? "opacity-100" : "opacity-70 group-hover:opacity-100",
+          highlight && "text-amber-600"
+        )}>
+          {label}
+        </span>
+      </div>
+      {displayBadge !== undefined && (
+        <span className={cn(
+          "rounded-full px-1.5 py-0.5 text-[9px] font-black relative z-10",
+          active ? "bg-primary text-white" : "bg-slate-200 text-slate-500",
+          highlight && "bg-amber-500 text-white"
+        )}>
+          {displayBadge}
+        </span>
+      )}
+    </button>
+  )
+}
+
 type ActivityFilterId = "all" | "updates" | "moves" | "creation" | "automation"
 
 const ACTIVITY_FILTER_OPTIONS: Array<{ id: ActivityFilterId; label: string }> = [
@@ -598,7 +657,10 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "w-[calc(100vw-1.5rem)] sm:w-[95vw] lg:w-[1120px] max-h-[95vh] overflow-hidden border border-white/10 bg-background/30 p-0 backdrop-blur-3xl rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl grid grid-rows-[auto_1fr] animate-in zoom-in-95 duration-300",
+          "w-[calc(100vw-1.5rem)] sm:w-[95vw] lg:w-[1120px]",
+          "max-h-[95vh] overflow-hidden border border-white/10 bg-background/30 p-0",
+          "backdrop-blur-3xl rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl",
+          "grid grid-rows-[auto_1fr] animate-in zoom-in-95 duration-300",
           activeTab === "images" ? "lg:max-w-[1440px]" : "lg:max-w-[1120px]"
         )}
       >
@@ -1060,7 +1122,6 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                         className="min-h-[450px] resize-none rounded-2xl border-slate-200 bg-slate-50/30 p-6 text-sm leading-relaxed focus-visible:ring-primary/20"
                       />
                     </section>
-                 </div>
 
                       <div className="grid gap-3 md:grid-cols-2">
                         <div className="rounded-2xl border bg-background p-4">
@@ -1090,11 +1151,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </section>
-                      </div>
-                    </div>
-                  </section>
+                  </div>
 
                  <div className="space-y-6">
                     <section className="rounded-2xl border bg-card p-5 shadow-sm">

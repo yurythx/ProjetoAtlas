@@ -396,6 +396,10 @@ export interface Deal {
     risk_reason?: string
     suggested_actions?: string[]
     insight?: string
+    risk_score?: number
+    xla_impact?: string
+    suggested_diagnosis?: string
+    resolution_steps?: string[]
   } | null
   owner: number
   is_closed: boolean
