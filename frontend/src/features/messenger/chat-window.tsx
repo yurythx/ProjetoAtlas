@@ -135,7 +135,7 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage
-  } = useInfiniteQuery({
+  } = useInfiniteQuery<{ results: Message[], next: string | null }, Error, { pages: { results: Message[], next: string | null }[], pageParams: (string | null)[] }, (string | number | undefined)[], string | null>({
     queryKey: ['messages', conversation?.id],
     queryFn: async ({ pageParam }) => {
       if (!conversation?.id) return { results: [], next: null }
@@ -145,9 +145,10 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
       return res.data
     },
     getNextPageParam: (lastPage) => lastPage.next ? lastPage.results[0]?.created_at : undefined,
-    initialPageParam: null,
+    initialPageParam: null as string | null,
     enabled: !!conversation?.id,
   })
+
 
   const messages = React.useMemo(() => {
     const history = infiniteMessages?.pages?.flatMap((page) => (page as any).results || []) || []
@@ -254,14 +255,12 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
   }
 
   React.useEffect(() => {
-    if (conversation?.prefetched_pref?.[0]) {
-      const p = conversation.prefetched_pref[0]
+    if ((conversation as any)?.prefetched_pref?.[0]) {
+      const p = (conversation as any).prefetched_pref[0]
       setIsMuted(!!p.is_muted)
       setIsPinned(!!p.is_pinned)
     }
   }, [conversation])
-
-
 
   const handleSend = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -277,9 +276,19 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
       file_url: null,
       file_name: selectedFile?.name ?? null,
       file_type: selectedFile?.type ?? null,
+      file_size: selectedFile?.size ?? null,
       created_at: new Date().toISOString(),
       is_read: false,
       reactions: [],
+      edited_at: null,
+      is_deleted: false,
+      reply_to: replyingTo ? {
+          id: replyingTo.id,
+          sender: replyingTo.sender,
+          sender_username: replyingTo.sender_username,
+          content: replyingTo.content,
+          file_name: replyingTo.file_name
+      } as any : null,
       local_status: 'sending'
     }
     
@@ -331,7 +340,7 @@ export function ChatWindow({ contact, currentUser, onBack, conversationId }: Cha
                   <span className={cn("text-[9px] font-black uppercase tracking-widest", (onlineUsers.has(contact.id) || contact.is_online) ? "text-emerald-500" : "text-muted-foreground/40")}>
                     {(onlineUsers.has(contact.id) || contact.is_online) ? "Transmissão Ativa" : "Offline"}
                   </span>
-                 {typingUsers.size > 0 && (
+                 {Object.keys(typingUsers).length > 0 && (
                    <span className="text-[9px] font-black uppercase tracking-widest text-primary animate-pulse">Digitando...</span>
                  )}
               </div>

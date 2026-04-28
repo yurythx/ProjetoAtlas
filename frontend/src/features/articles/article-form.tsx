@@ -92,7 +92,7 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
     staleTime: 1000 * 60 * 10, // 10 minutos
   })
 
-  const [lockSlug, setLockSlug] = useState(!initialData)
+  const [isSlugAuto, setIsSlugAuto] = useState(!initialData)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -133,8 +133,7 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
   const handleTitleChange = (value: string) => {
     form.setValue("title", value)
     setPreviewTitle(value)
-    // Bug 5: quando lockSlug=false (modo criação), gera slug automaticamente
-    if (!lockSlug) {
+    if (isSlugAuto) {
       form.setValue("slug", slugify(value))
     }
   }
@@ -145,6 +144,7 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['articles'] })
+      queryClient.invalidateQueries({ queryKey: ['public-articles'] })
       const messages = {
         submit: "Artigo enviado para revisão",
         publish: "Artigo publicado com sucesso",
@@ -230,6 +230,7 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] })
+      queryClient.invalidateQueries({ queryKey: ['public-articles'] })
       notify.success(initialData ? "Artigo atualizado" : "Artigo criado", "As alterações foram salvas com sucesso.")
       onSuccess()
     },
@@ -717,20 +718,19 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
-                          onClick={() => setLockSlug(!lockSlug)}
-                          title={!lockSlug ? "Bloquear (ativa geração automática)" : "Desbloquear para edição manual"}
+                          onClick={() => setIsSlugAuto(!isSlugAuto)}
+                          title={isSlugAuto ? "Desbloquear para edição manual" : "Bloquear (ativa geração automática)"}
                         >
-                          {/* Bug 5: Lock agora significa "bloqueado para edição" = geração automática ativa */}
-                          {!lockSlug ? <Lock className="h-3 w-3 text-primary" /> : <LinkIcon className="h-3 w-3" />}
+                          {isSlugAuto ? <Lock className="h-3 w-3 text-primary" /> : <LinkIcon className="h-3 w-3" />}
                         </Button>
                       </FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
                             placeholder="slug-do-artigo"
-                            className={`h-11 bg-background font-mono text-sm ${!lockSlug ? 'opacity-80' : ''}`}
+                            className={`h-11 bg-background font-mono text-sm ${isSlugAuto ? 'opacity-80' : ''}`}
                             {...field}
-                            readOnly={!lockSlug}
+                            readOnly={isSlugAuto}
                           />
                         </div>
                       </FormControl>

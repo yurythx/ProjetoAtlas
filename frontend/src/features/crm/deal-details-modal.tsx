@@ -690,6 +690,10 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
           </div>
         )}
         <DialogHeader className="border-b bg-muted/20 px-6 py-6 text-left shrink-0">
+          <DialogTitle className="sr-only">Detalhes do Chamado</DialogTitle>
+          <DialogDescription className="sr-only">
+            Informações detalhadas, histórico e ações relacionadas a este chamado.
+          </DialogDescription>
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">

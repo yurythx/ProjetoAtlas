@@ -107,14 +107,30 @@ class PublicArticleViewSet(viewsets.ReadOnlyModelViewSet):
         if not is_same_tenant:
             qs = qs.filter(is_public=True)
 
-        if company:
-            qs = qs.filter(company=company)
-        else:
-            # Fallback manual de tenant
-            company_slug = self.request.query_params.get("company_slug") or self.request.headers.get("X-Company-Slug")
-            if company_slug:
-                qs = qs.filter(company__slug=company_slug)
-
+        # Tenant filtering logic:
+        # 1. Try to get explicit tenant from query params or headers
+        company_slug = self.request.query_params.get("company_slug") or self.request.headers.get("X-Company-Slug")
+        
+        if company_slug:
+            qs = qs.filter(company__slug=company_slug)
+        elif company:
+            # Se temos uma empresa identificada pelo middleware (Host ou Fallback)
+            # Mas espera: se for o fallback 'raiz', queremos mostrar TUDO ou apenas Raiz?
+            # Se o usuário está acessando via um domínio específico (Host), filtramos por essa empresa.
+            # Se ele está no domínio principal (onde o fallback 'raiz' acontece), mostramos TUDO que é público.
+            
+            # Verificamos se a empresa foi identificada "explicitamente" ou se é o fallback 'raiz'
+            # Uma forma simples é ver se o Host bate com o domínio da empresa ou se temos o slug.
+            # Para simplificar e garantir visibilidade: se não houver slug explícito nem host-matching forte,
+            # e a empresa for 'raiz', não filtramos por empresa para permitir a visão global.
+            
+            host = self.request.get_host().split(":")[0]
+            is_explicit_host = company.domain and host.lower() == company.domain.lower()
+            
+            if is_explicit_host or company.slug != "raiz":
+                qs = qs.filter(company=company)
+            # else: vision global (não filtra por company)
+        
         return (
             qs.select_related("category", "author", "company")
             .prefetch_related("tags")
@@ -349,25 +365,39 @@ class ArticleViewSet(viewsets.ModelViewSet):
             data=serializer.validated_data,
             image=self.request.FILES.get("image"),
         )
+        
+        # Se criado já como publicado (ex: marcado como público por admin), dispara efeitos
+        if article.status == Article.STATUS_PUBLISHED:
+            ArticleService.publish_article(self.request.user, article)
+            
         serializer.instance = article
         log_create(self.request.user, "Article", article, request=self.request)
 
     def perform_update(self, serializer):
         # Permission already verified by ActionRolePermission before this point.
+        old_status = serializer.instance.status
+        new_status = serializer.validated_data.get("status")
+
         updated_article = ArticleService.update_article(
             user=self.request.user,
             article=serializer.instance,
             data=serializer.validated_data,
             image=self.request.FILES.get("image"),
         )
+        
+        # Se o status mudou para publicado agora, ou se foi salvo como público (o que força o status),
+        # garantimos que as ações de publicação (webhooks, notificações) sejam disparadas.
+        if new_status == Article.STATUS_PUBLISHED and old_status != Article.STATUS_PUBLISHED:
+            # Re-chamamos o publish_article (que é idempotente para o status mas dispara os efeitos)
+            ArticleService.publish_article(self.request.user, updated_article)
+            
         serializer.instance = updated_article
         log_update(self.request.user, "Article", updated_article, request=self.request)
 
     def perform_destroy(self, instance):
-        # Permission already verified by ActionRolePermission before this point.
+        # O ArticleService.delete_article já realiza o log_delete, a invalidação de cache
+        # e a exclusão física do objeto, além de disparar webhooks.
         ArticleService.delete_article(self.request.user, instance)
-        log_delete(self.request.user, "Article", instance, request=self.request)
-        instance.delete()
 
     @action(detail=True, methods=["get"])
     def history(self, request, slug=None):
