@@ -151,6 +151,13 @@ class CompanyViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], permission_classes=[permissions.AllowAny], throttle_classes=[])
     def public_list(self, request):
         """Lista apenas nome, slug e logo para o seletor de login"""
+        from django.core.cache import cache
+
+        CACHE_KEY = "companies:public_list"
+        cached = cache.get(CACHE_KEY)
+        if cached is not None:
+            return Response(cached)
+
         companies = Company.objects.select_related("theme_branding").all()
         data = []
         for c in companies:
@@ -160,13 +167,18 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 logo_url = request.build_absolute_uri(c.theme_branding.logo.url)
 
             data.append({"name": c.name, "slug": c.slug, "logo": logo_url})
+
+        cache.set(CACHE_KEY, data, timeout=300)  # 5 min — invalidado em perform_update
         return Response(data)
 
     @action(detail=False, methods=["get", "patch"], permission_classes=[permissions.IsAuthenticated])
     def current(self, request):
         """Retorna os dados da empresa atual do usuário autenticado."""
+        from django.core.cache import cache
+
         if not request.company:
             return Response({"detail": "No tenant context found."}, status=status.HTTP_404_NOT_FOUND)
+
         if request.method == "PATCH":
             if not request.user.is_superuser:
                 role = getattr(request.user, "role", None)
@@ -176,20 +188,27 @@ class CompanyViewSet(viewsets.ModelViewSet):
             serializer = CompanyUpdateSerializer(request.company, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+            cache.delete(f"company:current:{request.company.slug}")
+            cache.delete("companies:public_list")
             return Response(CompanySerializer(request.company, context={"request": request}).data)
 
+        cache_key = f"company:current:{request.company.slug}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         serializer = self.get_serializer(request.company)
+        cache.set(cache_key, serializer.data, timeout=300)  # 5 min
         return Response(serializer.data)
 
     def perform_update(self, serializer):
         """Override to invalidate cache when Company is updated."""
         instance = serializer.save()
 
-        # Invalidate cache for this company
         from django.core.cache import cache
 
-        cache_key = f"company:slug:{instance.slug}"
-        cache.delete(cache_key)
+        cache.delete(f"company:slug:{instance.slug}")
+        cache.delete("companies:public_list")
 
         return instance
 
