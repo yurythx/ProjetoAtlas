@@ -491,6 +491,7 @@ export default function CRMPage() {
   }
 
   return (
+    <>
     <ModuleGuard moduleCode="crm">
       {isLoading ? (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -946,6 +947,7 @@ export default function CRMPage() {
       )}
     </ModuleGuard>
     <ExportModal open={exportOpen} onOpenChange={setExportOpen} reportType="crm" />
+    </>
   )
 }
 

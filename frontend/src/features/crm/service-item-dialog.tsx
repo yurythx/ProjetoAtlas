@@ -49,7 +49,7 @@ export function ServiceItemDialog({ open, onOpenChange }: ServiceItemDialogProps
   const { createServiceItem, serviceDefinitions, slaPolicies } = useGovernance()
   
   const form = useForm<ItemSchema>({
-    resolver: zodResolver(itemSchema),
+    resolver: zodResolver(itemSchema) as any,
     defaultValues: {
       name: "",
       description: "",

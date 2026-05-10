@@ -152,6 +152,7 @@ export function TransactionList() {
   }, [range.start, range.end, filteredTransactions])
 
   return (
+    <>
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       {/* Control Panel */}
       <Card className="rounded-[2.5rem] border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl relative overflow-hidden group/controls">
@@ -598,6 +599,7 @@ export function TransactionList() {
       />
     </div>
     <ExportModal open={exportOpen} onOpenChange={setExportOpen} reportType="finance" />
+    </>
   )
 }
 

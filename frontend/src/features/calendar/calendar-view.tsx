@@ -18,7 +18,7 @@ import * as z from 'zod'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { format } from 'date-fns'
 import { usePermission } from '@/hooks/use-permission'
-import { Calendar as CalendarIcon, Clock, Tag, Sparkles } from 'lucide-react'
+import { Calendar as CalendarIcon, Clock, Tag, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const COLOR_CATEGORIES = ["blue", "green", "red", "purple", "orange"] as const

@@ -42,6 +42,7 @@ export interface CRMColumn {
     | "operate"
     | "deliver"
     | "support"
+    | "onboarding"
   marks_done?: boolean
   requires_schedule?: boolean
   requires_assignee?: boolean

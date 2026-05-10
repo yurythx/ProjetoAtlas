@@ -120,7 +120,7 @@ export function ExportModal({ open, onOpenChange, reportType, filters = {} }: Ex
         <div className="space-y-6 py-2">
           <div className="space-y-3">
             <Label>Formato do arquivo</Label>
-            <RadioGroup value={fmt} onValueChange={(v) => setFmt(v as ExportFormat)} className="flex gap-4">
+            <RadioGroup value={fmt} onValueChange={(v: string) => setFmt(v as ExportFormat)} className="flex gap-4">
               <div className="flex items-center gap-2 p-3 rounded-xl border cursor-pointer hover:bg-muted/50 transition-colors has-[input:checked]:border-primary has-[input:checked]:bg-primary/5 flex-1">
                 <RadioGroupItem value="csv" id="fmt-csv" />
                 <Label htmlFor="fmt-csv" className="flex items-center gap-2 cursor-pointer font-normal">

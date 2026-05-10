@@ -63,7 +63,7 @@ export function ArticleList({ onEdit, onCreate }: ArticleListProps) {
       if (debouncedSearch) params.append('search', debouncedSearch)
       if (selectedCategory !== 'all') params.append('category', selectedCategory)
       const res = await api.get<{ results?: Article[] } | Article[]>('/api/articles/articles/', { params, signal })
-      return Array.isArray(res.data) ? res.data : (res.data as any).results || []
+      return (Array.isArray(res.data) ? res.data : ((res.data as { results?: Article[] }).results ?? [])) as Article[]
     }
   })
 
@@ -71,7 +71,7 @@ export function ArticleList({ onEdit, onCreate }: ArticleListProps) {
     queryKey: ['categories'],
     queryFn: async () => {
       const res = await api.get<{ results?: Category[] } | Category[]>('/api/articles/categories/')
-      return Array.isArray(res.data) ? res.data : (res.data as any).results || []
+      return (Array.isArray(res.data) ? res.data : ((res.data as { results?: Category[] }).results ?? [])) as Category[]
     }
   })
 

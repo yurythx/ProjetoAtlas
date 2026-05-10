@@ -38,7 +38,7 @@ interface SLAPolicyDialogProps {
 export function SLAPolicyDialog({ open, onOpenChange }: SLAPolicyDialogProps) {
   const { createSLAPolicy } = useGovernance()
   const form = useForm<SLASchema>({
-    resolver: zodResolver(slaSchema),
+    resolver: zodResolver(slaSchema) as any,
     defaultValues: {
       name: "",
       description: "",

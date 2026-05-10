@@ -186,7 +186,7 @@ export function PipelineDetail({ pipelineId }: { pipelineId: number }) {
                       />
                       <Button 
                         disabled={name === pipeline.name || name.length < 3 || updatePipeline.isPending}
-                        onClick={() => updatePipeline.mutate({ ...pipeline, name })}
+                        onClick={() => updatePipeline.mutate({ id: pipeline.id, name, visibility: pipeline.visibility ?? "company", groups: pipeline.groups ?? [] })}
                         className="h-14 w-14 rounded-2xl"
                       >
                         <Save className="h-5 w-5" />

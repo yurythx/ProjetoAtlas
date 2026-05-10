@@ -62,7 +62,7 @@ export function CompanyForm() {
   })
 
   const form = useForm<z.infer<typeof companySchema>>({
-    resolver: zodResolver(companySchema),
+    resolver: zodResolver(companySchema) as any,
     defaultValues: { name: "", domain: "", language_code: "pt-br" },
   })
 

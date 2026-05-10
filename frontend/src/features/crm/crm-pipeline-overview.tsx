@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import { getDealColumnId, getPipelineColumns, isDealDone, isDealInColumn, resolveDealProgress, type Deal, type Pipeline } from "./use-crm"
 import { getDeadlineMeta } from "./crm-visuals"
 
@@ -23,6 +24,8 @@ export interface PipelineOverviewData {
     at_risk: number
     done: number
     average_progress: number
+    average_xla?: string
+    flow_health?: string
   }
   stages?: Array<{
     stage_id?: number

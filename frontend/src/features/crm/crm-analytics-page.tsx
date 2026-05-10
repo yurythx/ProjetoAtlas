@@ -15,7 +15,6 @@ import {
   Rocket,
   Shield,
   Lightbulb,
-  Layers,
   Zap,
   Sparkles,
   Waves,

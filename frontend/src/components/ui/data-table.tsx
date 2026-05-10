@@ -46,6 +46,7 @@ interface DataTableProps<TData, TValue> {
   onSortingChange?: OnChangeFn<SortingState>
   columnVisibility?: VisibilityState
   onColumnVisibilityChange?: OnChangeFn<VisibilityState>
+  className?: string
 }
 
 function DataTableInner<TData, TValue>({
