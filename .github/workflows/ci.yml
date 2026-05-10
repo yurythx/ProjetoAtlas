@@ -82,12 +82,16 @@ jobs:
     name: Frontend Tests (Next.js)
     runs-on: ubuntu-latest
     needs: [backend-test]
+    permissions:
+      contents: write  # required for auto-commit of generated TypeScript client
     defaults:
       run:
         working-directory: ./frontend
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Setup Node.js
       uses: actions/setup-node@v4

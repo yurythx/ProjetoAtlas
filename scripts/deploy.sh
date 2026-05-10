@@ -380,10 +380,35 @@ info "Limpando imagens nao utilizadas..."
 docker image prune -f > /dev/null 2>&1 || true
 
 # ══════════════════════════════════════════════════════════
-# FASE 7: FINALIZACAO
+# FASE 7: SMOKE TEST
 # ══════════════════════════════════════════════════════════
 echo ""
-echo -e "${WHITE}:: FASE 7: FINALIZACAO${RESET}"
+echo -e "${WHITE}:: FASE 7: SMOKE TEST${RESET}"
+info "Aguardando backend ficar saudavel..."
+BACKEND_READY=0
+for i in $(seq 1 20); do
+    if curl -sf http://127.0.0.1:8005/api/health/ > /dev/null 2>&1; then
+        BACKEND_READY=1; break
+    fi
+    sleep 3
+done
+
+if [ "$BACKEND_READY" -eq 1 ]; then
+    BASE_URL=http://127.0.0.1:8005 \
+    FRONTEND_URL=http://127.0.0.1:3005 \
+    COMPANY_SLUG="$(get_env COMPANY_SLUG || echo 'raiz')" \
+    bash "$(dirname "$0")/smoke-test.sh" || {
+        echo -e "${YELLOW}${BOLD}[WARN] Smoke test encontrou falhas — verifique os logs acima.${RESET}"
+    }
+else
+    echo -e "${YELLOW}[WARN] Backend nao ficou pronto para smoke test. Verifique manualmente.${RESET}"
+fi
+
+# ══════════════════════════════════════════════════════════
+# FASE 8: FINALIZACAO
+# ══════════════════════════════════════════════════════════
+echo ""
+echo -e "${WHITE}:: FASE 8: FINALIZACAO${RESET}"
 ok "Deploy realizado com sucesso!"
 echo ""
 echo -e "${GREEN}   Backend  -> http://127.0.0.1:8005/api/health/${RESET}"
