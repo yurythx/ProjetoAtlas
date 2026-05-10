@@ -203,8 +203,108 @@ class CRMUser(HttpUser):
     weight = 30
 
 
+class MessengerTasks(AuthMixin, TaskSet):
+    """Messenger read workload — conversations and messages."""
+
+    conversation_id: int | None = None
+
+    @task(5)
+    def list_conversations(self):
+        resp = self.client.get(
+            "/api/messenger/conversations/",
+            headers=self._headers(),
+            name="/api/messenger/conversations/",
+        )
+        if resp.status_code == 200:
+            results = resp.json().get("results", resp.json())
+            if results:
+                self.conversation_id = results[0]["id"]
+
+    @task(3)
+    def list_messages(self):
+        if not self.conversation_id:
+            return
+        self.client.get(
+            f"/api/messenger/conversations/{self.conversation_id}/messages/",
+            headers=self._headers(),
+            name="/api/messenger/conversations/[id]/messages/",
+        )
+
+    @task(1)
+    def list_modules(self):
+        """Cache hit test — tenant module list (cached 1h)."""
+        self.client.get(
+            "/api/modules/my-modules/",
+            headers={**self._headers(), "X-Company-Slug": COMPANY_SLUG},
+            name="/api/modules/my-modules/ [cached]",
+        )
+
+
+class WriteTasksMixin(AuthMixin, TaskSet):
+    """Write operations to simulate realistic mutation load."""
+
+    @task(2)
+    def mark_notification_read(self):
+        """Marks any unread notification as read (optimistic in UI, confirmed here)."""
+        resp = self.client.get(
+            "/api/notifications/notifications/?is_read=false&page_size=1",
+            headers=self._headers(),
+            name="/api/notifications/ [pick one]",
+        )
+        if resp.status_code == 200:
+            results = resp.json().get("results", resp.json())
+            if results:
+                nid = results[0]["id"]
+                self.client.post(
+                    f"/api/notifications/notifications/{nid}/mark_as_read/",
+                    headers=self._headers(),
+                    name="/api/notifications/[id]/mark_as_read/",
+                )
+
+    @task(1)
+    def request_crm_report(self):
+        """Triggers async CSV report generation for CRM."""
+        resp = self.client.post(
+            "/api/reports/crm/export/",
+            json={"format": "csv"},
+            headers=self._headers(),
+            name="/api/reports/crm/export/",
+        )
+        if resp.status_code == 202:
+            task_id = resp.json().get("task_id")
+            if task_id:
+                self.client.get(
+                    f"/api/reports/tasks/{task_id}/",
+                    headers=self._headers(),
+                    name="/api/reports/tasks/[id]/ [status]",
+                )
+
+    @task(1)
+    def company_current(self):
+        """Cache hit test — company branding (cached 5 min)."""
+        self.client.get(
+            "/api/core/companies/current/",
+            headers=self._headers(),
+            name="/api/core/companies/current/ [cached]",
+        )
+
+
 class MixedUser(HttpUser):
     """Simulates a user alternating between dashboard and CRM."""
     tasks = {DashboardTasks: 3, CRMTasks: 2}
     wait_time = between(2, 6)
     weight = 10
+
+
+class MessengerUser(HttpUser):
+    """Simulates a user focused on messaging."""
+    tasks = [MessengerTasks]
+    wait_time = between(1, 3)
+    weight = 15
+
+
+class WriterUser(HttpUser):
+    """Simulates a user performing write operations (notifications, reports)."""
+    tasks = [WriteTasksMixin]
+    wait_time = between(3, 8)
+    weight = 5

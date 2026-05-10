@@ -76,11 +76,56 @@ def fill_secrets(lines: list[str], values: dict[str, str]) -> list[str]:
     return result
 
 
+def rotate_vapid(output_path: Path, dry_run: bool):
+    """Rotate only the VAPID keys in an existing .env file."""
+    if not output_path.exists():
+        print(f"[ERROR] File not found: {output_path}. Run without --rotate-vapid first.")
+        sys.exit(1)
+
+    print("\n  Rotating VAPID keys...\n")
+    pub, priv = generate_vapid_keys()
+    if not pub:
+        print("  [ERROR] Could not generate VAPID keys. Install pywebpush.")
+        sys.exit(1)
+
+    print(f"  ✓ New VAPID_PUBLIC_KEY  {pub[:20]}...")
+    print(f"  ✓ New VAPID_PRIVATE_KEY {priv[:20]}...")
+
+    lines = output_path.read_text(encoding="utf-8").splitlines()
+    new_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("VAPID_PUBLIC_KEY="):
+            line = f"VAPID_PUBLIC_KEY={pub}"
+        elif stripped.startswith("VAPID_PRIVATE_KEY="):
+            line = f"VAPID_PRIVATE_KEY={priv}"
+        new_lines.append(line)
+    content = "\n".join(new_lines) + "\n"
+
+    if dry_run:
+        print("\n" + "─" * 60)
+        print(content)
+    else:
+        output_path.write_text(content, encoding="utf-8")
+        print(f"\n  ✓ Written to {output_path}")
+        print("\n  IMPORTANT: Push subscription records in the database are now invalid.")
+        print("  Users will need to re-accept browser notifications to re-subscribe.\n")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate Atlas secrets into .env.docker")
     parser.add_argument("--dry-run", action="store_true", help="Print to stdout instead of writing")
     parser.add_argument("--output", default=str(OUTPUT_FILE), help="Output file path")
+    parser.add_argument(
+        "--rotate-vapid",
+        action="store_true",
+        help="Rotate only VAPID keys in an existing .env file (leaves all other values unchanged)",
+    )
     args = parser.parse_args()
+
+    if args.rotate_vapid:
+        rotate_vapid(Path(args.output), args.dry_run)
+        return
 
     output_path = Path(args.output)
 

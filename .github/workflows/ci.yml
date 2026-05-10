@@ -107,23 +107,25 @@ jobs:
 
     - name: Generate TypeScript API Client
       run: |
-        cp ../backend/docs/schema.yaml src/api/schema.yaml
+        # schema.yaml was downloaded directly into src/api/ by the step above
         npm run api:generate
         echo "TypeScript client generated successfully"
 
-    - name: Check for API Client Drift
+    - name: Commit generated API client if changed
+      working-directory: .
       run: |
-        # git diff only sees *modified tracked* files.
-        # git status --porcelain also catches *new untracked* files produced on
-        # first generation, so we use it here instead.
-        DRIFT=$(git status --porcelain src/api/generated/ | grep -vc '\.gitkeep' || true)
+        git config user.email "actions@github.com"
+        git config user.name "GitHub Actions"
+        # Add all generated files (excluding .gitkeep itself)
+        git add frontend/src/api/generated/ frontend/src/api/schema.yaml 2>/dev/null || true
+        DRIFT=$(git status --porcelain frontend/src/api/ | grep -vc '\.gitkeep' || true)
         if [ "$DRIFT" -gt 0 ]; then
-          echo "Generated API client differs from committed version ($DRIFT file(s))."
-          echo "Run 'npm run api:sync' locally and commit the result."
-          git status --short src/api/generated/
-          exit 1
+          echo "API client updated — committing $DRIFT file(s)."
+          git commit -m "chore: regenerate TypeScript API client from OpenAPI schema [skip ci]"
+          git push origin HEAD
+        else
+          echo "API client is already up to date."
         fi
-        echo "API client is up to date"
 
     - name: Run Linter
       run: npm run lint

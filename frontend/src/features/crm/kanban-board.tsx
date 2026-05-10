@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useCRM, Pipeline, Deal, CRMColumn, getColumnTransitionGuard, getDealColumnId, getPipelineColumns, isDealDone, isDealInColumn, resolveColumnSemantics } from "./use-crm"
 import { Card } from "@/components/ui/card"
@@ -595,7 +595,7 @@ function DealCard({
                 {/* Sentiment (XLA) - ITIL Version 5 Focus */}
                 <div className="flex items-center gap-1 mt-1 bg-muted/50 px-1.5 py-0.5 rounded-full border border-primary/5">
                   <span className="text-[12px]">
-                    {deal.xla_score && deal.xla_score >= 8 ? "Smileys fix" : deal.xla_score && deal.xla_score >= 5 ? "ðŸ˜" : "Sad fix"}
+                    {deal.xla_score && deal.xla_score >= 8 ? "😊" : deal.xla_score && deal.xla_score >= 5 ? "😐" : "😞"}
                   </span>
                   <span className="text-[10px] font-black text-muted-foreground">XLA</span>
                 </div>
