@@ -1,9 +1,6 @@
 import logging
 
-import requests
-
 from apps.module_manager.models import TenantModule
-from shared_kernel.sanitization import sanitize_url
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Contact, Pipeline, Stage, Column, Deal, SLAPolicy, CRMGroup, EvolutionConfig, XLAFeedback
+from .models import Contact, Pipeline, Column, Deal, SLAPolicy, CRMGroup, EvolutionConfig, XLAFeedback
 
 @admin.register(Contact)
 class ContactAdmin(admin.ModelAdmin):

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
-import { Send, Loader2, Paperclip, FileIcon, Download, X, ImageIcon, Check, CheckCheck, SmilePlus, Reply, ArrowLeft, MoreVertical, Trash2, Copy, Pencil, Bell, BellOff, Ban, Mail, Phone, Pin, Archive, Info, Sparkles, MessageSquare, History } from "lucide-react"
+import { Send, Loader2, Paperclip, FileIcon, Download, X, ImageIcon, Check, CheckCheck, SmilePlus, Reply, ArrowLeft, MoreVertical, Trash2, Copy, Bell, BellOff, Ban, Pin, Archive, Info, History } from "lucide-react"
 import { api } from "@/lib/axios"
 import { Contact, User } from "@/types"
 import { Conversation, Message, MessageReaction } from "@/types/messenger"

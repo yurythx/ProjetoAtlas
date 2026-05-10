@@ -4,7 +4,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.accounts.permissions import HasRolePermission
-from config.pagination import DefaultPagination
 from shared_kernel.cache import invalidate_tenant_cache, tenant_cached
 
 from .models import Module, TenantModule

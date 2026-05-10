@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { format } from "date-fns"
-import { Plus, CalendarDays, RefreshCcw, DollarSign, Wallet, ArrowUpRight, ArrowDownRight, Tag, Loader2, X } from "lucide-react"
+import { Plus, CalendarDays, RefreshCcw, DollarSign, Wallet, ArrowUpRight, ArrowDownRight, Tag, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -15,8 +15,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { cn } from "@/lib/utils"
-
 import type { FinanceCategory, Transaction } from "./use-finance"
 
 const transactionSchema = z.object({

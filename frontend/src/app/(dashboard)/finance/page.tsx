@@ -3,7 +3,6 @@
 import { ModuleGuard } from "@/components/module-guard"
 import { Protected } from "@/components/auth/protected"
 import dynamic from "next/dynamic"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Wallet } from "lucide-react"
 
 const TransactionList = dynamic(

@@ -6,19 +6,17 @@ import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatsCard } from "@/components/ui/stats-card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  Users, 
-  UserPlus, 
-  Activity, 
-  Database, 
-  ShieldCheck, 
-  FileText, 
-  Globe, 
-  Zap, 
-  DollarSign, 
-  CreditCard, 
-  Target, 
-  LineChart 
+import {
+  Users,
+  UserPlus,
+  Activity,
+  ShieldCheck,
+  Globe,
+  Zap,
+  DollarSign,
+  CreditCard,
+  Target,
+  LineChart
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/axios"

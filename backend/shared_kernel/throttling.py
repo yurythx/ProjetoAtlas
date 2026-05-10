@@ -1,4 +1,4 @@
-from rest_framework.throttling import AnonRateThrottle, SimpleRateThrottle
+from rest_framework.throttling import SimpleRateThrottle
 
 
 class TenantRateThrottle(SimpleRateThrottle):

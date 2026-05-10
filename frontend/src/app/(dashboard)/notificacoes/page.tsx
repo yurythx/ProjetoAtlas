@@ -2,7 +2,7 @@
 
 import { useNotifications, Notification } from "@/hooks/use-notifications-v2"
 import { Button } from "@/components/ui/button"
-import { Bell, MessageSquare, ShieldCheck, CheckCircle2, Calendar, ChevronRight, Search, DollarSign, Users, AlertTriangle, Sparkles, Zap, Trash2, History, Inbox } from "lucide-react"
+import { Bell, MessageSquare, ShieldCheck, CheckCircle2, ChevronRight, Search, DollarSign, Users, AlertTriangle, Zap, History, Inbox } from "lucide-react"
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"

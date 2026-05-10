@@ -10,23 +10,7 @@ import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/axios"
 import { useTheme } from "@/components/theme-provider"
 import { useEffect, useState } from "react"
-import {
-  LayoutDashboard,
-  MessageSquare,
-  FileText,
-  Settings,
-  Shield,
-  Users,
-  Package,
-  ChevronRight,
-  TrendingUp,
-  Globe,
-  KeyRound,
-  Calendar as CalendarIcon,
-  DollarSign,
-  ClipboardList,
-  BarChart3
-} from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import { motion } from "framer-motion"
 import {
   Tooltip,

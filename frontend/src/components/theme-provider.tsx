@@ -95,18 +95,6 @@ function useThemeHooks(): ThemeConfigShape {
   const [userTheme, setUserTheme] = useState<UserPreferences | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Limpeza de Service Worker legado (PWA desativado)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        for (const registration of registrations) {
-          registration.unregister();
-          console.log('Antigravity: Service Worker legado desinstalado.');
-        }
-      });
-    }
-  }, []);
-
   const effectiveCompany = useMemo(() => {
     if (typeof window === "undefined") return process.env.NEXT_PUBLIC_COMPANY_SLUG || "unknown"
     return localStorage.getItem("companySlug") || process.env.NEXT_PUBLIC_COMPANY_SLUG || "unknown"

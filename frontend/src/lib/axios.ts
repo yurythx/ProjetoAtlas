@@ -1,5 +1,4 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { isJwtExpired } from './jwt';
 import { clearClientSession } from './session';
 
 const isServer = typeof window === 'undefined';

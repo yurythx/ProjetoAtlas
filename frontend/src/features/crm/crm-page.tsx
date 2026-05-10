@@ -12,7 +12,6 @@ import {
   endOfWeek, 
   endOfMonth,
 } from "date-fns"
-import { PageHeader } from "@/components/ui/page-header"
 import { ExportModal } from "@/components/reports/export-modal"
 import { ModuleGuard } from "@/components/module-guard"
 import { CRMSavedView, CRMViewMode, getPipelineColumns, useCRM, CRMSavedViewFilters, useSLAMonitor } from "./use-crm"

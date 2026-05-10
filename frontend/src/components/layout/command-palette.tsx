@@ -2,17 +2,15 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { 
-  Search, 
-  Zap, 
-  LayoutGrid, 
-  MessageSquare, 
-  Calendar, 
-  DollarSign, 
-  BookOpen, 
-  Settings, 
-  User, 
-  Bell,
+import {
+  Search,
+  Zap,
+  MessageSquare,
+  Calendar,
+  DollarSign,
+  BookOpen,
+  Settings,
+  User,
   Activity,
   Plus,
   Layers,
@@ -20,7 +18,7 @@ import {
   ShieldCheck,
   Target
 } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"

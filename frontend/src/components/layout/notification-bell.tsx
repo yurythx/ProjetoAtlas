@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Check, MessageSquare, Info, ExternalLink, ChevronRight, AlertTriangle, DollarSign, Users, Briefcase, Zap, Inbox, CheckCircle2, History } from "lucide-react"
+import { Bell, Check, MessageSquare, ChevronRight, AlertTriangle, DollarSign, Users, Zap, Inbox, CheckCircle2, History } from "lucide-react"
 import { useNotifications, Notification } from "@/hooks/use-notifications-v2"
 import { Button } from "@/components/ui/button"
 import {

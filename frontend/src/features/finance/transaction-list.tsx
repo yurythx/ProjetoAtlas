@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, Download, Calendar, Filter, Sparkles, Loader2, Search, DollarSign } from "lucide-react"
 import { Input } from "@/components/ui/input"

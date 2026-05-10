@@ -1,4 +1,3 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
 from apps.core.models import Company
 from apps.crm.models import Deal, Pipeline, Stage, Swarm, Column, Contact
