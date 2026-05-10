@@ -6,7 +6,7 @@ import { api } from "@/lib/axios"
 import { Article, Category } from "@/types"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Button } from "@/components/ui/button"
-import { Plus, Pencil, Trash2, Eye, Calendar, Clock, Image as ImageIcon, MessageSquare, Search, Filter, X, Sparkles, BookOpen, User, ArrowUpRight } from "lucide-react"
+import { Plus, Pencil, Trash2, Eye, Calendar, Clock, Image as ImageIcon, MessageSquare, Search, Filter, X, Sparkles, BookOpen, User, ArrowUpRight, Download } from "lucide-react"
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
@@ -35,6 +35,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
+import dynamic from "next/dynamic"
+
+const ExportModal = dynamic(
+  () => import("@/components/reports/export-modal").then((m) => m.ExportModal),
+  { ssr: false }
+)
 
 interface ArticleListProps {
   onEdit: (article: Article) => void
@@ -44,6 +50,7 @@ interface ArticleListProps {
 export function ArticleList({ onEdit, onCreate }: ArticleListProps) {
   const queryClient = useQueryClient()
   const [articleToDelete, setArticleToDelete] = React.useState<Article | null>(null)
+  const [exportOpen, setExportOpen] = React.useState(false)
 
   const [search, setSearch] = React.useState("")
   const debouncedSearch = useDebounce(search, 500)
@@ -132,9 +139,16 @@ export function ArticleList({ onEdit, onCreate }: ArticleListProps) {
                 <p className="text-slate-400 text-lg font-bold max-w-xl leading-relaxed uppercase tracking-tight opacity-80">Orquestre sua estratégia de conteúdo com a elite do gerenciamento editorial Atlas.</p>
             </div>
          </div>
-         <div className="relative z-10 shrink-0">
-            <Button 
-                onClick={onCreate} 
+         <div className="relative z-10 shrink-0 flex items-center gap-4">
+            <Button
+                variant="outline"
+                onClick={() => setExportOpen(true)}
+                className="h-14 px-8 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 font-black uppercase tracking-widest text-[10px] flex items-center gap-3 transition-all"
+            >
+               <Download className="h-4 w-4 text-primary" /> Exportar
+            </Button>
+            <Button
+                onClick={onCreate}
                 className="h-20 px-14 rounded-3xl bg-primary text-white font-black uppercase tracking-[0.2em] text-[11px] shadow-[0_20px_40px_-10px_rgba(59,130,246,0.5)] transition-all hover:scale-105 active:scale-95 flex items-center gap-4 group/btn"
             >
                <Plus className="h-6 w-6 group-hover/btn:rotate-90 transition-transform" /> Novo Artigo Atlas
@@ -350,6 +364,8 @@ export function ArticleList({ onEdit, onCreate }: ArticleListProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ExportModal open={exportOpen} onOpenChange={setExportOpen} reportType="articles" />
     </div>
   )
 }

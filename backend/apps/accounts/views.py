@@ -82,6 +82,8 @@ class CustomTokenRefreshView(generics.GenericAPIView):
 
     permission_classes = [permissions.AllowAny]
     authentication_classes = []  # Disable authentication for this endpoint
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "token_refresh"
 
     def post(self, request):
         from rest_framework_simplejwt.exceptions import TokenError

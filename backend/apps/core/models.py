@@ -31,6 +31,17 @@ class Company(models.Model):
         null=True, blank=True, help_text="Set automatically when is_active is flipped to False."
     )
 
+    LANGUAGE_CHOICES = [
+        ("pt-br", "Português (Brasil)"),
+        ("en-us", "English (US)"),
+    ]
+    language_code = models.CharField(
+        max_length=10,
+        choices=LANGUAGE_CHOICES,
+        default="pt-br",
+        help_text="Default language for this tenant's users.",
+    )
+
     # Onboarding state
     onboarding_completed = models.BooleanField(default=False)
     onboarding_step = models.IntegerField(default=1)  # 1: Identity, 2: Visual, 3: Connectivity, 4: Domain

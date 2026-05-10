@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { useFinance, Transaction } from "./use-finance"
 import dynamic from "next/dynamic"
+import { ExportModal } from "@/components/reports/export-modal"
 import {
   Table,
   TableBody,
@@ -36,6 +37,7 @@ export function TransactionList() {
   const [selectedSemester, setSelectedSemester] = useState<1 | 2>(now.getMonth() < 6 ? 1 : 2)
   const [selectedDate, setSelectedDate] = useState<string>(() => format(now, "yyyy-MM-dd"))
   const [searchTerm, setSearchTerm] = useState("")
+  const [exportOpen, setExportOpen] = useState(false)
 
   const range = useMemo(() => {
     if (periodMode === 'day') {
@@ -435,14 +437,23 @@ export function TransactionList() {
              </div>
              
              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleExportCSV}
                   className="h-10 px-4 rounded-xl font-black uppercase tracking-widest text-[9px] border-white/10 bg-white/5 hover:bg-white/10 transition-all shadow-lg"
                 >
                   <Download className="h-3.5 w-3.5 mr-2 text-primary" />
                   Exportar CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExportOpen(true)}
+                  className="h-10 px-4 rounded-xl font-black uppercase tracking-widest text-[9px] border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary transition-all shadow-lg"
+                >
+                  <Download className="h-3.5 w-3.5 mr-2" />
+                  Relatório PDF
                 </Button>
                 <Button 
                   onClick={handleCreate} 
@@ -457,96 +468,114 @@ export function TransactionList() {
         </div>
 
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-white/5">
-                <TableRow className="hover:bg-transparent border-white/5">
-                  <TableHead className="px-8 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Descrição</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Segmentação</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Temporalidade</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Status</TableHead>
-                  <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Valor Líquido</TableHead>
-                  <TableHead className="px-8 text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center h-48">
-                       <div className="flex flex-col items-center gap-3">
-                          <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Processando dados...</span>
-                       </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredTransactions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center h-48">
-                       <div className="flex flex-col items-center gap-3 opacity-30">
-                          <Sparkles className="h-10 w-10 text-muted-foreground" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nenhuma transação registrada no período.</span>
-                       </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  (Array.isArray(filteredTransactions) ? filteredTransactions : []).map((transaction) => (
-                    <TableRow key={transaction.id} className="group hover:bg-white/5 transition-colors border-white/5">
-                      <TableCell className="px-8 py-4">
-                         <div className="font-bold text-sm text-foreground/90">{transaction.description}</div>
-                         <div className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight mt-0.5">ID: {String(transaction.id).slice(0, 8)}</div>
-                      </TableCell>
-                      <TableCell>
-                        {transaction.category_details ? (
-                          <div className="inline-flex items-center gap-2 rounded-lg px-3 py-1 bg-white/5 border border-white/5">
-                             <div className="h-1.5 w-1.5 rounded-full shadow-lg" style={{ backgroundColor: transaction.category_details.color }} />
-                             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                               {transaction.category_details.name}
-                             </span>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-30">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                         <div className="text-xs font-bold text-muted-foreground">
-                           {format(new Date(transaction.due_date), 'dd MMM yyyy', { locale: ptBR }).toUpperCase()}
-                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={transaction.status} />
-                      </TableCell>
-                      <TableCell className={cn(
-                        "text-right font-black text-sm tracking-tighter",
-                        transaction.type === 'in' ? 'text-emerald-500' : 'text-rose-500'
-                      )}>
-                        {transaction.type === 'in' ? '+' : '-'} 
+          {isLoading ? (
+            <div className="flex flex-col items-center gap-3 h-48 justify-center">
+              <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Processando dados...</span>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 h-48 justify-center opacity-30">
+              <Sparkles className="h-10 w-10 text-muted-foreground" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nenhuma transação registrada no período.</span>
+            </div>
+          ) : (
+            <>
+              {/* Mobile card view */}
+              <div className="sm:hidden divide-y divide-border/40">
+                {(Array.isArray(filteredTransactions) ? filteredTransactions : []).map((transaction) => (
+                  <div key={transaction.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm text-foreground/90 truncate">{transaction.description}</p>
+                        <p className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight mt-0.5">
+                          {format(new Date(transaction.due_date), 'dd MMM yyyy', { locale: ptBR }).toUpperCase()}
+                        </p>
+                      </div>
+                      <span className={cn("font-black text-sm tracking-tighter shrink-0", transaction.type === 'in' ? 'text-emerald-500' : 'text-rose-500')}>
+                        {transaction.type === 'in' ? '+' : '-'}
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(transaction.amount))}
-                      </TableCell>
-                      <TableCell className="px-8 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <Button variant="ghost" size="icon" onClick={() => handleEdit(transaction)} className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
-                             <Edit2 className="h-4 w-4" />
-                           </Button>
-                           <Button 
-                             variant="ghost" 
-                             size="icon" 
-                             onClick={() => {
-                               if (confirm("Deseja realmente excluir esta transação?")) {
-                                 deleteTransaction.mutate(transaction.id)
-                               }
-                             }} 
-                             className="h-8 w-8 rounded-lg hover:bg-rose-500/10 hover:text-rose-500"
-                           >
-                             <Trash2 className="h-4 w-4" />
-                           </Button>
-                        </div>
-                      </TableCell>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <StatusBadge status={transaction.status} />
+                        {transaction.category_details && (
+                          <div className="inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 bg-white/5 border border-white/5">
+                            <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: transaction.category_details.color }} />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground truncate max-w-[80px]">{transaction.category_details.name}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(transaction)} className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { if (confirm("Deseja realmente excluir esta transação?")) deleteTransaction.mutate(transaction.id) }} className="h-8 w-8 rounded-lg hover:bg-rose-500/10 hover:text-rose-500">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop table view */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-white/5">
+                    <TableRow className="hover:bg-transparent border-white/5">
+                      <TableHead className="px-8 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Descrição</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Segmentação</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Temporalidade</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Status</TableHead>
+                      <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Valor Líquido</TableHead>
+                      <TableHead className="px-8 text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 h-14">Ações</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {(Array.isArray(filteredTransactions) ? filteredTransactions : []).map((transaction) => (
+                      <TableRow key={transaction.id} className="group hover:bg-white/5 transition-colors border-white/5">
+                        <TableCell className="px-8 py-4">
+                          <div className="font-bold text-sm text-foreground/90">{transaction.description}</div>
+                          <div className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-tight mt-0.5">ID: {String(transaction.id).slice(0, 8)}</div>
+                        </TableCell>
+                        <TableCell>
+                          {transaction.category_details ? (
+                            <div className="inline-flex items-center gap-2 rounded-lg px-3 py-1 bg-white/5 border border-white/5">
+                              <div className="h-1.5 w-1.5 rounded-full shadow-lg" style={{ backgroundColor: transaction.category_details.color }} />
+                              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{transaction.category_details.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-30">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs font-bold text-muted-foreground">
+                            {format(new Date(transaction.due_date), 'dd MMM yyyy', { locale: ptBR }).toUpperCase()}
+                          </div>
+                        </TableCell>
+                        <TableCell><StatusBadge status={transaction.status} /></TableCell>
+                        <TableCell className={cn("text-right font-black text-sm tracking-tighter", transaction.type === 'in' ? 'text-emerald-500' : 'text-rose-500')}>
+                          {transaction.type === 'in' ? '+' : '-'}
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(transaction.amount))}
+                        </TableCell>
+                        <TableCell className="px-8 text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(transaction)} className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => { if (confirm("Deseja realmente excluir esta transação?")) deleteTransaction.mutate(transaction.id) }} className="h-8 w-8 rounded-lg hover:bg-rose-500/10 hover:text-rose-500">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -568,6 +597,7 @@ export function TransactionList() {
         isCreatingCategory={createCategory.isPending}
       />
     </div>
+    <ExportModal open={exportOpen} onOpenChange={setExportOpen} reportType="finance" />
   )
 }
 

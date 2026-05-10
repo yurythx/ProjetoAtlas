@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/axios"
 import { useCRM, type Pipeline, type CRMColumn } from "./use-crm"
+import { AutomationRulesPanel } from "./automation-rules-panel"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -311,6 +312,11 @@ export function PipelineDetail({ pipelineId }: { pipelineId: number }) {
                 </div>
              </div>
           </div>
+        </div>
+
+        {/* Automation Rules */}
+        <div className="rounded-3xl border bg-card/60 backdrop-blur-sm p-6 sm:p-8">
+          <AutomationRulesPanel pipelineId={pipelineId} />
         </div>
 
         {/* Dialogs */}

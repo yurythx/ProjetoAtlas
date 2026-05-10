@@ -1,19 +1,21 @@
-# 🌍 Atlas - Plataforma SaaS Multi-Tenant (ITIL Version 5 Suite)
+# Atlas — Plataforma SaaS Multi-Tenant (ITIL Version 5 Suite)
 
-> Plataforma SaaS white-label de nível empresarial orientada ao ITIL Version 5, multitenant (clientes múltiples).
+> Plataforma SaaS white-label de nível empresarial orientada ao ITIL Version 5, multi-tenant, com autenticação JWT, RBAC granular, módulos dinâmicos por tenant e observabilidade integrada.
 
 ---
 
-## � Documentação
+## Documentação
 
-- Visão geral (índice): [docs/SYSTEM_OVERVIEW.md](docs/SYSTEM_OVERVIEW.md)
-- Capacidades do produto (features): [docs/FEATURES.md](docs/FEATURES.md)
-- Deploy com Docker (dev e produção): [docs/DEPLOY_DOCKER.md](docs/DEPLOY_DOCKER.md)
-- Cloudflare Tunnel (produção): [ops/DEPLOY_CLOUDFLARE.md](ops/DEPLOY_CLOUDFLARE.md)
+| Documento | Descrição |
+|---|---|
+| [docs/SYSTEM_OVERVIEW.md](docs/SYSTEM_OVERVIEW.md) | Visão geral e arquitetura |
+| [docs/FEATURES.md](docs/FEATURES.md) | Lista completa de funcionalidades |
+| [docs/DEPLOY_DOCKER.md](docs/DEPLOY_DOCKER.md) | Deploy local e produção com Docker |
+| [ops/DEPLOY_CLOUDFLARE.md](ops/DEPLOY_CLOUDFLARE.md) | Cloudflare Tunnel para produção |
 
-## �🚀 Início Rápido (Deploy Oficial)
+---
 
-A forma oficial e mais rápida de colocar o Atlas em produção é utilizando o nosso script de automação.
+## Início Rápido
 
 ```bash
 # 1. Clone o repositório
@@ -22,141 +24,225 @@ cd atlas
 
 # 2. Configure o ambiente de produção
 cp .env.prod.example .env.prod
-# Edite as variáveis conforme necessário
-nano .env.prod
+nano .env.prod          # edite as variáveis necessárias
 
-# 3. Execute o Deploy
+# 3. Execute o deploy
 chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
 ```
 
-Se você estiver no Windows ou preferir um deploy manual, siga: [docs/DEPLOY_DOCKER.md](docs/DEPLOY_DOCKER.md).
-
-### 🌍 Acesso Pós-Deploy
-*   **Frontend**: `https://projetoravenna.cloud`
-*   **Backend API**: `https://api.projetoravenna.cloud`
-*   **Admin**: `https://api.projetoravenna.cloud/admin`
-
-Para detalhes sobre a configuração do Cloudflare Tunnel, veja o guia: [Manual Cloudflare](ops/DEPLOY_CLOUDFLARE.md)
+**Acessos pós-deploy:**
+- Frontend: `https://projetoravenna.cloud`
+- Backend API: `https://api.projetoravenna.cloud`
+- Admin: `https://api.projetoravenna.cloud/admin`
+- Monitoramento: `http://<host>:3000` (Grafana)
 
 ---
 
-## ✨ Funcionalidades
+## Funcionalidades
 
-Para uma lista completa e atualizada: [docs/FEATURES.md](docs/FEATURES.md).
+### Multi-Tenancy & White-Label
+- Isolamento completo de dados por cliente via campo `company`
+- Branding personalizado: cores, logos, fontes e CSS/JS por tenant
+- Gestão de módulos ativados por tenant (`HasModuleAccess`)
 
-### 🏢 Multi-Tenancy & White-Label
-- **Isolamento de Empresas**: Separação completa de dados por cliente.
-- **Branding Personalizado**: Cores, logos, fontes e CSS/JS customizados por tenant.
-- **Temas Dinâmicos**: Troca de tema em tempo real.
-- **Integração Google Fonts**: Tipografia personalizada para cada empresa.
+### Autenticação & Controle de Acesso
+- JWT com refresh rotation e blacklist (access: 15min, refresh: 30d)
+- **RBAC granular** com permissões por string e suporte a wildcard (`*`)
+- Autenticação LDAP corporativa multi-tenant
+- **API Keys** para integrações externas: geração, revogação, expiração, scopes e rastreio de uso
+- Convites por e-mail e onboarding guiado
 
-### 🧩 Gestão de Módulos (Module Manager)
-- **Ativação Dinâmica**: Recursos são habilitados por tenant.
-- **Isolamento de API**: Permissões bloqueiam acesso a APIs de módulos inativos (`HasModuleAccess`).
+### CMS — Base de Conhecimento
+- Fluxo editorial (Rascunho → Revisão → Publicado) com django-reversion
+- Portal público com SEO otimizado: robots.txt, sitemap.xml dinâmico por tenant
+- Artigos públicos acessíveis sem autenticação (React Server Components)
 
-### 📝 CMS (Sistema de Gestão de Conteúdo)
-- **Fluxo Editorial**: Status rigorosos (Rascunho, Pendente, Publicado, Rejeitado).
-- **Controle de Versão**: Histórico e rollback com `django-reversion`.
-- **Moderação**: Painel de aprovação/rejeição em lote com motivos de auditoria.
-- **Otimização SEO**: Meta tags, sitemaps e portal público.
+### ITIL Version 5 Suite
+- **CRM Kanban**: pipelines, colunas, deals com prioridade, SLA e tipo de registro
+- **Automação de CRM**: regras configuráveis por pipeline (trigger → condição → ação) executadas via Celery
+- **Catálogo de Serviços**: itens e definições com controle de acesso por tenant
+- **CMDB**: inventário de ativos de TI com tipos e status
+- **Gestão de Mudanças e Problemas**: registro e rastreio de impacto
 
-### 💻 ITIL Version 5 Suite (Service Desk & Operations)
-- **Gestão de Incidentes e Requisições**: Service Desk integrado.
-- **Catálogo de Serviços**: Foco no ciclo de vida de ativos e catálogo de serviços (ITIL Version 5).
-- **Gestão de Mudanças e Problemas**: Rastreio de impactos no ecossistema.
+### Relatórios & Exportação
+- Geração assíncrona (Celery) de relatórios em **CSV** e **PDF**
+- Módulos cobertos: **CRM (deals)**, **Financeiro**, **Artigos**, **Folha de Pagamento**
+- Polling de status por task ID; download direto quando pronto
+- Modal de exportação com filtros por período, status e formato
 
-### 💰 Financeiro & Folha de Pagamento
-- **Controle Financeiro**: Gestão de receitas, despesas e relatórios.
-- **Folha de Pagamento (Payroll)**: Processamento de salários, cálculos de 13º e férias.
+### Financeiro & Folha de Pagamento
+- Controle de receitas, despesas, categorias e status de pagamento
+- Folha de pagamento: runs mensais, linhas (proventos/descontos), 13º e férias
+- Exportação de relatórios financeiros e de folha em CSV/PDF
 
-### 👥 Gestão de Usuários
-- **Autenticação Segura**: JWT em cookies HttpOnly.
-- **Autenticação LDAP**: Integração corporativa multi-tenant.
-- **RBAC (Controle de Acesso)**: Permissões granulares baseadas em papéis, com suporte a wildcard (`*`).
-- **Grupos CRM**: Separação adicional de acesso em pipelines por grupos (além do tenant).
-- **Onboarding**: Fluxo guiado para novas empresas.
+### Inteligência Artificial
+- **Resumo automático** de artigos (Gemini / OpenAI)
+- **Sugestão de prioridade** para deals baseada em histórico e tipo de registro
+- **Geração de rascunho** de artigo a partir de um título
+- **Classificação automática** de incidentes com sugestão de categoria e SLA
 
-### 💳 Licenciamento & Monetização
-- **Planos em Camadas**: Free, Pro e Enterprise.
-- **Gating de Funcionalidades**: Controle de acesso a módulos via middleware.
-- **Gestão de Licenças**: Rastreamento de assinaturas.
+### Comunicação
+- **Messenger** em tempo real via WebSockets (Django Channels / Daphne)
+- Notificações push VAPID no navegador
+- **Webhooks** com retry automático e histórico de entregas
 
-### 💬 Comunicação
-- **Messenger**: Chat em tempo real via WebSockets.
-- **Notificações Push**: Suporte a notificações VAPID no navegador.
-- **Webhooks**: Integrações baseadas em eventos.
+### Licenciamento
+- Planos Free, Pro e Enterprise com gating de módulos via middleware
+- Rastreamento de assinaturas por tenant
+
+### Calendário
+- Eventos com suporte a dia inteiro, categorias por cor e participantes
 
 ---
 
-## 🏗️ Stack Tecnológica
+## Stack Tecnológica
 
 | Camada | Tecnologia |
-|-------|------------|
-| **Backend** | Django 5.0, Django REST Framework |
-| **Frontend** | Next.js 15, React 19, TypeScript |
-| **Banco de Dados** | PostgreSQL 16 |
+|---|---|
+| **Backend** | Django 5.0, Django REST Framework, Celery, Channels (Daphne) |
+| **Frontend** | Next.js 15, React 19, TypeScript, TanStack Query, Zustand |
+| **Banco de Dados** | PostgreSQL 16 + PgBouncer (connection pooling) |
 | **Cache & Broker** | Redis 7 |
-| **Storage** | MinIO (padrão S3) |
-| **Fila de Tarefas** | Celery |
-| **WebSockets** | Django Channels (Daphne) |
-| **Infra** | Docker, Cloudflare Tunnel |
+| **Storage** | MinIO (compatível com S3) |
+| **WebSockets** | Django Channels (protocolo ASGI) |
+| **Internacionalização** | next-intl (pt-BR + en-US) |
+| **UI** | Tailwind CSS 4, Radix UI, Framer Motion |
+| **PWA** | Serwist (service worker, cache-first para assets) |
+| **Observabilidade** | Prometheus, Grafana, Sentry, Flower (Celery) |
+| **Infra** | Docker Compose, Cloudflare Tunnel |
+| **CI/CD** | GitHub Actions (lint → testes → build → E2E → deploy) |
 
 ---
 
-## 📂 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 atlas/
-├── backend/                 # API Django (Python)
-│   ├── apps/               # Aplicações específicas
-│   ├── config/             # Configurações globais (settings)
-│   └── requirements.txt    # Dependências
-├── frontend/               # Aplicação Next.js (TypeScript)
+├── backend/
+│   ├── apps/
+│   │   ├── accounts/        # Usuários, roles, LDAP, invites
+│   │   ├── ai/              # Integrações Gemini/OpenAI
+│   │   ├── api_keys/        # API Key auth para integrações externas
+│   │   ├── articles/        # CMS — base de conhecimento
+│   │   ├── calendar/        # Eventos e agendamentos
+│   │   ├── cmdb/            # Inventário de ativos de TI
+│   │   ├── core/            # Company, branding, health check
+│   │   ├── crm/             # Kanban, deals, automações
+│   │   ├── finance/         # Transações e categorias financeiras
+│   │   ├── messenger/       # Chat em tempo real (WebSockets)
+│   │   ├── module_manager/  # Ativação dinâmica de módulos por tenant
+│   │   ├── notifications/   # Notificações in-app e push
+│   │   ├── pages/           # Páginas estáticas por tenant
+│   │   ├── payroll/         # Folha de pagamento
+│   │   ├── reports/         # Exportação CSV/PDF assíncrona
+│   │   ├── service_catalog/ # Catálogo de serviços ITIL
+│   │   ├── seo/             # robots.txt, sitemap.xml
+│   │   └── webhooks/        # Subscriptions, entregas e retry
+│   ├── config/              # settings.py, urls.py, celery.py, wsgi/asgi
+│   ├── factories.py         # Factory Boy — fixtures de teste
+│   └── requirements.txt
+├── frontend/
 │   ├── src/
-│   │   ├── app/            # App Router
-│   │   └── components/     # Componentes UI
-├── docs/                   # Documentação técnica e de produto
-├── scripts/                # Scripts de automação (Deploy, Backup)
-└── docker-compose.prod.yml # Orquestração oficial de produção
+│   │   ├── app/             # Next.js App Router (dashboard + público)
+│   │   ├── components/      # UI compartilhada (shadcn/Radix)
+│   │   ├── features/        # Lógica por domínio (crm, finance, reports…)
+│   │   ├── api/generated/   # Client TypeScript gerado do schema OpenAPI
+│   │   └── i18n/            # Configuração next-intl
+│   └── e2e/                 # Testes Playwright (login, CRM, artigos, reports…)
+├── docs/                    # Documentação técnica e de produto
+├── scripts/                 # deploy.sh, backup.sh, seed
+├── docker-compose.yml       # Ambiente de desenvolvimento
+└── docker-compose.prod.yml  # Produção (inclui PgBouncer, Flower, Prometheus, Grafana)
 ```
 
 ---
 
-## 🔧 Desenvolvimento Local
-
-Se você deseja rodar o projeto para desenvolvimento:
+## Desenvolvimento Local
 
 ```bash
-# Usando Docker Compose de Dev
+# Sobe todos os serviços (backend, frontend, DB, Redis, MinIO)
 docker compose up -d --build
 
-# Backend disponível em: http://localhost:8005
-# Frontend disponível em: http://localhost:3005
+# Backend:  http://localhost:8005
+# Frontend: http://localhost:3005
+# MinIO:    http://localhost:9001
 ```
 
-Para passo a passo com seed/migrações e troubleshooting: [docs/DEPLOY_DOCKER.md](docs/DEPLOY_DOCKER.md).
+### Bootstrap (primeira execução)
+
+```bash
+cd backend
+
+# Cria tenant padrão "raiz" e usuário suporte/suporte123
+python manage.py seed_system
+
+# Popula com dados de exemplo (deals, artigos, transações)
+python manage.py seed_local
+```
 
 ---
 
-## 🧪 Testes
+## Testes
+
+### Backend (Django)
 
 ```bash
-# Testes do Backend
 cd backend
-python -m pytest
-
-# Testes do Frontend
-cd frontend
-npm run test
+python manage.py test          # todos os apps
+python manage.py test apps.reports apps.api_keys apps.seo  # módulos específicos
 ```
 
-## ✅ Qualidade (lint/typecheck)
+Cobertura ≥ 93% com Factory Boy para fixtures — sem fixtures manuais.
+
+### Frontend (Vitest)
 
 ```bash
-# Backend (lint)
+cd frontend
+npm run test           # watch mode
+npm run test:coverage  # relatório de cobertura
+```
+
+### E2E (Playwright)
+
+```bash
+cd frontend
+
+# requer backend em :8005 e frontend em :3005 rodando
+npx playwright test
+
+# relatório HTML
+npx playwright show-report
+```
+
+Suítes disponíveis: login, dashboard, CRM, artigos, relatórios, messenger, usuários, portal público.
+
+---
+
+## CI/CD (GitHub Actions)
+
+O pipeline possui três jobs em sequência:
+
+```
+backend-test  →  frontend-test  →  e2e-test
+    │                  │               │
+  pytest            Vitest        Playwright
+  lint              lint          (Chromium)
+  OpenAPI           TypeScript
+  schema            client drift
+```
+
+O job `e2e-test` sobe Django + Next.js no runner, semeia o usuário de teste e executa todas as suítes Playwright. O relatório HTML é salvo como artefato por 7 dias.
+
+---
+
+## Lint & Typecheck
+
+```bash
+# Backend
 cd backend
-python -m ruff check .
+black --check .
+flake8 . --select=E9,F63,F7,F82
 
 # Frontend
 cd frontend
@@ -164,27 +250,25 @@ npm run lint
 npx tsc -p tsconfig.json --noEmit
 ```
 
-## 🧰 Bootstrap (primeira instalação)
+---
 
-Em um banco vazio, o comando abaixo cria um tenant padrão (`raiz`) e usuários iniciais (inclui `suporte/suporte123`):
+## Observabilidade
 
-```bash
-cd backend
-python manage.py seed_system
-```
+| Serviço | Porta | Descrição |
+|---|---|---|
+| Grafana | 3000 | Dashboards de métricas (Django, Celery, PostgreSQL) |
+| Prometheus | 9090 | Coleta de métricas via django-prometheus |
+| Flower | 5555 | Monitor de workers e filas Celery |
+| Sentry | — | Rastreamento de erros em produção |
 
-Para popular ambiente local com dados de exemplo:
-
-```bash
-python manage.py seed_local
-```
+O endpoint `/api/health/` retorna latência de DB, Redis, MinIO e profundidade da fila Celery.
 
 ---
 
-## 📄 Licença
+## Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 
-**Desenvolvido com ❤️ para aplicações SaaS modernas.**
+**Desenvolvido para aplicações SaaS enterprise modernas.**

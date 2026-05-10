@@ -65,6 +65,26 @@ services:
         exit 0;
       "
 
+  pgbouncer:
+    image: edoburu/pgbouncer:1.22.0
+    container_name: atlas_pgbouncer
+    environment:
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_HOST: db
+      DB_NAME: ${POSTGRES_DB:-atlas_db}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 25
+      MIN_POOL_SIZE: 5
+      RESERVE_POOL_SIZE: 5
+      SERVER_IDLE_TIMEOUT: 600
+    ports:
+      - "6432:5432"
+    depends_on:
+      db:
+        condition: service_healthy
+
   backend:
     image: atlas_backend
     build: ./backend
@@ -77,6 +97,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      pgbouncer:
+        condition: service_started
       redis:
         condition: service_healthy
       minio:
@@ -88,7 +110,7 @@ services:
         required: false # Falls back to inline env below if file not present
     environment:
       # These are non-secret dev defaults — override via .env.docker for real secrets.
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-atlas_db}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@pgbouncer:5432/${POSTGRES_DB:-atlas_db}
       - REDIS_URL=redis://redis:6379/0
       - DEBUG=True
       # IMPORTANT: Set a real SECRET_KEY via .env.docker in staging/production!
@@ -112,14 +134,14 @@ services:
     # Run `docker-compose build backend` first, then `docker-compose up celery_worker`.
     image: atlas_backend
     container_name: atlas_celery_worker
-    command: celery -A config worker -l info
+    command: celery -A config worker -l info -Q default,emails,notifications,reports
     volumes:
       - ./backend:/app
     env_file:
       - path: ./backend/.env.docker
         required: false
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-atlas_db}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@pgbouncer:5432/${POSTGRES_DB:-atlas_db}
       - REDIS_URL=redis://redis:6379/0
       - DEBUG=True
       - SECRET_KEY=${SECRET_KEY:-django-insecure-LOCAL-DEV-ONLY-do-not-use-in-production}
@@ -145,7 +167,7 @@ services:
       - path: ./backend/.env.docker
         required: false
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-atlas_db}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@pgbouncer:5432/${POSTGRES_DB:-atlas_db}
       - REDIS_URL=redis://redis:6379/0
       - DEBUG=True
       - SECRET_KEY=${SECRET_KEY:-django-insecure-LOCAL-DEV-ONLY-do-not-use-in-production}
@@ -153,6 +175,16 @@ services:
       - backend
       - db
       - redis
+
+  flower:
+    image: mher/flower:2.0
+    container_name: atlas_flower
+    command: celery --broker=redis://redis:6379/1 flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery_worker
 
   frontend:
     image: atlas_frontend
@@ -176,8 +208,44 @@ services:
     depends_on:
       - backend
 
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: atlas_prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: atlas_grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-atlas_grafana}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_UNIFIED_ALERTING_ENABLED=true
+      - GF_ALERTING_ENABLED=false
+      - GRAFANA_ALERT_EMAIL=${GRAFANA_ALERT_EMAIL:-ops@example.com}
+      - GRAFANA_SLACK_WEBHOOK_URL=${GRAFANA_SLACK_WEBHOOK_URL:-}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   redis_data:
   media_data:
   minio_data:
+  prometheus_data:
+  grafana_data:

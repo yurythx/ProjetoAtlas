@@ -405,7 +405,14 @@ class Deal(BaseTenantModel):
         resolved_column = self.column or getattr(self.stage, "column", None)
         if resolved_column:
             pipeline = resolved_column.pipeline
-            all_columns = list(Column.objects.filter(pipeline=pipeline).order_by("order"))
+            # Cache pipeline columns for 5 minutes — they rarely change and this query
+            # fires on every Deal.save(), making it a hot path under load.
+            from django.core.cache import cache
+            cache_key = f"pipeline_columns_{pipeline.pk}"
+            all_columns = cache.get(cache_key)
+            if all_columns is None:
+                all_columns = list(Column.objects.filter(pipeline=pipeline).order_by("order"))
+                cache.set(cache_key, all_columns, 300)
             if all_columns:
                 try:
                     current_index = all_columns.index(resolved_column)
@@ -436,17 +443,20 @@ class Deal(BaseTenantModel):
         from apps.ai.tasks import analyze_deal_ai_metadata
         from .tasks import orchestrate_swarming, send_xla_whatsapp_poll
 
+        # Captura o ID explicitamente para evitar closure sobre self mutável
+        _deal_id = self.id
+
         # 1. Triagem Inteligente (IA) na criação
         if is_new:
-            transaction.on_commit(lambda: analyze_deal_ai_metadata.delay(self.id))
+            transaction.on_commit(lambda: analyze_deal_ai_metadata.delay(_deal_id))
 
         # 2. Orquestração de Swarming para Urgências
         if self.priority == "URGENT" and (is_new or (old_instance and old_instance.priority != "URGENT")):
-            transaction.on_commit(lambda: orchestrate_swarming.delay(self.id))
+            transaction.on_commit(lambda: orchestrate_swarming.delay(_deal_id))
 
         # 3. Automação de XLA no fechamento
         if self.is_closed and (is_new or (old_instance and not old_instance.is_closed)):
-            transaction.on_commit(lambda: send_xla_whatsapp_poll.delay(self.id))
+            transaction.on_commit(lambda: send_xla_whatsapp_poll.delay(_deal_id))
 
 
 class DealActivity(BaseTenantModel):
@@ -670,3 +680,62 @@ class MetricSnapshot(BaseTenantModel):
 
     def __str__(self):
         return f"Snapshot {self.date} - {self.pipeline.name}"
+
+
+class AutomationRule(BaseTenantModel):
+    """
+    CRM automation: when trigger fires and conditions match, run an action.
+    Triggers: deal_created, deal_moved, sla_breached, deal_closed
+    Actions: notify_assignee, send_webhook, assign_user, create_notification
+    """
+
+    TRIGGER_CHOICES = [
+        ("deal_created", "Card criado"),
+        ("deal_moved", "Card movido de coluna"),
+        ("sla_breached", "SLA violado"),
+        ("deal_closed", "Card fechado"),
+    ]
+
+    ACTION_CHOICES = [
+        ("notify_assignee", "Notificar responsável"),
+        ("send_webhook", "Enviar webhook"),
+        ("assign_user", "Atribuir usuário"),
+        ("create_notification", "Criar notificação para usuário específico"),
+    ]
+
+    name = models.CharField(max_length=200)
+    is_active = models.BooleanField(default=True)
+    pipeline = models.ForeignKey(
+        Pipeline, on_delete=models.CASCADE, related_name="automation_rules", null=True, blank=True
+    )
+    trigger = models.CharField(max_length=50, choices=TRIGGER_CHOICES)
+    # Optional JSON conditions: {"priority": "HIGH", "record_type": "incident"}
+    conditions = models.JSONField(default=dict, blank=True)
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    # Action-specific config:
+    #   notify_assignee: {}
+    #   send_webhook: {"url": "https://..."}
+    #   assign_user: {"user_id": 42}
+    #   create_notification: {"user_id": 42, "title": "...", "message": "..."}
+    action_config = models.JSONField(default=dict, blank=True)
+    execution_count = models.PositiveIntegerField(default=0)
+    last_triggered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Automation Rule"
+        verbose_name_plural = "Automation Rules"
+        ordering = ["pipeline", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_trigger_display()} → {self.get_action_display()})"
+
+    def matches(self, deal) -> bool:
+        """Check whether this rule's conditions match the given deal."""
+        cond = self.conditions or {}
+        if cond.get("priority") and deal.priority != cond["priority"]:
+            return False
+        if cond.get("record_type") and deal.record_type != cond["record_type"]:
+            return False
+        if cond.get("column_id") and str(getattr(deal, "column_id", None)) != str(cond["column_id"]):
+            return False
+        return True

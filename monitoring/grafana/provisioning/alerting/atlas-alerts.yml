@@ -1,0 +1,192 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: Atlas Platform
+    folder: Atlas Alerts
+    interval: 1m
+    rules:
+
+      # ── HTTP 5xx error rate > 1 % for 5 minutes ─────────────────────────
+      - uid: atlas-alert-5xx
+        title: "High 5xx Error Rate"
+        condition: threshold
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: atlas-prometheus
+            model:
+              expr: >
+                sum(rate(django_http_responses_total_by_status_total{status=~"5.."}[5m]))
+                /
+                sum(rate(django_http_responses_total_by_status_total[5m])) * 100
+              instant: true
+              refId: A
+          - refId: threshold
+            datasourceUid: "-100"
+            model:
+              type: threshold
+              refId: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [1] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "Taxa de erros 5xx acima de 1 %"
+          description: "{{ $value | humanizePercentage }} de erros 5xx nos últimos 5 minutos."
+          runbook_url: "https://your-docs.example.com/runbooks/5xx"
+        labels:
+          severity: critical
+        isPaused: false
+
+      # ── P95 latency > 2 s for 5 minutes ─────────────────────────────────
+      - uid: atlas-alert-p95
+        title: "High P95 Latency"
+        condition: threshold
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: atlas-prometheus
+            model:
+              expr: >
+                histogram_quantile(0.95,
+                  rate(django_http_requests_latency_seconds_by_view_method_bucket[5m])
+                ) * 1000
+              instant: true
+              refId: A
+          - refId: threshold
+            datasourceUid: "-100"
+            model:
+              type: threshold
+              refId: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [2000] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "Latência P95 acima de 2 s"
+          description: "P95 = {{ $value | humanizeDuration }} nos últimos 5 minutos."
+        labels:
+          severity: warning
+        isPaused: false
+
+      # ── Celery queue depth > 100 tasks ───────────────────────────────────
+      # Requires redis_exporter or the /metrics endpoint exposing queue length.
+      # Relies on the atlas_backend job exposing a custom gauge — fallback to
+      # checking via the health endpoint instead if not available.
+      - uid: atlas-alert-celery-queue
+        title: "Celery Queue Backlog"
+        condition: threshold
+        data:
+          - refId: A
+            relativeTimeRange: { from: 120, to: 0 }
+            datasourceUid: atlas-prometheus
+            model:
+              expr: 'atlas_celery_queue_length{queue="celery"}'
+              instant: true
+              refId: A
+          - refId: threshold
+            datasourceUid: "-100"
+            model:
+              type: threshold
+              refId: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [100] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+        noDataState: OK
+        execErrState: OK
+        for: 5m
+        annotations:
+          summary: "Fila do Celery com backlog alto"
+          description: "{{ $value }} tarefas pendentes na fila padrão."
+        labels:
+          severity: warning
+        isPaused: false
+
+      # ── No HTTP requests for 10 minutes (possible backend down) ─────────
+      - uid: atlas-alert-no-traffic
+        title: "Backend Receiving No Traffic"
+        condition: threshold
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: atlas-prometheus
+            model:
+              expr: sum(increase(django_http_requests_total_by_method_total[10m]))
+              instant: true
+              refId: A
+          - refId: threshold
+            datasourceUid: "-100"
+            model:
+              type: threshold
+              refId: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: "Backend sem tráfego há 10 minutos"
+          description: "Nenhuma requisição HTTP nos últimos 10 minutos — verifique se o serviço está rodando."
+        labels:
+          severity: critical
+        isPaused: false
+
+      # ── Cache miss rate > 80 % ───────────────────────────────────────────
+      - uid: atlas-alert-cache-miss
+        title: "High Cache Miss Rate"
+        condition: threshold
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: atlas-prometheus
+            model:
+              expr: >
+                rate(django_cache_get_misses_total[5m])
+                /
+                (rate(django_cache_get_hits_total[5m]) + rate(django_cache_get_misses_total[5m]))
+                * 100
+              instant: true
+              refId: A
+          - refId: threshold
+            datasourceUid: "-100"
+            model:
+              type: threshold
+              refId: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [80] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+        noDataState: OK
+        execErrState: OK
+        for: 10m
+        annotations:
+          summary: "Taxa de cache miss acima de 80 %"
+          description: "{{ $value | humanizePercentage }} de misses no cache Redis nos últimos 5 minutos."
+        labels:
+          severity: warning
+        isPaused: false

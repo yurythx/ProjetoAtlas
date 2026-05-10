@@ -87,6 +87,7 @@ class CompanySerializer(serializers.ModelSerializer):
             "name",
             "slug",
             "domain",
+            "language_code",
             "onboarding_completed",
             "onboarding_step",
             "theme_branding",
@@ -99,7 +100,7 @@ class CompanySerializer(serializers.ModelSerializer):
 class CompanyUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
-        fields = ["name", "domain"]
+        fields = ["name", "domain", "language_code"]
 
 
 class TenantEmailConfigSerializer(serializers.ModelSerializer):

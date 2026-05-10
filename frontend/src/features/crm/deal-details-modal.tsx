@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn, fixImageUrl } from "@/lib/utils"
+import { api } from "@/lib/axios"
 import { getDeadlineMeta, getPriorityMeta, getProgressMeta } from "./crm-visuals"
 import { getColumnTransitionGuard, getDealColumnId, getDealColumnTitle, getPipelineColumns, getProgressValue, isDealDone, resolveColumnSemantics } from "./use-crm"
 import { getUserDisplayName, getUserInitials } from "./crm-utils"
@@ -154,6 +155,8 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
   const [draftDescription, setDraftDescription] = useState("")
   const [draftRecordType, setDraftRecordType] = useState<Deal["record_type"]>("incident")
   const [draftPriority, setDraftPriority] = useState<Deal["priority"]>("MEDIUM")
+  const [aiPrioritySuggestion, setAiPrioritySuggestion] = useState<{ suggested_priority?: string; suggested_record_type?: string; reasoning?: string } | null>(null)
+  const [isLoadingAiPriority, setIsLoadingAiPriority] = useState(false)
   const [draftColumnId, setDraftColumnId] = useState("")
   const [draftServiceItemId, setDraftServiceItemId] = useState<string>("none")
   const [draftAffectedCis, setDraftAffectedCis] = useState<number[]>([])
@@ -248,7 +251,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
     })
   }, [userSearch, users])
   const ownerUser = (Array.isArray(users) ? users : []).find((user) => user.id === currentDeal.owner)
-  const selectedColumn = columns.find((column) => column.id.toString() === draftColumnId)
+  const selectedColumn = draftColumnId ? columns.find((column) => column.id === Number(draftColumnId)) : undefined
   const selectedColumnSemantics = resolveColumnSemantics(selectedColumn)
   const draftPriorityMeta = getPriorityMeta(draftPriority)
   const currentPriorityMeta = getPriorityMeta(currentDeal.priority)
@@ -977,13 +980,63 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
                 </div>
 
                 <div className="rounded-2xl border bg-card p-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Prioridade</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Prioridade</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary/80 hover:bg-primary/10 rounded-xl"
+                      disabled={isLoadingAiPriority}
+                      onClick={async () => {
+                        setIsLoadingAiPriority(true)
+                        setAiPrioritySuggestion(null)
+                        try {
+                          const res = await api.get(`/api/ai/deals/${currentDeal.id}/priority-suggest/`)
+                          setAiPrioritySuggestion(res.data)
+                        } catch {
+                          // ignore
+                        } finally {
+                          setIsLoadingAiPriority(false)
+                        }
+                      }}
+                    >
+                      {isLoadingAiPriority ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                      IA
+                    </Button>
+                  </div>
                   <div className="mt-3">
                     <Badge className={draftPriorityMeta.className}>{draftPriorityMeta.label}</Badge>
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">
                     Antes: {currentPriorityMeta.label}. Agora: {draftPriorityMeta.label}.
                   </p>
+                  {aiPrioritySuggestion && (
+                    <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-1.5">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1"><Sparkles className="h-3 w-3" /> Sugestão IA</p>
+                      <p className="text-xs text-foreground">
+                        Prioridade: <span className="font-bold">{aiPrioritySuggestion.suggested_priority}</span>
+                        {" · "}Tipo: <span className="font-bold">{aiPrioritySuggestion.suggested_record_type}</span>
+                      </p>
+                      {aiPrioritySuggestion.reasoning && (
+                        <p className="text-xs text-muted-foreground">{aiPrioritySuggestion.reasoning}</p>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-6 text-[10px] rounded-lg mt-1"
+                        onClick={() => {
+                          if (aiPrioritySuggestion.suggested_priority) {
+                            setDraftPriority(aiPrioritySuggestion.suggested_priority as Deal["priority"])
+                          }
+                          setAiPrioritySuggestion(null)
+                        }}
+                      >
+                        Aplicar sugestão
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-2xl border bg-card p-4 shadow-sm">

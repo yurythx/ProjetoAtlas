@@ -17,22 +17,43 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Building2, Globe, Save } from "lucide-react"
+import { Loader2, Building2, Globe, Save, Languages } from "lucide-react"
 import { toast } from "sonner"
 import { useEffect } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { LOCALE_COOKIE } from "@/i18n/config"
+
+const LANGUAGE_OPTIONS = [
+  { value: "pt-br", label: "Português (Brasil)" },
+  { value: "en-us", label: "English (US)" },
+] as const
 
 const companySchema = z.object({
   name: z.string().min(2, "O nome da empresa deve ter pelo menos 2 caracteres."),
-  domain: z.string().regex(/^(?!:\/\/)([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$/, "Insira um domínio válido (ex: app.acme.com)").optional().or(z.literal("")),
+  domain: z
+    .string()
+    .regex(
+      /^(?!:\/\/)([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$/,
+      "Insira um domínio válido (ex: app.acme.com)"
+    )
+    .optional()
+    .or(z.literal("")),
+  language_code: z.enum(["pt-br", "en-us"]).default("pt-br"),
 })
 
 export function CompanyForm() {
   const queryClient = useQueryClient()
 
   const { data: company, isLoading } = useQuery({
-    queryKey: ['company-current'],
+    queryKey: ["company-current"],
     queryFn: async ({ signal }) => {
       const res = await api.get<Company>(`/api/core/companies/current/`, { signal })
       return res.data
@@ -42,10 +63,7 @@ export function CompanyForm() {
 
   const form = useForm<z.infer<typeof companySchema>>({
     resolver: zodResolver(companySchema),
-    defaultValues: {
-      name: "",
-      domain: "",
-    }
+    defaultValues: { name: "", domain: "", language_code: "pt-br" },
   })
 
   useEffect(() => {
@@ -53,6 +71,7 @@ export function CompanyForm() {
       form.reset({
         name: company.name,
         domain: company.domain || "",
+        language_code: (company as Company & { language_code?: string }).language_code as "pt-br" | "en-us" ?? "pt-br",
       })
     }
   }, [company, form])
@@ -61,23 +80,35 @@ export function CompanyForm() {
     mutationFn: async (values: z.infer<typeof companySchema>) => {
       await api.patch(`/api/core/companies/current/`, values)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-current'] })
+    onSuccess: (_, values) => {
+      queryClient.invalidateQueries({ queryKey: ["company-current"] })
       toast.success("Configurações da empresa atualizadas!")
+
+      // Sync frontend locale cookie with the company language choice
+      const frontendLocale = values.language_code.startsWith("pt") ? "pt" : "en"
+      const currentCookie = document.cookie
+        .split("; ")
+        .find((r) => r.startsWith(`${LOCALE_COOKIE}=`))
+        ?.split("=")[1]
+      if (currentCookie !== frontendLocale) {
+        document.cookie = `${LOCALE_COOKIE}=${frontendLocale}; path=/; max-age=31536000; SameSite=Lax`
+        window.location.reload()
+      }
     },
     onError: () => {
       toast.error("Falha ao salvar configurações")
-    }
+    },
   })
 
   if (isLoading) {
     return (
-      <Card className="border-none shadow-none bg-transparent" role="status" aria-live="polite" aria-label="Carregando configurações da empresa">
+      <Card className="border-none shadow-none bg-transparent" role="status" aria-live="polite">
         <CardHeader className="px-0">
           <Skeleton className="h-8 w-1/3 mb-2" />
           <Skeleton className="h-4 w-1/2" />
         </CardHeader>
         <CardContent className="px-0 space-y-6">
+          <Skeleton className="h-12 w-full max-w-2xl" />
           <Skeleton className="h-12 w-full max-w-2xl" />
           <Skeleton className="h-12 w-full max-w-2xl" />
           <Skeleton className="h-12 w-32" />
@@ -101,7 +132,7 @@ export function CompanyForm() {
           </div>
           <div>
             <CardTitle className="text-2xl">Perfil da Organização</CardTitle>
-            <CardDescription>Configure a identidade visual e domínio da sua empresa.</CardDescription>
+            <CardDescription>Configure a identidade visual, domínio e idioma da sua empresa.</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -135,8 +166,15 @@ export function CompanyForm() {
                     <FormLabel className="font-bold">Domínio Personalizado</FormLabel>
                     <FormControl>
                       <div className="relative group">
-                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" aria-hidden="true" />
-                        <Input placeholder="app.suaempresa.com" className="pl-10 h-11 bg-background" {...field} />
+                        <Globe
+                          className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors"
+                          aria-hidden="true"
+                        />
+                        <Input
+                          placeholder="app.suaempresa.com"
+                          className="pl-10 h-11 bg-background"
+                          {...field}
+                        />
                       </div>
                     </FormControl>
                     <FormDescription className="text-xs">
@@ -146,9 +184,46 @@ export function CompanyForm() {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="language_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold flex items-center gap-2">
+                      <Languages className="h-4 w-4" aria-hidden="true" />
+                      Idioma da Organização
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11 bg-background">
+                          <SelectValue placeholder="Selecione o idioma" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {LANGUAGE_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs">
+                      Define o idioma padrão para todos os usuários desta organização. A interface será
+                      atualizada após salvar.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            <Button type="submit" size="lg" className="px-8 shadow-lg shadow-primary/20" disabled={mutation.isPending}>
+            <Button
+              type="submit"
+              size="lg"
+              className="px-8 shadow-lg shadow-primary/20"
+              disabled={mutation.isPending}
+            >
               {mutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (

@@ -102,6 +102,8 @@ class Transaction(BaseTenantModel):
             models.Index(fields=["company", "competence_date"]),
             models.Index(fields=["company", "status"]),
             models.Index(fields=["company", "type"]),
+            models.Index(fields=["company", "due_date"], name="finance_txn_company_due_date_idx"),
+            models.Index(fields=["company", "due_date", "status"], name="finance_txn_company_due_status_idx"),
         ]
 
     def __str__(self):

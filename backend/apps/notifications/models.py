@@ -46,6 +46,7 @@ class Notification(BaseTenantModel):
         indexes = [
             models.Index(fields=["recipient", "is_read"]),
             models.Index(fields=["recipient", "is_read", "aggregate_key"]),
+            models.Index(fields=["company", "created_at"], name="notif_company_created_at_idx"),
         ]
 
     def __str__(self):

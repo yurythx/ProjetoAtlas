@@ -66,41 +66,86 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[permissions.AllowAny])
     def health(self, request):
-        """Health check endpoint for monitoring."""
+        """Detailed health check endpoint for monitoring and alerting."""
         import time
 
+        from django.conf import settings
         from django.core.cache import cache
         from django.db import connection
 
-        start_time = time.time()
+        t0 = time.time()
+        checks = {}
 
-        # Check DB
-        db_status = "ok"
+        # ── Database ──────────────────────────────────────────────────────────
+        t = time.time()
         try:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1")
-        except Exception:
-            db_status = "error"
+            checks["database"] = {"status": "ok", "latency_ms": round((time.time() - t) * 1000, 2)}
+        except Exception as exc:
+            checks["database"] = {"status": "error", "detail": str(exc)}
 
-        # Check Redis
-        redis_status = "ok"
+        # ── Redis ─────────────────────────────────────────────────────────────
+        t = time.time()
         try:
-            cache.set("health_check", "ok", 10)
-            if cache.get("health_check") != "ok":
-                redis_status = "error"
-        except Exception:
-            redis_status = "error"
+            probe_key = "_health_probe"
+            cache.set(probe_key, "1", timeout=5)
+            val = cache.get(probe_key)
+            if val != "1":
+                raise ValueError("cache read mismatch")
+            checks["redis"] = {"status": "ok", "latency_ms": round((time.time() - t) * 1000, 2)}
+        except Exception as exc:
+            checks["redis"] = {"status": "error", "detail": str(exc)}
+
+        # ── MinIO / S3 ────────────────────────────────────────────────────────
+        t = time.time()
+        if getattr(settings, "USE_S3", False):
+            try:
+                import boto3
+                from botocore.config import Config as BotoConfig
+
+                s3 = boto3.client(
+                    "s3",
+                    endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                    config=BotoConfig(connect_timeout=2, read_timeout=2),
+                )
+                s3.head_bucket(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+                checks["storage"] = {"status": "ok", "latency_ms": round((time.time() - t) * 1000, 2)}
+            except Exception as exc:
+                checks["storage"] = {"status": "error", "detail": str(exc)}
+        else:
+            checks["storage"] = {"status": "ok", "backend": "filesystem"}
+
+        # ── Celery ────────────────────────────────────────────────────────────
+        try:
+            from config.celery import app as celery_app
+
+            inspect = celery_app.control.inspect(timeout=1)
+            active = inspect.active()
+            if active is None:
+                checks["celery"] = {"status": "unavailable", "detail": "no workers responded"}
+            else:
+                total_tasks = sum(len(v) for v in active.values())
+                checks["celery"] = {"status": "ok", "active_tasks": total_tasks, "workers": len(active)}
+        except Exception as exc:
+            checks["celery"] = {"status": "error", "detail": str(exc)}
+
+        # ── Overall status ────────────────────────────────────────────────────
+        critical = ["database", "redis"]
+        overall = "ok" if all(checks.get(k, {}).get("status") == "ok" for k in critical) else "degraded"
+        if any(checks.get(k, {}).get("status") == "error" for k in critical):
+            overall = "error"
 
         return Response(
             {
-                "status": "ok" if db_status == "ok" and redis_status == "ok" else "error",
-                "timestamp": time.time(),
-                "database": db_status,
-                "redis": redis_status,
-                "minio": "ok",  # Simplified for now
-                "celery": "ok",  # Simplified for now
-                "response_time_ms": round((time.time() - start_time) * 1000, 2),
-            }
+                "status": overall,
+                "version": getattr(settings, "APP_VERSION", "1.0.0"),
+                "checks": checks,
+                "response_time_ms": round((time.time() - t0) * 1000, 2),
+            },
+            status=200 if overall in ("ok", "degraded") else 503,
         )
 
     @action(detail=False, methods=["get"], permission_classes=[permissions.AllowAny], throttle_classes=[])

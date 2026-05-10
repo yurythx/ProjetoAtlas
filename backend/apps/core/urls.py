@@ -2,7 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .branding_views import TenantBrandingViewSet
-from .health_view import health_check
+from .health_view import health_check  # re-exported; mounted at /api/core/health/ via api_urls
 from .search_views import GlobalSearchViewSet
 from .views import AuditLogViewSet, CompanyViewSet, DashboardStatsView, LDAPConfigViewSet, RobotsView, SitemapView
 

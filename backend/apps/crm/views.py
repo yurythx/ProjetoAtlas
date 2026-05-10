@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Q, Sum
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
-from rest_framework import parsers, permissions, status, viewsets
+from rest_framework import parsers, permissions, serializers, status, viewsets
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -28,6 +28,7 @@ except Exception:
 
 from apps.accounts.permissions import ActionRolePermission, HasRolePermission
 from apps.api_keys.authentication import APIKeyAuthentication
+from shared_kernel.throttling import WebhookInboundThrottle
 from apps.api_keys.models import APIKey
 from apps.api_keys.permissions import HasAPIKeyScopes
 from apps.media.models import Media
@@ -38,6 +39,7 @@ from apps.notifications.models import Notification
 
 from .integration_sync import upsert_integration_card
 from .models import (
+    AutomationRule,
     Column,
     Contact,
     CRMGroup,
@@ -326,7 +328,7 @@ class PipelineViewSet(viewsets.ModelViewSet):
                 for legacy_stage in pipeline.stages.all().order_by("order", "id")
             ]
         deals = list(
-            Deal.all_objects.select_related("stage", "column")
+            Deal.all_objects.select_related("stage", "column", "column__legacy_stage")
             .filter(company=request.company, is_deleted=False, stage__pipeline=pipeline)
         )
 
@@ -423,8 +425,13 @@ class ColumnViewSet(viewsets.ModelViewSet):
             .filter(company=company, pipeline__in=allowed_pipelines)
         )
 
+    def _invalidate_columns_cache(self, pipeline_id):
+        from django.core.cache import cache
+        cache.delete(f"pipeline_columns_{pipeline_id}")
+
     def perform_create(self, serializer):
         column = serializer.save(company=self.request.company)
+        self._invalidate_columns_cache(column.pipeline_id)
         if column.legacy_stage_id is None:
             # Garante persistência da compatibilidade com o esquema legado de Deals (ForeignKey para Stage)
             try:
@@ -442,12 +449,17 @@ class ColumnViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         column = serializer.save()
+        self._invalidate_columns_cache(column.pipeline_id)
         if column.legacy_stage_id:
             Stage.all_objects.filter(id=column.legacy_stage_id).update(
                 pipeline=column.pipeline,
                 name=column.title,
                 order=column.order,
             )
+
+    def perform_destroy(self, instance):
+        self._invalidate_columns_cache(instance.pipeline_id)
+        instance.delete()
 
 
 class DealViewSet(viewsets.ModelViewSet):
@@ -703,11 +715,15 @@ class DealViewSet(viewsets.ModelViewSet):
         ITIL Version 5: Visualização 360 graus do ecossistema do Deal.
         Retorna nós e links para visualização em grafo (Topology tab).
         """
+        from django.db.models import prefetch_related_objects
+
         deal = self.get_object()
-        
+        # Prefetch relationships not included in the base get_queryset()
+        prefetch_related_objects([deal], "affected_cis__ci_type", "swarm__participants")
+
         nodes = []
         links = []
-        
+
         # Central Node (O Deal)
         nodes.append({
             "id": f"deal_{deal.id}",
@@ -717,8 +733,8 @@ class DealViewSet(viewsets.ModelViewSet):
             "status": "closed" if deal.is_closed else "active",
             "uuid": str(deal.uuid)
         })
-        
-        # ICs Afetados (Affected CIs)
+
+        # ICs Afetados (Affected CIs) — prefetched above, no N+1
         if hasattr(deal, 'affected_cis'):
             for ci in deal.affected_cis.all():
                 nodes.append({
@@ -735,57 +751,64 @@ class DealViewSet(viewsets.ModelViewSet):
                     "relation": "impacts",
                     "label": "Afeta IC"
                 })
-            
-        # Usuários Relacionados (Participantes do Swarm se houver)
+
+        # Usuários Relacionados (Participantes do Swarm se houver) — prefetched above
         if hasattr(deal, 'swarm') and deal.swarm:
-            for user in deal.swarm.participants.all():
+            for participant in deal.swarm.participants.all():
                 nodes.append({
-                    "id": f"user_{user.id}",
+                    "id": f"user_{participant.id}",
                     "type": "user",
-                    "label": user.get_full_name() or user.username,
-                    "email": user.email
+                    "label": participant.get_full_name() or participant.username,
+                    "email": participant.email
                 })
                 links.append({
                     "source": f"deal_{deal.id}",
-                    "target": f"user_{user.id}",
+                    "target": f"user_{participant.id}",
                     "relation": "collaborator",
                     "label": "Swarmer"
                 })
-        
-        # Dono e Técnico Responsável
+
+        # Dono e Técnico Responsável — already select_related in get_queryset()
         if deal.owner:
-             nodes.append({
+            nodes.append({
                 "id": f"user_{deal.owner.id}",
                 "type": "user",
                 "label": deal.owner.get_full_name() or deal.owner.username,
                 "email": deal.owner.email,
                 "role": "Owner"
             })
-             links.append({
+            links.append({
                 "source": f"deal_{deal.id}",
                 "target": f"user_{deal.owner.id}",
                 "relation": "owner",
                 "label": "Responsável"
             })
-            
+
         # RFCs/Problemas Vinculados (via ai_metadata)
+        # Validate that the referenced RFC belongs to the same company (prevents IDOR)
         metadata = deal.ai_metadata or {}
-        if metadata.get('linked_rfc_id'):
-            rfc_id = metadata['linked_rfc_id']
-            nodes.append({
-                "id": f"deal_{rfc_id}",
-                "type": "deal",
-                "label": f"RFC #{rfc_id} (Automática)",
-                "kind": "change",
-                "status": "triggered"
-            })
-            links.append({
-                "source": f"deal_{deal.id}",
-                "target": f"deal_{rfc_id}",
-                "relation": "triggers",
-                "label": "Gatilhou Mudança"
-            })
-            
+        linked_rfc_id = metadata.get('linked_rfc_id')
+        if linked_rfc_id:
+            rfc_exists = Deal.all_objects.filter(
+                id=linked_rfc_id,
+                company=deal.company,
+                is_deleted=False,
+            ).exists()
+            if rfc_exists:
+                nodes.append({
+                    "id": f"deal_{linked_rfc_id}",
+                    "type": "deal",
+                    "label": f"RFC #{linked_rfc_id} (Automática)",
+                    "kind": "change",
+                    "status": "triggered"
+                })
+                links.append({
+                    "source": f"deal_{deal.id}",
+                    "target": f"deal_{linked_rfc_id}",
+                    "relation": "triggers",
+                    "label": "Gatilhou Mudança"
+                })
+
         return Response({"nodes": nodes, "links": links})
 
     @action(detail=True, methods=["post"])
@@ -1152,6 +1175,7 @@ class IntegrationSyncCardAPIView(APIView):
 class IntegrationGLPITicketWebhookAPIView(APIView):
     authentication_classes = [c for c in [JWTAuthentication, APIKeyAuthentication, SessionAuthentication] if c]
     permission_classes = [permissions.IsAuthenticated, HasModuleAccess, HasAPIKeyScopes]
+    throttle_classes = [WebhookInboundThrottle]
     module_code = "crm"
     required_api_key_scopes = ["crm.glpi_ticket"]
 
@@ -2136,3 +2160,29 @@ class CSIEntryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return super().get_queryset().filter(company=self.request.company)
+
+
+class AutomationRuleSerializer(serializers.ModelSerializer):
+    trigger_display = serializers.CharField(source="get_trigger_display", read_only=True)
+    action_display = serializers.CharField(source="get_action_display", read_only=True)
+
+    class Meta:
+        model = AutomationRule
+        fields = [
+            "id", "name", "is_active", "pipeline", "trigger", "trigger_display",
+            "conditions", "action", "action_display", "action_config",
+            "execution_count", "last_triggered_at", "created_at",
+        ]
+        read_only_fields = ["execution_count", "last_triggered_at", "created_at"]
+
+
+class AutomationRuleViewSet(viewsets.ModelViewSet):
+    serializer_class = AutomationRuleSerializer
+    queryset = AutomationRule.objects.all()
+    filterset_fields = ["pipeline", "trigger", "action", "is_active"]
+
+    def get_queryset(self):
+        return super().get_queryset().filter(company=self.request.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.company)

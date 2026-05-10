@@ -127,6 +127,7 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
   const [previewContent, setPreviewContent] = useState(form.getValues("content"))
   const [previewExcerpt, setPreviewExcerpt] = useState(form.getValues("excerpt"))
   const [previewImage, setPreviewImage] = useState(form.getValues("image"))
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [previewCategoryId, setPreviewCategoryId] = useState(form.getValues("category"))
   const [previewTags, setPreviewTags] = useState<number[]>(form.getValues("tags") || [])
 
@@ -819,9 +820,38 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
             </div>
 
             <div className="space-y-6">
-              <div className="flex items-center gap-2 border-b pb-2">
-                <MessageSquareQuote className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-bold">Resumo</h3>
+              <div className="flex items-center justify-between border-b pb-2">
+                <div className="flex items-center gap-2">
+                  <MessageSquareQuote className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-bold">Resumo</h3>
+                </div>
+                {initialData?.id && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 text-xs rounded-xl border-primary/30 text-primary hover:bg-primary/10"
+                    disabled={isGeneratingSummary}
+                    onClick={async () => {
+                      setIsGeneratingSummary(true)
+                      try {
+                        const res = await api.post(`/api/ai/articles/${initialData.id}/summarize/`)
+                        const summary: string = res.data.summary
+                        if (summary) {
+                          form.setValue("excerpt", summary)
+                          setPreviewExcerpt(summary)
+                        }
+                      } catch {
+                        // silently ignore — user can type manually
+                      } finally {
+                        setIsGeneratingSummary(false)
+                      }
+                    }}
+                  >
+                    {isGeneratingSummary ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    Gerar com IA
+                  </Button>
+                )}
               </div>
 
               <FormField

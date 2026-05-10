@@ -1,6 +1,7 @@
 import logging
 
 from django.db import models
+from django.utils import translation
 
 from shared_kernel.tenant_context import set_current_company
 
@@ -173,6 +174,27 @@ class TenantSecurityMiddleware:
             )
 
         return self.get_response(request)
+
+
+class TenantLanguageMiddleware:
+    """
+    Activates Django's translation for the current request based on the tenant's
+    language_code. Must run after TenantMiddleware so request.company is set.
+    Falls back to settings.LANGUAGE_CODE when no tenant context exists.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        company = getattr(request, "company", None)
+        lang = getattr(company, "language_code", None) or translation.get_language()
+        translation.activate(lang)
+        request.LANGUAGE_CODE = lang
+        try:
+            return self.get_response(request)
+        finally:
+            translation.deactivate()
 
 
 class LicensingMiddleware:

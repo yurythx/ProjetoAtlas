@@ -12,49 +12,38 @@ Covers:
 
 from datetime import timedelta
 
-from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.core.models import AuditLog, Company
-from apps.messenger.models import Conversation, ConversationPreference, Message
+from apps.core.models import AuditLog
+from apps.messenger.models import ConversationPreference, Message
 from apps.module_manager.models import Module, TenantModule
-
-User = get_user_model()
+from factories import CompanyFactory, ConversationFactory, UserFactory
 
 
 class MessengerBaseTest(APITestCase):
     """Shared setup for all messenger tests."""
 
     def setUp(self):
-        # Company A
-        self.company_a = Company.objects.create(name="Company A", slug="company-a")
-        self.user_a1 = User.objects.create_user(
-            username="u_a1", email="a1@a.com", password="pwd", company=self.company_a
-        )
-        self.user_a2 = User.objects.create_user(
-            username="u_a2", email="a2@a.com", password="pwd", company=self.company_a
-        )
+        self.company_a = CompanyFactory(slug="company-a")
+        self.user_a1 = UserFactory(username="u_a1", company=self.company_a)
+        self.user_a2 = UserFactory(username="u_a2", company=self.company_a)
 
-        # Company B
-        self.company_b = Company.objects.create(name="Company B", slug="company-b")
-        self.user_b1 = User.objects.create_user(
-            username="u_b1", email="b1@b.com", password="pwd", company=self.company_b
-        )
+        self.company_b = CompanyFactory(slug="company-b")
+        self.user_b1 = UserFactory(username="u_b1", company=self.company_b)
 
         # Enable messenger module for both tenants
-        messenger_module = Module.objects.create(code="messenger", name="Messenger")
-        TenantModule.objects.create(company=self.company_a, module=messenger_module, is_active=True)
-        TenantModule.objects.create(company=self.company_b, module=messenger_module, is_active=True)
+        messenger_module, _ = Module.objects.get_or_create(code="messenger", defaults={"name": "Messenger"})
+        TenantModule.objects.get_or_create(company=self.company_a, module=messenger_module, defaults={"is_active": True})
+        TenantModule.objects.get_or_create(company=self.company_b, module=messenger_module, defaults={"is_active": True})
 
-        # Conversation in A
-        self.conv_a = Conversation.objects.create(company=self.company_a)
-        self.conv_a.participants.add(self.user_a1, self.user_a2)
-
-        # Conversation in B
-        self.conv_b = Conversation.objects.create(company=self.company_b)
-        self.conv_b.participants.add(self.user_b1)
+        self.conv_a = ConversationFactory(
+            company=self.company_a, participants=[self.user_a1, self.user_a2]
+        )
+        self.conv_b = ConversationFactory(
+            company=self.company_b, participants=[self.user_b1]
+        )
 
     def auth(self, user, company_slug):
         self.client.force_authenticate(user=user)

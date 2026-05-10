@@ -15,7 +15,9 @@
     "e2e:ui": "playwright test --ui",
     "e2e:codegen": "playwright codegen localhost:3005",
     "e2e:report": "playwright show-report e2e/report",
-    "api:generate": "openapi --input ../backend/docs/schema.yaml --output src/api --client axios"
+    "schema:export": "cd ../backend && python manage.py spectacular --file docs/schema.yaml --validate",
+    "api:generate": "openapi --input src/api/schema.yaml --output src/api/generated --client axios",
+    "api:sync": "npm run schema:export && cp ../backend/docs/schema.yaml src/api/schema.yaml && npm run api:generate"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",
@@ -64,9 +66,11 @@
     "idb-keyval": "^6.2.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.563.0",
+    "@serwist/next": "^9.0.0",
     "next": "15.1.6",
-    "next-pwa": "^5.6.0",
+    "next-intl": "^3.22.0",
     "next-themes": "^0.4.6",
+    "serwist": "^9.0.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-dropzone": "^14.3.5",

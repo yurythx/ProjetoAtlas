@@ -13,25 +13,43 @@ import {
   endOfMonth,
 } from "date-fns"
 import { PageHeader } from "@/components/ui/page-header"
+import { ExportModal } from "@/components/reports/export-modal"
 import { ModuleGuard } from "@/components/module-guard"
 import { CRMSavedView, CRMViewMode, getPipelineColumns, useCRM, CRMSavedViewFilters, useSLAMonitor } from "./use-crm"
 import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
 import { KanbanSkeleton } from "./kanban-skeleton"
+import { ErrorBoundary } from "@/components/error-boundary"
 
-const KanbanBoard = dynamic(() => import("./kanban-board").then(m => m.KanbanBoard), { 
-  ssr: false, 
+const KanbanBoard = dynamic(() => import("./kanban-board").then(m => m.KanbanBoard), {
+  ssr: false,
   loading: () => <KanbanSkeleton />
 })
 
 import { CreateDealModal } from "./create-deal-modal"
 import { ColumnGovernanceSheet } from "./column-governance-sheet"
-import { CRMTableView } from "./crm-table-view"
-import { CRMTriageInbox } from "./crm-triage-inbox"
-import { CRMPipelineOverview, PipelineOverviewData } from "./crm-pipeline-overview"
+
+const CRMTableView = dynamic(() => import("./crm-table-view").then(m => m.CRMTableView), {
+  ssr: false,
+  loading: () => <div className="h-[500px] rounded-2xl border bg-card/30 animate-pulse" />,
+})
+const CRMTriageInbox = dynamic(() => import("./crm-triage-inbox").then(m => m.CRMTriageInbox), {
+  ssr: false,
+  loading: () => <div className="h-[500px] rounded-2xl border bg-card/30 animate-pulse" />,
+})
+const CRMPipelineOverview = dynamic(
+  () => import("./crm-pipeline-overview").then(m => m.CRMPipelineOverview),
+  {
+    ssr: false,
+    loading: () => <div className="h-[500px] rounded-2xl border bg-card/30 animate-pulse" />,
+  }
+)
+
+import type { PipelineOverviewData } from "./crm-pipeline-overview"
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { BarChart3, BookOpen, ChevronDown, ChevronUp, Inbox, LayoutGrid, List, Loader2, PanelsTopLeft, Search, Settings2, TrendingUp } from "lucide-react"
+import { BarChart3, BookOpen, ChevronDown, ChevronUp, Download, Inbox, LayoutGrid, List, Loader2, PanelsTopLeft, Search, Settings2, TrendingUp } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -135,6 +153,7 @@ export default function CRMPage() {
 
   const [showTriage, setShowTriage] = useState(false)
   const [showStats, setShowStats] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   useEffect(() => {
     const fromUrl = searchParams.get("pipeline")
@@ -578,6 +597,16 @@ export default function CRMPage() {
                     <TrendingUp className="h-4 w-4" />
                     <span className="hidden sm:inline">Métricas</span>
                   </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 gap-3 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest text-primary/80 transition-all shadow-lg"
+                    onClick={() => setExportOpen(true)}
+                  >
+                    <Download className="h-4 w-4 text-primary" />
+                    <span className="hidden sm:inline">Exportar</span>
+                  </Button>
               </div>
 
               <Button 
@@ -881,13 +910,19 @@ export default function CRMPage() {
 
           <Tabs value={view} onValueChange={(v) => setView(v as CRMViewMode)} className="w-full">
             <TabsContent value="kanban" className="m-0 outline-none">
-              {currentPipeline ? (
-                <KanbanBoard pipeline={currentPipeline} deals={filteredDeals} />
-              ) : (
-                <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-white/10 rounded-[2.5rem] opacity-50 bg-white/5 backdrop-blur-xl">
-                  <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">Nenhum pipeline configurado.</p>
+              <ErrorBoundary fallback={
+                <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-destructive/30 rounded-[2.5rem] bg-destructive/5">
+                  <p className="text-muted-foreground text-sm">Erro ao carregar o Kanban. Recarregue a página.</p>
                 </div>
-              )}
+              }>
+                {currentPipeline ? (
+                  <KanbanBoard pipeline={currentPipeline} deals={filteredDeals} />
+                ) : (
+                  <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-white/10 rounded-[2.5rem] opacity-50 bg-white/5 backdrop-blur-xl">
+                    <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">Nenhum pipeline configurado.</p>
+                  </div>
+                )}
+              </ErrorBoundary>
             </TabsContent>
 
             <TabsContent value="list" className="m-0 outline-none">
@@ -911,6 +946,7 @@ export default function CRMPage() {
         </div>
       )}
     </ModuleGuard>
+    <ExportModal open={exportOpen} onOpenChange={setExportOpen} reportType="crm" />
   )
 }
 

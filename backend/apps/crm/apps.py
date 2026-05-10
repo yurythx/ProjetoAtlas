@@ -21,4 +21,5 @@ class CrmConfig(AppConfig):
         post_save.connect(signals.check_wip_and_sla_risks, sender=Deal)
         post_save.connect(signals.create_rfc_from_problem, sender=Deal)
         post_save.connect(signals.trigger_ai_analysis, sender=Deal)
+        post_save.connect(signals.trigger_automation_rules, sender=Deal)
         post_delete.connect(signals.delete_calendar_event, sender=Deal)

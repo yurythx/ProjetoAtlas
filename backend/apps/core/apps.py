@@ -6,5 +6,5 @@ class CoreConfig(AppConfig):
     name = "apps.core"
 
     def ready(self):
-        """Import signals when Django starts."""
         import apps.core.signals  # noqa
+        import apps.core.metrics  # noqa: registers Celery queue Prometheus collector

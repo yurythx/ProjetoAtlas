@@ -1,12 +1,17 @@
 import { withSentryConfig } from '@sentry/nextjs';
-import withPWA from 'next-pwa';
+import withSerwistInit from "@serwist/next";
+import createNextIntlPlugin from "next-intl/plugin";
 import type { NextConfig } from "next";
 
-const pwaConfig = withPWA({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: true, // Forçamos desativado para parar o flickering em produção
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+const withSerwist = withSerwistInit({
+  swSrc: "src/app/sw.ts",
+  swDest: "public/sw.js",
+  // Only activate the SW in production builds — development uses HMR and the SW
+  // would intercept those requests, causing stale assets and layout flicker.
+  disable: process.env.NODE_ENV === "development",
+  reloadOnOnline: true,
 });
 
 const nextConfig: NextConfig = {
@@ -71,7 +76,7 @@ const nextConfig: NextConfig = {
 };
 
 
-export default withSentryConfig(pwaConfig(nextConfig), {
+export default withSentryConfig(withSerwist(withNextIntl(nextConfig)), {
   // For all available options, see:
   // https://github.com/getsentry/sentry-webpack-plugin#options
 

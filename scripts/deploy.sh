@@ -100,7 +100,9 @@ for var in SECRET_KEY FIELD_ENCRYPTION_KEY \
            MINIO_ROOT_USER MINIO_ROOT_PASSWORD \
            AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY \
            ALLOWED_HOSTS CORS_ALLOWED_ORIGINS CSRF_TRUSTED_ORIGINS \
-           NEXT_PUBLIC_API_URL TUNNEL_TOKEN; do
+           NEXT_PUBLIC_API_URL FRONTEND_URL \
+           FLOWER_PASSWORD GRAFANA_PASSWORD \
+           TUNNEL_TOKEN; do
     val="$(get_env "$var")"
     if [ -z "$val" ] || echo "$val" | grep -q "CHANGE_ME"; then
         err "Variavel ${var} ausente ou ainda com CHANGE_ME em ${ENV_FILE}"
@@ -311,7 +313,8 @@ echo ""
 # FASE 5: SUBIR APLICACAO
 # ══════════════════════════════════════════════════════════
 echo -e "${WHITE}:: FASE 5: STARTUP DA APLICACAO${RESET}"
-$DC up -d backend celery_worker celery_beat frontend > /dev/null 2>&1
+$DC up -d pgbouncer backend celery_worker celery_beat frontend \
+         flower prometheus grafana > /dev/null 2>&1
 progress "STARTING SERVICES" 5
 ok "Containers iniciados. Aguardando healthchecks..."
 echo ""
@@ -325,7 +328,7 @@ echo -e "${WHITE}:: FASE 6: VERIFICACAO DE INTEGRIDADE${RESET}"
 echo -n "   Aguardando backend..."
 BACKEND_UP=0
 for i in $(seq 1 45); do
-    if curl -sf http://127.0.0.1:8005/api/core/health/ > /dev/null 2>&1; then
+    if curl -sf http://127.0.0.1:8005/api/health/ > /dev/null 2>&1; then
         echo -e " ${GREEN}[ONLINE]${RESET}"
         BACKEND_UP=1
         break
@@ -383,8 +386,10 @@ echo ""
 echo -e "${WHITE}:: FASE 7: FINALIZACAO${RESET}"
 ok "Deploy realizado com sucesso!"
 echo ""
-echo -e "${GREEN}   Backend  -> http://127.0.0.1:8005/api/core/health/${RESET}"
+echo -e "${GREEN}   Backend  -> http://127.0.0.1:8005/api/health/${RESET}"
 echo -e "${GREEN}   Frontend -> http://127.0.0.1:3005${RESET}"
+echo -e "${GREEN}   Grafana  -> http://127.0.0.1:3001${RESET}"
+echo -e "${GREEN}   Flower   -> http://127.0.0.1:5555${RESET}"
 echo -e "${GREEN}   Tunnel   -> verifique o Cloudflare Dashboard${RESET}"
 echo ""
 echo -e "${GREEN}${BOLD}DEPLOY CONCLUIDO COM SUCESSO.${RESET}"

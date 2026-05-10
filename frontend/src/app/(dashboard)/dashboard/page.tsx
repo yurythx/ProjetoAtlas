@@ -80,42 +80,11 @@ export default function DashboardPage() {
     }
   })
 
-  if (statsLoading || companyLoading) {
-    return (
-      <div className="space-y-12 pb-20" role="status" aria-live="polite" aria-label="Carregando dashboard">
-        <div className="-mx-8 -mt-8">
-          <div className="h-[400px] w-full bg-muted/20 animate-pulse flex flex-col justify-center px-12 space-y-6 border-b">
-            <div className="space-y-3">
-              <Skeleton className="h-14 w-[60%] rounded-2xl" />
-              <Skeleton className="h-6 w-[40%] rounded-xl" />
-            </div>
-            <div className="flex gap-4 pt-4">
-              <Skeleton className="h-12 w-40 rounded-full" />
-              <Skeleton className="h-12 w-40 rounded-full" />
-            </div>
-          </div>
-        </div>
-
-        <div className="container mx-auto px-6 space-y-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border border-primary/5 bg-card/30 p-5 space-y-3">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-10 w-24" />
-                <Skeleton className="h-3 w-40" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-12 pb-20">
       {!company?.onboarding_completed && <OnboardingWizard />}
 
-      {/* Hero Section - The "WOW" factor */}
+      {/* Hero Section */}
       <div className="-mx-8 -mt-8">
         <DjangoHero
           title={`Bem-vindo ao ${stats?.counters?.users?.total > 0 ? 'seu' : ''} Atlas`}
@@ -130,45 +99,35 @@ export default function DashboardPage() {
       <div className="container mx-auto px-6 space-y-16">
 
         {/* Quick Stats Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.08s" }}>
-            <StatItem
-              title="Usuários Ativos"
-              value={stats?.counters?.users?.total || 0}
-              growth={stats?.counters?.users?.growth}
-              icon={Users}
-            />
-          </div>
-          {isModuleActive('articles') && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.12s" }}>
-              <StatItem
-                title="Conteúdo Publicado"
-                value={stats?.counters?.articles?.total || 0}
-                growth={stats?.counters?.articles?.growth}
-                icon={FileText}
-              />
-            </div>
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" aria-label="Resumo de métricas">
+          {statsLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-primary/5 bg-card/30 p-5 space-y-3 animate-pulse">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-24" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.08s" }}>
+                <StatItem title="Usuários Ativos" value={stats?.counters?.users?.total || 0} growth={stats?.counters?.users?.growth} icon={Users} />
+              </div>
+              {isModuleActive('articles') && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.12s" }}>
+                  <StatItem title="Conteúdo Publicado" value={stats?.counters?.articles?.total || 0} growth={stats?.counters?.articles?.growth} icon={FileText} />
+                </div>
+              )}
+              {isModuleActive('messenger') && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.16s" }}>
+                  <StatItem title="Mensagens Trocadas" value={stats?.counters?.messages?.total || 0} growth={stats?.counters?.messages?.growth} icon={MessageSquare} />
+                </div>
+              )}
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.20s" }}>
+                <StatItem title="Status do Sistema" value={stats?.system_status?.api_uptime || "Online"} label="API Uptime" icon={Zap} isStatus statusColor={stats?.system_status?.api_uptime ? "text-green-500" : "text-red-500"} />
+              </div>
+            </>
           )}
-          {isModuleActive('messenger') && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.16s" }}>
-              <StatItem
-                title="Mensagens Trocadas"
-                value={stats?.counters?.messages?.total || 0}
-                growth={stats?.counters?.messages?.growth}
-                icon={MessageSquare}
-              />
-            </div>
-          )}
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "0.20s" }}>
-            <StatItem
-              title="Status do Sistema"
-              value={stats?.system_status?.api_uptime || "Online"}
-              label="API Uptime"
-              icon={Zap}
-              isStatus
-              statusColor={stats?.system_status?.api_uptime ? "text-green-500" : "text-red-500"}
-            />
-          </div>
         </section>
 
         {/* Analytics Section */}
@@ -212,31 +171,48 @@ export default function DashboardPage() {
               </Button>
             </div>
             <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
-              <div className="divide-y divide-border/50">
-                {(stats?.recent_activity || []).map((log: { action: string; resource: string; user?: { name?: string } | null; created_at: string }, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-all group">
-                    <div className="flex items-center gap-4">
-                      <div className="h-2 w-2 rounded-full bg-primary/40 group-hover:bg-primary transition-colors" />
-                      <div>
-                        <div className="text-sm font-medium flex items-center gap-2">
-                          <span className="text-primary font-bold">{String(log.action).toUpperCase()}</span>
-                          <span className="text-muted-foreground">•</span>
-                          <span>{log.resource}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          Realizado por <span className="text-foreground font-semibold">{log.user?.name}</span>
+              {statsLoading ? (
+                <div className="divide-y divide-border/50">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="h-2 w-2 rounded-full" />
+                        <div className="space-y-1.5">
+                          <Skeleton className="h-4 w-48" />
+                          <Skeleton className="h-3 w-32" />
                         </div>
                       </div>
+                      <Skeleton className="h-5 w-12 rounded" />
                     </div>
-                    <div className="text-[10px] text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
-                      {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  ))}
+                </div>
+              ) : (
+                <div className="divide-y divide-border/50">
+                  {(stats?.recent_activity || []).map((log: { action: string; resource: string; user?: { name?: string } | null; created_at: string }, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-all group">
+                      <div className="flex items-center gap-4">
+                        <div className="h-2 w-2 rounded-full bg-primary/40 group-hover:bg-primary transition-colors" />
+                        <div>
+                          <div className="text-sm font-medium flex items-center gap-2">
+                            <span className="text-primary font-bold">{String(log.action).toUpperCase()}</span>
+                            <span className="text-muted-foreground">•</span>
+                            <span>{log.resource}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Realizado por <span className="text-foreground font-semibold">{log.user?.name}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
+                        {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {(!stats?.recent_activity || stats.recent_activity.length === 0) && (
-                  <div className="p-12 text-center text-muted-foreground">Nenhuma atividade detectada nas últimas 24h.</div>
-                )}
-              </div>
+                  ))}
+                  {(!stats?.recent_activity || stats.recent_activity.length === 0) && (
+                    <div className="p-12 text-center text-muted-foreground">Nenhuma atividade detectada nas últimas 24h.</div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

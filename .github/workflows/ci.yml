@@ -46,7 +46,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-django pytest-cov black flake8
+        pip install pytest pytest-django pytest-cov black flake8 factory-boy
 
     - name: Run Linter (Black & Flake8)
       run: |
@@ -63,9 +63,25 @@ jobs:
         python manage.py migrate
         pytest --cov=. --cov-report=xml
 
+    - name: Generate OpenAPI Schema
+      env:
+        DJANGO_SETTINGS_MODULE: config.settings
+        DATABASE_URL: postgres://postgres:password@localhost:5432/atlas_db
+        REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: test-secret-key-for-ci
+      run: python manage.py spectacular --file docs/schema.yaml --validate
+
+    - name: Upload OpenAPI Schema
+      uses: actions/upload-artifact@v4
+      with:
+        name: openapi-schema
+        path: backend/docs/schema.yaml
+        retention-days: 1
+
   frontend-test:
     name: Frontend Tests (Next.js)
     runs-on: ubuntu-latest
+    needs: [backend-test]
     defaults:
       run:
         working-directory: ./frontend
@@ -83,8 +99,186 @@ jobs:
     - name: Install Dependencies
       run: npm ci
         
+    - name: Download OpenAPI Schema
+      uses: actions/download-artifact@v4
+      with:
+        name: openapi-schema
+        path: frontend/src/api
+
+    - name: Generate TypeScript API Client
+      run: |
+        cp ../backend/docs/schema.yaml src/api/schema.yaml
+        npm run api:generate
+        echo "TypeScript client generated successfully"
+
+    - name: Check for API Client Drift
+      run: |
+        # git diff only sees *modified tracked* files.
+        # git status --porcelain also catches *new untracked* files produced on
+        # first generation, so we use it here instead.
+        DRIFT=$(git status --porcelain src/api/generated/ | grep -vc '\.gitkeep' || true)
+        if [ "$DRIFT" -gt 0 ]; then
+          echo "Generated API client differs from committed version ($DRIFT file(s))."
+          echo "Run 'npm run api:sync' locally and commit the result."
+          git status --short src/api/generated/
+          exit 1
+        fi
+        echo "API client is up to date"
+
     - name: Run Linter
       run: npm run lint
-        
+
     - name: Run Unit Tests
       run: npm run test:coverage
+
+  e2e-test:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: atlas_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # ── Backend ─────────────────────────────────────────────────────────────
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+
+    - name: Install Backend Dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt factory-boy
+
+    - name: Migrate & Seed E2E Test User
+      working-directory: ./backend
+      env:
+        DJANGO_SETTINGS_MODULE: config.settings
+        DATABASE_URL: postgres://postgres:password@localhost:5432/atlas_db
+        REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: test-secret-key-for-ci
+        DEBUG: "true"
+      run: |
+        python manage.py migrate --noinput
+        python manage.py shell << 'PYEOF'
+from apps.core.models import Company
+from apps.accounts.models import User
+company, _ = Company.objects.get_or_create(slug='raiz', defaults={'name': 'Raiz'})
+if not User.objects.filter(username='suporte').exists():
+    User.objects.create_user(
+        username='suporte', password='suporte123',
+        email='suporte@raiz.com', company=company,
+        is_staff=True, is_superuser=True)
+    print('E2E test user created.')
+else:
+    print('E2E test user already exists.')
+PYEOF
+
+    - name: Start Django Backend
+      working-directory: ./backend
+      env:
+        DJANGO_SETTINGS_MODULE: config.settings
+        DATABASE_URL: postgres://postgres:password@localhost:5432/atlas_db
+        REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: test-secret-key-for-ci
+        DEBUG: "true"
+        CELERY_TASK_ALWAYS_EAGER: "true"
+      run: nohup python manage.py runserver 0.0.0.0:8005 > /tmp/django.log 2>&1 &
+
+    # ── Frontend ────────────────────────────────────────────────────────────
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+        cache: 'npm'
+        cache-dependency-path: './frontend/package-lock.json'
+
+    - name: Install Frontend Dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Install Playwright Browsers
+      working-directory: ./frontend
+      run: npx playwright install --with-deps chromium
+
+    - name: Start Next.js Dev Server
+      working-directory: ./frontend
+      env:
+        NEXT_PUBLIC_API_URL: http://localhost:8005
+        API_URL_INTERNAL: http://localhost:8005
+        NEXT_TELEMETRY_DISABLED: "1"
+        NEXT_PUBLIC_SENTRY_DSN: ""
+      run: nohup npm run dev -- --port 3005 > /tmp/nextjs.log 2>&1 &
+
+    # ── Wait & Run ──────────────────────────────────────────────────────────
+    - name: Wait for Django backend
+      run: |
+        echo "Waiting for backend on :8005..."
+        for i in $(seq 1 60); do
+          curl -sf http://localhost:8005/api/health/ > /dev/null 2>&1 && echo "Backend ready." && break
+          echo "  attempt $i/60..."; sleep 3
+        done
+
+    - name: Wait for Next.js frontend
+      run: |
+        echo "Waiting for frontend on :3005..."
+        for i in $(seq 1 90); do
+          curl -sf http://localhost:3005/ > /dev/null 2>&1 && echo "Frontend ready." && break
+          echo "  attempt $i/90..."; sleep 3
+        done
+
+    - name: Run Playwright E2E Tests
+      working-directory: ./frontend
+      env:
+        PLAYWRIGHT_TEST_BASE_URL: http://localhost:3005
+        E2E_API_URL: http://localhost:8005
+        E2E_USERNAME: suporte
+        E2E_PASSWORD: suporte123
+        E2E_COMPANY_SLUG: raiz
+        CI: "true"
+      run: npx playwright test
+
+    - name: Upload Playwright Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report
+        path: frontend/playwright-report/
+        retention-days: 7
+
+    - name: Upload Backend Log on Failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: django-server-log
+        path: /tmp/django.log
+        retention-days: 3
+
+    - name: Upload Frontend Log on Failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: nextjs-server-log
+        path: /tmp/nextjs.log
+        retention-days: 3

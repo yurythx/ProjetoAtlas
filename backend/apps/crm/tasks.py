@@ -2,6 +2,7 @@ import logging
 import requests
 from celery import shared_task
 from django.apps import apps
+from django.db.models import F, Q
 from django.utils import timezone
 from shared_kernel.sanitization import sanitize_url
 
@@ -136,3 +137,108 @@ def check_integrations_health(company_id):
             
     # Aqui poderíamos disparar uma notificação caso algo esteja offline
     return results
+
+
+@shared_task(bind=True, soft_time_limit=60, time_limit=90)
+def run_automation_rules(self, deal_id: int, trigger: str):
+    """
+    Evaluate and execute all active AutomationRules for a deal + trigger event.
+    Called asynchronously via on_commit from signals.
+    """
+    Deal = apps.get_model("crm", "Deal")
+    AutomationRule = apps.get_model("crm", "AutomationRule")
+    Notification = apps.get_model("notifications", "Notification")
+
+    try:
+        deal = Deal.objects.select_related("company", "assigned_to", "owner").get(id=deal_id)
+    except Deal.DoesNotExist:
+        return f"deal {deal_id} not found"
+
+    pipeline_id = deal.column.pipeline_id if deal.column_id else None
+    rules = AutomationRule.objects.filter(
+        company=deal.company,
+        trigger=trigger,
+        is_active=True,
+    ).filter(
+        Q(pipeline__isnull=True) | Q(pipeline_id=pipeline_id)
+    )
+
+    executed = 0
+    for rule in rules:
+        if not rule.matches(deal):
+            continue
+        try:
+            _execute_action(rule, deal, Notification)
+            AutomationRule.objects.filter(pk=rule.pk).update(
+                execution_count=F("execution_count") + 1,
+                last_triggered_at=timezone.now(),
+            )
+            executed += 1
+        except Exception:
+            logger.exception("automation_rule_failed rule_id=%s deal_id=%s", rule.pk, deal_id)
+
+    return f"automation: {executed} rules executed for deal {deal_id} trigger={trigger}"
+
+
+def _execute_action(rule, deal, Notification):
+    """Dispatch the configured action for a matching rule."""
+    from shared_kernel.sanitization import sanitize_url
+
+    action = rule.action
+    cfg = rule.action_config or {}
+
+    if action == "notify_assignee":
+        recipient = deal.assigned_to or deal.owner
+        if not recipient:
+            return
+        Notification.objects.create(
+            recipient=recipient,
+            company=deal.company,
+            title=f"Automação: {rule.name}",
+            message=f"Regra ativada para o card '{deal.title}' (gatilho: {rule.get_trigger_display()}).",
+            notification_type="system",
+            metadata={"deal_id": deal.id, "rule_id": rule.id},
+        )
+
+    elif action == "create_notification":
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user_id = cfg.get("user_id")
+        if not user_id:
+            return
+        try:
+            user = User.objects.get(id=user_id, company=deal.company)
+        except User.DoesNotExist:
+            return
+        Notification.objects.create(
+            recipient=user,
+            company=deal.company,
+            title=cfg.get("title", f"Automação: {rule.name}"),
+            message=cfg.get("message", f"Card '{deal.title}' ativou a regra '{rule.name}'."),
+            notification_type="system",
+            metadata={"deal_id": deal.id, "rule_id": rule.id},
+        )
+
+    elif action == "assign_user":
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user_id = cfg.get("user_id")
+        if not user_id:
+            return
+        try:
+            user = User.objects.get(id=user_id, company=deal.company)
+        except User.DoesNotExist:
+            return
+        deal.__class__.objects.filter(pk=deal.pk).update(assigned_to=user)
+
+    elif action == "send_webhook":
+        url = sanitize_url(cfg.get("url", ""), allowed_protocols=["http", "https"])
+        if not url:
+            return
+        import requests
+        payload = {
+            "event": rule.trigger,
+            "rule": rule.name,
+            "deal": {"id": deal.id, "title": deal.title, "priority": deal.priority, "record_type": deal.record_type},
+        }
+        requests.post(url, json=payload, timeout=10)

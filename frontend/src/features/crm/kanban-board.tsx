@@ -67,7 +67,9 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
       const parsed = JSON.parse(raw) as unknown
       if (!Array.isArray(parsed)) return
       setCollapsedColumnIds(new Set(parsed.filter((value) => typeof value === "number")))
-    } catch {}
+    } catch (e) {
+      if (process.env.NODE_ENV !== "production") console.warn("CRM Kanban: Failed to restore collapsed columns:", e)
+    }
   }, [pipeline.id])
 
   useEffect(() => {
@@ -122,12 +124,28 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
   }
 
   const columnSummaryById = useMemo(() => {
-    const summaryById = new Map<number, { total: number; overdue: number; averageProgress: number }>()
+    // Build legacy_stage → column.id lookup once — O(m)
+    const columnIdByLegacyStage = new Map<number, number>()
+    for (const col of columns) {
+      if (col.legacy_stage != null) columnIdByLegacyStage.set(col.legacy_stage, col.id)
+    }
 
+    // Group deals by resolved column ID in one pass — O(n)
+    const dealsByColumnId = new Map<number, Deal[]>()
+    for (const deal of deals) {
+      const colId = deal.column ?? (deal.stage != null ? columnIdByLegacyStage.get(deal.stage) : undefined)
+      if (!colId) continue
+      const group = dealsByColumnId.get(colId)
+      if (group) group.push(deal)
+      else dealsByColumnId.set(colId, [deal])
+    }
+
+    // Compute per-column summaries — O(n) total across all columns
+    const summaryById = new Map<number, { total: number; overdue: number; averageProgress: number }>()
     const totalColumns = columns.length
 
     columns.forEach((column, columnIndex) => {
-      const stageDeals = deals.filter((deal) => isDealInColumn(deal, column))
+      const stageDeals = dealsByColumnId.get(column.id) ?? []
       let overdue = 0
       const columnSemantics = resolveColumnSemantics(column)
       const columnProgress =
@@ -137,11 +155,11 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
             : Math.round((columnIndex / (totalColumns - 1)) * 100)
           : 0
 
-      stageDeals.forEach((deal) => {
+      for (const deal of stageDeals) {
         const isCompleted = isDealDone(deal, [pipeline])
         const deadline = getDeadlineMeta(deal.closing_date, isCompleted)
         if (deadline.risk === "overdue") overdue += 1
-      })
+      }
 
       summaryById.set(column.id, {
         total: stageDeals.length,
@@ -195,11 +213,11 @@ export function KanbanBoard({ pipeline, deals }: KanbanBoardProps) {
     setDropIntent(null)
 
     const dealIdStr = e.dataTransfer.getData("dealId")
-    const dealId = parseInt(dealIdStr)
-    const draggedDeal = deals.find((deal) => deal.id === dealId)
+    const dealId = Number(dealIdStr)
+    const draggedDeal = Number.isFinite(dealId) && dealId > 0 ? deals.find((deal) => deal.id === dealId) : undefined
     const targetColumn = columns.find((column) => column.id === columnId)
-    
-    if (!dealId || !draggedDeal || !targetColumn) return
+
+    if (!draggedDeal || !targetColumn) return
 
     // 1. Verifica se já está na mesma coluna
     if (getDealColumnId(draggedDeal) === targetColumn.id) return

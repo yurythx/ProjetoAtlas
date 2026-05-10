@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.postgres",
     # Third party
+    "django_prometheus",
     "rest_framework",
     "corsheaders",
     "channels",
@@ -71,9 +72,11 @@ INSTALLED_APPS = [
     "apps.service_catalog",
     "apps.cmdb",
     "apps.ai",
+    "apps.reports",
 ]
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",  # must be first
     "django.middleware.gzip.GZipMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # Whitenoise for static files
@@ -83,12 +86,14 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "csp.middleware.CSPMiddleware",  # Content Security Policy
     "shared_kernel.middleware.TenantMiddleware",
+    "shared_kernel.middleware.TenantLanguageMiddleware",
     "shared_kernel.middleware.LicensingMiddleware",
     "shared_kernel.logging_middleware.StructuredLoggingMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "shared_kernel.middleware.TenantSecurityMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",   # must be last
 ]
 
 # Authentication Backends (LDAP + Standard)
@@ -124,10 +129,12 @@ REST_FRAMEWORK = {
         "link_preview": "15/min",
         "public_articles": "60/min",
         "public_comments": "10/min",
-        # SECURITY: Strict limit on user registration to prevent bot account creation
+        # SECURITY: Strict limits on auth endpoints to prevent brute force / abuse
         "user_registration": "5/hour",
         "login_attempt": "10/minute",
         "password_reset": "3/hour",
+        "token_refresh": "30/minute",  # Prevents refresh token brute force / session flooding
+        "webhook_inbound": "300/minute",  # Per API key + company; prevents webhook flood/DDoS
     },
 }
 
@@ -396,8 +403,10 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
 }
-# Forcing CONN_MAX_AGE=0 by default in Daphne/ASGI to prevent "too many clients"
-# Postgres errors. Connections will close after each request unless overridden.
+# CONN_MAX_AGE=0: With PgBouncer in transaction mode, Django must not hold persistent
+# connections — PgBouncer owns the pool. Each request gets a connection from the pool
+# and returns it immediately. Do NOT set this to a positive value when using PgBouncer
+# in transaction mode, as it would interfere with the pooler's connection lifecycle.
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=0)
 DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
@@ -498,7 +507,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # Password reset link timeout (in seconds). Default is 3 days, let's reduce to 1 hour for security.
 PASSWORD_RESET_TIMEOUT = 3600
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "pt-br"
+LANGUAGES = [
+    ("pt-br", "Português (Brasil)"),
+    ("en-us", "English (US)"),
+]
+LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
@@ -547,6 +561,14 @@ LOGGING = {
         "django.request": {
             "handlers": ["console"],
             "level": "INFO",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            # In production log queries that exceed the slow-query threshold (set via
+            # log_min_duration_statement in PostgreSQL). In DEBUG, only log errors to
+            # avoid drowning the output with every ORM query.
+            "level": "DEBUG" if DEBUG else "WARNING",
             "propagate": False,
         },
     },

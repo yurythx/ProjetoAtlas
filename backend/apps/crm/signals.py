@@ -334,10 +334,27 @@ def create_rfc_from_problem(sender, instance, created, **kwargs):
 
 def trigger_ai_analysis(sender, instance, created, **kwargs):
     """
-    ITIL Version 5: Dispara a análise de IA em background para atualizar 
+    ITIL Version 5: Dispara a análise de IA em background para atualizar
     o score de risco e metadados de governança.
     """
     from apps.ai.tasks import analyze_deal_ai_metadata
-    
+
     # Executa a tarefa de forma assíncrona (Celery)
     transaction.on_commit(lambda: analyze_deal_ai_metadata.delay(instance.id))
+
+
+def trigger_automation_rules(sender, instance, created, **kwargs):
+    """Evaluate CRM automation rules after a deal is saved."""
+    from .tasks import run_automation_rules
+
+    update_fields = set(kwargs.get("update_fields") or [])
+
+    if created:
+        transaction.on_commit(lambda: run_automation_rules.delay(instance.id, "deal_created"))
+        return
+
+    if {"column", "column_id", "stage", "stage_id"} & update_fields:
+        transaction.on_commit(lambda: run_automation_rules.delay(instance.id, "deal_moved"))
+
+    if {"is_closed"} & update_fields and instance.is_closed:
+        transaction.on_commit(lambda: run_automation_rules.delay(instance.id, "deal_closed"))

@@ -1182,3 +1182,519 @@ class CRMSavedViewApiTest(APITestCase):
         second_view.refresh_from_db()
         self.assertFalse(first_default.is_default)
         self.assertTrue(second_view.is_default)
+
+
+# ---------------------------------------------------------------------------
+# SLA deadline calculation
+# ---------------------------------------------------------------------------
+
+
+class CRMSLAPolicyTest(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(name="SLA Corp", slug="sla-corp")
+        self.user = User.objects.create_user(username="sla_user", password="pass", company=self.company)
+        self.contact = Contact.objects.create(company=self.company, name="Cliente SLA", email="sla@cliente.com")
+        self.pipeline = Pipeline.all_objects.create(company=self.company, name="Suporte")
+        self.stage = Stage.all_objects.get(pipeline=self.pipeline, name="Novo")
+
+        from apps.crm.models import SLAPolicy
+        self.sla_policy = SLAPolicy.objects.create(
+            company=self.company,
+            name="Crítico 4h",
+            target_response_minutes=30,
+            target_resolution_minutes=240,
+            business_hours_only=False,
+        )
+
+    def test_sla_deadlines_are_set_on_deal_creation(self):
+        deal = Deal.all_objects.create(
+            company=self.company,
+            owner=self.user,
+            title="Servidor Caído",
+            contact=self.contact,
+            stage=self.stage,
+            sla_policy=self.sla_policy,
+        )
+        deal.refresh_from_db()
+        self.assertIsNotNone(deal.sla_response_deadline)
+        self.assertIsNotNone(deal.sla_resolution_deadline)
+        # Resolution deadline should be ~4h after creation
+        delta = deal.sla_resolution_deadline - deal.created_at
+        self.assertAlmostEqual(delta.total_seconds() / 60, 240, delta=5)
+
+    def test_sla_status_is_breached_when_past_deadline(self):
+        past = timezone.now() - timezone.timedelta(hours=1)
+        deal = Deal.all_objects.create(
+            company=self.company,
+            owner=self.user,
+            title="Ticket Atrasado",
+            contact=self.contact,
+            stage=self.stage,
+            sla_policy=self.sla_policy,
+            sla_resolution_deadline=past,
+            sla_status="breached",
+        )
+        self.assertEqual(deal.sla_status, "breached")
+
+    def test_deal_without_sla_policy_has_no_deadlines(self):
+        deal = Deal.all_objects.create(
+            company=self.company,
+            owner=self.user,
+            title="Sem SLA",
+            contact=self.contact,
+            stage=self.stage,
+        )
+        deal.refresh_from_db()
+        self.assertIsNone(deal.sla_policy)
+
+
+# ---------------------------------------------------------------------------
+# AutomationRule.matches() + run_automation_rules task
+# ---------------------------------------------------------------------------
+
+
+class CRMAutomationRuleMatchesTest(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(name="Automation Corp", slug="auto-corp")
+        self.user = User.objects.create_user(username="auto_user", password="pass", company=self.company)
+        self.contact = Contact.objects.create(company=self.company, name="Cliente", email="auto@cliente.com")
+        self.pipeline = Pipeline.all_objects.create(company=self.company, name="Suporte")
+        self.stage = Stage.all_objects.get(pipeline=self.pipeline, name="Novo")
+        self.deal = Deal.all_objects.create(
+            company=self.company,
+            owner=self.user,
+            title="Incidente Crítico",
+            contact=self.contact,
+            stage=self.stage,
+            priority="URGENT",
+            record_type="incident",
+        )
+
+        from apps.crm.models import AutomationRule
+        self.AutomationRule = AutomationRule
+
+    def test_rule_matches_correct_priority(self):
+        rule = self.AutomationRule(
+            company=self.company,
+            name="Urgente",
+            trigger="deal_created",
+            action="notify_assignee",
+            conditions={"priority": "URGENT"},
+        )
+        self.assertTrue(rule.matches(self.deal))
+
+    def test_rule_does_not_match_wrong_priority(self):
+        rule = self.AutomationRule(
+            company=self.company,
+            name="Alta",
+            trigger="deal_created",
+            action="notify_assignee",
+            conditions={"priority": "HIGH"},
+        )
+        self.assertFalse(rule.matches(self.deal))
+
+    def test_rule_matches_with_no_conditions(self):
+        rule = self.AutomationRule(
+            company=self.company,
+            name="Sem Condição",
+            trigger="deal_created",
+            action="notify_assignee",
+            conditions={},
+        )
+        self.assertTrue(rule.matches(self.deal))
+
+    def test_rule_matches_record_type_condition(self):
+        rule = self.AutomationRule(
+            company=self.company,
+            name="Incidente",
+            trigger="deal_created",
+            action="notify_assignee",
+            conditions={"record_type": "incident"},
+        )
+        self.assertTrue(rule.matches(self.deal))
+
+    def test_rule_does_not_match_wrong_record_type(self):
+        rule = self.AutomationRule(
+            company=self.company,
+            name="Mudança",
+            trigger="deal_created",
+            action="notify_assignee",
+            conditions={"record_type": "change"},
+        )
+        self.assertFalse(rule.matches(self.deal))
+
+    def test_rule_with_multiple_conditions_all_must_match(self):
+        rule = self.AutomationRule(
+            company=self.company,
+            name="Multi",
+            trigger="deal_created",
+            action="notify_assignee",
+            conditions={"priority": "URGENT", "record_type": "incident"},
+        )
+        self.assertTrue(rule.matches(self.deal))
+
+    def test_rule_with_multiple_conditions_one_fails(self):
+        rule = self.AutomationRule(
+            company=self.company,
+            name="Multi Fail",
+            trigger="deal_created",
+            action="notify_assignee",
+            conditions={"priority": "URGENT", "record_type": "change"},
+        )
+        self.assertFalse(rule.matches(self.deal))
+
+
+class CRMRunAutomationRulesTaskTest(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(name="Task Corp", slug="task-corp")
+        self.user = User.objects.create_user(username="task_user", password="pass", company=self.company)
+        self.contact = Contact.objects.create(company=self.company, name="Cliente Task", email="task@cliente.com")
+        self.pipeline = Pipeline.all_objects.create(company=self.company, name="Suporte")
+        self.stage = Stage.all_objects.get(pipeline=self.pipeline, name="Novo")
+        self.deal = Deal.all_objects.create(
+            company=self.company,
+            owner=self.user,
+            title="Card Task",
+            contact=self.contact,
+            stage=self.stage,
+            priority="HIGH",
+        )
+
+        crm_module, _ = Module.objects.get_or_create(
+            code="crm",
+            defaults={"name": "CRM", "description": "CRM"},
+        )
+        TenantModule.objects.get_or_create(company=self.company, module=crm_module, defaults={"is_active": True})
+
+        from apps.crm.models import AutomationRule
+        self.rule = AutomationRule.objects.create(
+            company=self.company,
+            pipeline=self.pipeline,
+            name="Notificar na Criação",
+            trigger="deal_created",
+            action="notify_assignee",
+            conditions={},
+            is_active=True,
+        )
+
+    def test_task_executes_matching_rule_and_increments_count(self):
+        from apps.crm.tasks import run_automation_rules
+
+        run_automation_rules.apply(args=[self.deal.id, "deal_created"])
+
+        self.rule.refresh_from_db()
+        self.assertEqual(self.rule.execution_count, 1)
+        self.assertIsNotNone(self.rule.last_triggered_at)
+
+    def test_task_skips_inactive_rule(self):
+        from apps.crm.tasks import run_automation_rules
+
+        self.rule.is_active = False
+        self.rule.save(update_fields=["is_active"])
+
+        run_automation_rules.apply(args=[self.deal.id, "deal_created"])
+
+        self.rule.refresh_from_db()
+        self.assertEqual(self.rule.execution_count, 0)
+
+    def test_task_skips_rule_with_non_matching_conditions(self):
+        from apps.crm.tasks import run_automation_rules
+
+        self.rule.conditions = {"priority": "URGENT"}
+        self.rule.save(update_fields=["conditions"])
+
+        run_automation_rules.apply(args=[self.deal.id, "deal_created"])
+
+        self.rule.refresh_from_db()
+        self.assertEqual(self.rule.execution_count, 0)
+
+    def test_task_handles_nonexistent_deal_gracefully(self):
+        from apps.crm.tasks import run_automation_rules
+
+        result = run_automation_rules.apply(args=[999999, "deal_created"])
+        self.assertIn("not found", result.result)
+
+    def test_task_skips_wrong_trigger(self):
+        from apps.crm.tasks import run_automation_rules
+
+        run_automation_rules.apply(args=[self.deal.id, "deal_moved"])
+
+        self.rule.refresh_from_db()
+        self.assertEqual(self.rule.execution_count, 0)
+
+
+# ---------------------------------------------------------------------------
+# IDOR: topology endpoint must not leak other-company RFC deals
+# ---------------------------------------------------------------------------
+
+
+class CRMTopologyIsolationTest(APITestCase):
+    def setUp(self):
+        self.company_a = Company.objects.create(name="Empresa A", slug="empresa-a")
+        self.company_b = Company.objects.create(name="Empresa B", slug="empresa-b")
+
+        crm_module, _ = Module.objects.get_or_create(
+            code="crm",
+            defaults={"name": "CRM", "description": "CRM"},
+        )
+        TenantModule.objects.get_or_create(company=self.company_a, module=crm_module, defaults={"is_active": True})
+        TenantModule.objects.get_or_create(company=self.company_b, module=crm_module, defaults={"is_active": True})
+
+        role_a = Role.all_objects.create(company=self.company_a, name="Admin A", permissions=["*"])
+        self.user_a = User.all_objects.create_user(
+            username="user_a", password="pass", company=self.company_a, role=role_a
+        )
+        self.user_b = User.all_objects.create_user(
+            username="user_b", password="pass", company=self.company_b
+        )
+
+        self.contact_a = Contact.objects.create(company=self.company_a, name="A", email="a@a.com")
+        self.contact_b = Contact.objects.create(company=self.company_b, name="B", email="b@b.com")
+
+        self.pipeline_a = Pipeline.all_objects.create(company=self.company_a, name="Pipeline A")
+        self.pipeline_b = Pipeline.all_objects.create(company=self.company_b, name="Pipeline B")
+
+        stage_a = Stage.all_objects.get(pipeline=self.pipeline_a, name="Novo")
+        stage_b = Stage.all_objects.get(pipeline=self.pipeline_b, name="Novo")
+
+        self.deal_a = Deal.all_objects.create(
+            company=self.company_a,
+            owner=self.user_a,
+            title="Deal A",
+            contact=self.contact_a,
+            stage=stage_a,
+        )
+        self.deal_b = Deal.all_objects.create(
+            company=self.company_b,
+            owner=self.user_b,
+            title="RFC Empresa B (privado)",
+            contact=self.contact_b,
+            stage=stage_b,
+            record_type="change",
+        )
+
+        # Inject company B's deal ID into company A's deal metadata (simulating IDOR attempt)
+        self.deal_a.ai_metadata = {"linked_rfc_id": self.deal_b.id}
+        self.deal_a.save(update_fields=["ai_metadata"])
+
+        self.client.force_authenticate(user=self.user_a)
+        self.client.credentials(HTTP_X_COMPANY_SLUG=self.company_a.slug)
+
+    def test_topology_does_not_expose_other_company_rfc(self):
+        response = self.client.get(f"/api/crm/deals/{self.deal_a.id}/topology/")
+
+        self.assertEqual(response.status_code, 200)
+        node_ids = [node["id"] for node in response.data["nodes"]]
+        # Company B's deal must NOT appear as a topology node
+        self.assertNotIn(f"deal_{self.deal_b.id}", node_ids)
+
+    def test_topology_exposes_same_company_rfc(self):
+        stage_a = Stage.all_objects.get(pipeline=self.pipeline_a, name="Em Andamento")
+        rfc_a = Deal.all_objects.create(
+            company=self.company_a,
+            owner=self.user_a,
+            title="RFC Empresa A",
+            contact=self.contact_a,
+            stage=stage_a,
+            record_type="change",
+        )
+        self.deal_a.ai_metadata = {"linked_rfc_id": rfc_a.id}
+        self.deal_a.save(update_fields=["ai_metadata"])
+
+        response = self.client.get(f"/api/crm/deals/{self.deal_a.id}/topology/")
+
+        self.assertEqual(response.status_code, 200)
+        node_ids = [node["id"] for node in response.data["nodes"]]
+        self.assertIn(f"deal_{rfc_a.id}", node_ids)
+
+    def test_user_cannot_access_deal_from_other_company(self):
+        """get_queryset() already isolates deals — 404 for cross-tenant access."""
+        response = self.client.get(f"/api/crm/deals/{self.deal_b.id}/topology/")
+        self.assertEqual(response.status_code, 404)
+
+
+# ---------------------------------------------------------------------------
+# transaction.on_commit: IDs captured correctly (closure safety)
+# ---------------------------------------------------------------------------
+
+
+class CRMTransactionOnCommitCaptureTest(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(name="Commit Corp", slug="commit-corp")
+        self.user = User.objects.create_user(username="commit_user", password="pass", company=self.company)
+        self.contact = Contact.objects.create(company=self.company, name="C", email="c@c.com")
+        self.pipeline = Pipeline.all_objects.create(company=self.company, name="Suporte")
+        self.stage = Stage.all_objects.get(pipeline=self.pipeline, name="Novo")
+
+    @patch("apps.ai.tasks.analyze_deal_ai_metadata.delay")
+    def test_ai_task_receives_correct_deal_id(self, mock_delay):
+        deal = Deal.all_objects.create(
+            company=self.company,
+            owner=self.user,
+            title="Closure Test",
+            contact=self.contact,
+            stage=self.stage,
+        )
+        mock_delay.assert_called_once_with(deal.id)
+
+    @patch("apps.crm.tasks.orchestrate_swarming.delay")
+    def test_swarming_task_receives_correct_deal_id_for_urgent(self, mock_delay):
+        deal = Deal.all_objects.create(
+            company=self.company,
+            owner=self.user,
+            title="URGENT Deal",
+            contact=self.contact,
+            stage=self.stage,
+            priority="URGENT",
+        )
+        mock_delay.assert_called_once_with(deal.id)
+
+
+# ---------------------------------------------------------------------------
+# WIP limit enforcement via API
+# ---------------------------------------------------------------------------
+
+
+class CRMWIPLimitEnforcementTest(APITestCase):
+    def setUp(self):
+        self.company = Company.objects.create(name="WIP Corp", slug="wip-corp")
+        role = Role.all_objects.create(company=self.company, name="Admin", permissions=["*"])
+        self.user = User.all_objects.create_user(
+            username="wip_user", password="pass", company=self.company, role=role
+        )
+        self.client.force_authenticate(user=self.user)
+        self.client.credentials(HTTP_X_COMPANY_SLUG=self.company.slug)
+
+        crm_module, _ = Module.objects.get_or_create(
+            code="crm",
+            defaults={"name": "CRM", "description": "CRM"},
+        )
+        TenantModule.objects.get_or_create(company=self.company, module=crm_module, defaults={"is_active": True})
+
+        self.contact = Contact.objects.create(company=self.company, name="Cliente", email="wip@cliente.com")
+        self.pipeline = Pipeline.all_objects.create(company=self.company, name="Suporte")
+        self.stage_new = Stage.all_objects.get(pipeline=self.pipeline, name="Novo")
+        self.stage_progress = Stage.all_objects.get(pipeline=self.pipeline, name="Em Andamento")
+        self.target_column = self.stage_progress.column
+        self.target_column.wip_limit = 2
+        self.target_column.save(update_fields=["wip_limit"])
+
+        # Fill the target column up to WIP limit
+        for i in range(2):
+            Deal.all_objects.create(
+                company=self.company,
+                owner=self.user,
+                title=f"Ocupante {i}",
+                contact=self.contact,
+                stage=self.stage_progress,
+                column=self.target_column,
+                priority="LOW",
+            )
+
+        self.deal = Deal.all_objects.create(
+            company=self.company,
+            owner=self.user,
+            title="Deal Para Mover",
+            contact=self.contact,
+            stage=self.stage_new,
+            priority="MEDIUM",
+        )
+
+    def test_move_to_full_column_returns_400(self):
+        response = self.client.patch(
+            f"/api/crm/deals/{self.deal.id}/",
+            {"column": self.target_column.id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("limite wip", str(response.data).lower())
+
+    def test_move_after_freeing_slot_succeeds(self):
+        # Remove one occupant to free a slot
+        Deal.all_objects.filter(
+            company=self.company,
+            column=self.target_column,
+        ).first().delete()
+
+        response = self.client.patch(
+            f"/api/crm/deals/{self.deal.id}/",
+            {"column": self.target_column.id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.deal.refresh_from_db()
+        self.assertEqual(self.deal.column, self.target_column)
+
+
+# ---------------------------------------------------------------------------
+# Multi-tenant isolation: deals API
+# ---------------------------------------------------------------------------
+
+
+class CRMDealTenantIsolationTest(APITestCase):
+    def setUp(self):
+        self.company_a = Company.objects.create(name="Tenant A", slug="tenant-a")
+        self.company_b = Company.objects.create(name="Tenant B", slug="tenant-b")
+
+        crm_module, _ = Module.objects.get_or_create(
+            code="crm", defaults={"name": "CRM", "description": "CRM"}
+        )
+        TenantModule.objects.get_or_create(company=self.company_a, module=crm_module, defaults={"is_active": True})
+        TenantModule.objects.get_or_create(company=self.company_b, module=crm_module, defaults={"is_active": True})
+
+        role = Role.all_objects.create(company=self.company_a, name="Admin A", permissions=["*"])
+        self.user_a = User.all_objects.create_user(
+            username="tenant_a_user", password="pass", company=self.company_a, role=role
+        )
+        self.user_b = User.all_objects.create_user(
+            username="tenant_b_user", password="pass", company=self.company_b
+        )
+
+        contact_a = Contact.objects.create(company=self.company_a, name="A", email="a@a.com")
+        contact_b = Contact.objects.create(company=self.company_b, name="B", email="b@b.com")
+
+        pipeline_a = Pipeline.all_objects.create(company=self.company_a, name="PA")
+        pipeline_b = Pipeline.all_objects.create(company=self.company_b, name="PB")
+
+        stage_a = Stage.all_objects.get(pipeline=pipeline_a, name="Novo")
+        stage_b = Stage.all_objects.get(pipeline=pipeline_b, name="Novo")
+
+        self.deal_b = Deal.all_objects.create(
+            company=self.company_b,
+            owner=self.user_b,
+            title="Privado Tenant B",
+            contact=contact_b,
+            stage=stage_b,
+        )
+        self.deal_a = Deal.all_objects.create(
+            company=self.company_a,
+            owner=self.user_a,
+            title="Público Tenant A",
+            contact=contact_a,
+            stage=stage_a,
+        )
+
+        self.client.force_authenticate(user=self.user_a)
+        self.client.credentials(HTTP_X_COMPANY_SLUG=self.company_a.slug)
+
+    def test_list_returns_only_own_company_deals(self):
+        response = self.client.get("/api/crm/deals/")
+        self.assertEqual(response.status_code, 200)
+        results = response.data.get("results", response.data)
+        returned_ids = {item["id"] for item in results}
+        self.assertIn(self.deal_a.id, returned_ids)
+        self.assertNotIn(self.deal_b.id, returned_ids)
+
+    def test_retrieve_other_company_deal_returns_404(self):
+        response = self.client.get(f"/api/crm/deals/{self.deal_b.id}/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_patch_other_company_deal_returns_404(self):
+        response = self.client.patch(
+            f"/api/crm/deals/{self.deal_b.id}/",
+            {"title": "Hacked"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 404)
+        self.deal_b.refresh_from_db()
+        self.assertEqual(self.deal_b.title, "Privado Tenant B")

@@ -1,5 +1,6 @@
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
 from apps.accounts.permissions import HasRolePermission
@@ -7,6 +8,7 @@ from shared_kernel.audit import log_create, log_delete, log_update
 
 from .models import WebhookDelivery, WebhookSubscription
 from .serializers import WebhookSubscriptionSerializer
+from .tasks import dispatch_webhook
 
 
 class WebhookSubscriptionViewSet(viewsets.ModelViewSet):
@@ -52,3 +54,15 @@ class WebhookSubscriptionViewSet(viewsets.ModelViewSet):
             for d in deliveries
         ]
         return Response(data)
+
+    @action(detail=True, methods=["post"], url_path="deliveries/retry")
+    def retry_delivery(self, request, pk=None):
+        """Re-dispatch a previously failed webhook delivery."""
+        subscription = self.get_object()
+        delivery_id = request.data.get("delivery_id")
+        if not delivery_id:
+            return Response({"detail": "delivery_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        delivery = get_object_or_404(WebhookDelivery, pk=delivery_id, subscription=subscription)
+        dispatch_webhook.delay(subscription.id, delivery.event_name, delivery.request_payload)
+        return Response({"detail": "Reenvio agendado."}, status=status.HTTP_202_ACCEPTED)

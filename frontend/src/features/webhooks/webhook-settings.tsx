@@ -1,15 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/axios"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Loader2, Activity, CheckCircle2, XCircle } from "lucide-react"
+import { Loader2, Activity, CheckCircle2, XCircle, RefreshCw } from "lucide-react"
 import { usePermission } from "@/hooks/use-permission"
+import { toast } from "sonner"
 
 interface WebhookDelivery {
   id: number
@@ -100,6 +101,7 @@ export function WebhookSettings() {
 
 function WebhookDeliveryLogs({ subscription }: { subscription: WebhookSubscription }) {
   const [isOpen, setIsOpen] = useState(false)
+  const queryClient = useQueryClient()
 
   const { data: deliveries, isLoading } = useQuery<WebhookDelivery[]>({
     queryKey: ['webhook-deliveries', subscription.id],
@@ -111,9 +113,24 @@ function WebhookDeliveryLogs({ subscription }: { subscription: WebhookSubscripti
     retry: false,
   })
 
+  const retryMutation = useMutation({
+    mutationFn: async (deliveryId: number) => {
+      await api.post(`/api/webhooks/subscriptions/${subscription.id}/deliveries/retry/`, {
+        delivery_id: deliveryId,
+      })
+    },
+    onSuccess: () => {
+      toast.success("Reenvio agendado com sucesso.")
+      queryClient.invalidateQueries({ queryKey: ['webhook-deliveries', subscription.id] })
+    },
+    onError: () => {
+      toast.error("Não foi possível agendar o reenvio.")
+    },
+  })
+
   return (
     <div className="border rounded-lg overflow-hidden">
-      <div 
+      <div
         className="p-4 bg-muted/30 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
@@ -134,7 +151,7 @@ function WebhookDeliveryLogs({ subscription }: { subscription: WebhookSubscripti
       {isOpen && (
         <div className="p-4 border-t bg-background">
           <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Últimos Envios (Logs)</h4>
-          
+
           {isLoading ? (
             <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
           ) : !deliveries?.length ? (
@@ -145,16 +162,41 @@ function WebhookDeliveryLogs({ subscription }: { subscription: WebhookSubscripti
                 <div key={delivery.id} className="text-sm border rounded p-3 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {delivery.success ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />}
+                      {delivery.success
+                        ? <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        : <XCircle className="h-4 w-4 text-destructive" />}
                       <span className="font-medium">{delivery.event_name}</span>
                     </div>
-                    <span className="text-muted-foreground">
-                      {format(new Date(delivery.created_at), "dd/MM HH:mm:ss", { locale: ptBR })}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-muted-foreground">
+                        {format(new Date(delivery.created_at), "dd/MM HH:mm:ss", { locale: ptBR })}
+                      </span>
+                      {!delivery.success && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs"
+                          disabled={retryMutation.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            retryMutation.mutate(delivery.id)
+                          }}
+                        >
+                          {retryMutation.isPending
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <RefreshCw className="h-3 w-3 mr-1" />}
+                          Reenviar
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4 text-xs">
-                    <span className="text-muted-foreground">Status HTTP: <strong className={delivery.success ? 'text-green-500' : 'text-destructive'}>{delivery.status_code || 'Falha de Rede'}</strong></span>
+                    <span className="text-muted-foreground">
+                      Status HTTP: <strong className={delivery.success ? 'text-green-500' : 'text-destructive'}>
+                        {delivery.status_code || 'Falha de Rede'}
+                      </strong>
+                    </span>
                     <span className="text-muted-foreground">Tentativa: <strong>{delivery.attempt_number}</strong></span>
                   </div>
 

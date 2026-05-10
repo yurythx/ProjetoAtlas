@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    AutomationRuleViewSet,
     ColumnViewSet,
     ContactViewSet,
     DPSMDashboardViewSet,
@@ -32,6 +33,7 @@ router.register(r"xla-feedbacks", XLAFeedbackViewSet, basename="crm-xla-feedback
 router.register(r"csi-register", CSIEntryViewSet, basename="crm-csi-entry")
 router.register(r"dpsm-dashboard", DPSMDashboardViewSet, basename="crm-dpsm-dashboard")
 router.register(r"evolution-config", EvolutionConfigViewSet, basename="crm-evolution-config")
+router.register(r"automation-rules", AutomationRuleViewSet, basename="crm-automation-rule")
 
 urlpatterns = [
     path("integrations/options/", CRMIntegrationOptionsAPIView.as_view(), name="crm-integration-options"),

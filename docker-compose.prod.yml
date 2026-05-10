@@ -1,36 +1,79 @@
-# Atlas Docker Compose Configuration
 # ============================================================
 # ATLAS — PRODUCTION (Cloudflare Tunnel)
 # ============================================================
 # Sem Nginx. O Cloudflare Tunnel faz o roteamento HTTPS.
 #
 # Uso:
-#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#   docker compose -f docker-compose.prod.yml --env-file backend/.env.docker up -d
 #
-# Portas locais expostas APENAS em 127.0.0.1 (não acessíveis
-# externamente — o tunnel conecta-se via loopback):
-#   backend  → 127.0.0.1:8005
-#   frontend → 127.0.0.1:3005
+# Portas expostas APENAS em 127.0.0.1 (não acessíveis externamente —
+# o tunnel conecta-se via loopback):
+#   backend    → 127.0.0.1:8005
+#   frontend   → 127.0.0.1:3005
+#   grafana    → 127.0.0.1:3001  (monitoramento interno)
+#   prometheus → 127.0.0.1:9090  (scraping interno)
+#   flower     → 127.0.0.1:5555  (Celery — acesso restrito)
 # ============================================================
 
 x-backend-env: &backend-env
+  # ── Core ──────────────────────────────────────────────────
   DEBUG: "False"
   SECURE_SSL_REDIRECT: "${SECURE_SSL_REDIRECT:-False}"
   SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
-  DATABASE_URL: ${DATABASE_URL:-postgresql://user:pass@db:5432/db}
-  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+  FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
+
+  # ── Database ──────────────────────────────────────────────
+  DATABASE_URL: postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@pgbouncer:5432/${POSTGRES_DB:?}
+
+  # ── Cache / Broker ────────────────────────────────────────
+  REDIS_URL: ${REDIS_URL:-redis://:${REDIS_PASSWORD}@redis:6379/0}
+
+  # ── Security ──────────────────────────────────────────────
+  FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY is required}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?CSRF_TRUSTED_ORIGINS is required}
+
+  # ── Storage ───────────────────────────────────────────────
   USE_S3: ${USE_S3:-True}
-  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
-  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+  AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+  AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
   AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME:-atlas-media}
   AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://minio:9000}
   AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME:-us-east-1}
-  ALLOWED_HOSTS: ${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
-  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
-  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?CSRF_TRUSTED_ORIGINS is required}
-  FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY is required}
-  SENTRY_DSN: ${SENTRY_DSN:-}
+
+  # ── Email ─────────────────────────────────────────────────
+  EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.smtp.EmailBackend}
+  EMAIL_HOST: ${EMAIL_HOST:-}
+  EMAIL_PORT: ${EMAIL_PORT:-587}
+  EMAIL_USE_TLS: ${EMAIL_USE_TLS:-True}
+  EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+  EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+  DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Atlas <no-reply@example.com>}
+
+  # ── Celery ────────────────────────────────────────────────
   CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-2}
+
+  # ── Monitoring ────────────────────────────────────────────
+  SENTRY_DSN: ${SENTRY_DSN:-}
+
+  # ── AI ────────────────────────────────────────────────────
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+  # ── Web Push ──────────────────────────────────────────────
+  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+  VAPID_ADMIN_EMAIL: ${VAPID_ADMIN_EMAIL:-ops@example.com}
+
+  # ── Licensing ─────────────────────────────────────────────
+  LICENSING_ENFORCE: ${LICENSING_ENFORCE:-False}
+
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
   # ──────────────────────────────────────────────────────────
@@ -43,14 +86,18 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
-    command: [ "postgres", "-c", "max_connections=200", "-c", "shared_buffers=128MB" ]
+    command: >
+      postgres
+      -c max_connections=200
+      -c shared_buffers=128MB
+      -c log_min_duration_statement=200
+      -c log_line_prefix='%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
-    networks:
-      - atlas_internal
+    networks: [atlas_internal]
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -59,11 +106,7 @@ services:
       resources:
         limits:
           memory: 512m
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *logging
 
   # ──────────────────────────────────────────────────────────
   # CACHE / MESSAGE BROKER
@@ -72,14 +115,16 @@ services:
     image: redis:7-alpine
     container_name: atlas_redis
     command: >
-      redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     restart: unless-stopped
-    networks:
-      - atlas_internal
+    networks: [atlas_internal]
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -87,15 +132,10 @@ services:
       resources:
         limits:
           memory: 300m
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *logging
 
   # ──────────────────────────────────────────────────────────
   # OBJECT STORAGE (MinIO)
-  # Exposto apenas internamente. Acesso externo via Django proxy.
   # ──────────────────────────────────────────────────────────
   minio:
     image: minio/minio:RELEASE.2025-04-03T14-56-28Z
@@ -104,14 +144,13 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
-      MINIO_SERVER_URL: "https://minio.projetoravenna.cloud"
+      MINIO_SERVER_URL: ${MINIO_SERVER_URL:-}
     volumes:
       - minio_data:/data
     restart: unless-stopped
-    networks:
-      - atlas_internal
+    networks: [atlas_internal]
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1" ]
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -120,16 +159,8 @@ services:
       resources:
         limits:
           memory: 512m
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *logging
 
-  # ──────────────────────────────────────────────────────────
-  # MINIO BUCKET CREATOR
-  # Garante que o bucket 'atlas-media' exista na inicialização.
-  # ──────────────────────────────────────────────────────────
   createbuckets:
     image: minio/mc:latest
     container_name: atlas_minio_setup
@@ -140,17 +171,43 @@ services:
       /bin/sh -c "
         /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
         /usr/bin/mc mb --ignore-existing myminio/${AWS_STORAGE_BUCKET_NAME:-atlas-media};
-        echo 'Bucket ${AWS_STORAGE_BUCKET_NAME:-atlas-media} is ready';
+        echo 'Bucket ${AWS_STORAGE_BUCKET_NAME:-atlas-media} ready (private)';
         exit 0;
       "
-    networks:
-      - atlas_internal
-    restart: "no" # Roda apenas uma vez na inicialização
+    networks: [atlas_internal]
+    restart: "no"
 
   # ──────────────────────────────────────────────────────────
-  # BACKEND (Django/Daphne)
-  # Bind em 127.0.0.1 → não acessível externamente!
-  # Cloudflare Tunnel conecta via http://localhost:8005
+  # CONNECTION POOLER (PgBouncer)
+  # ──────────────────────────────────────────────────────────
+  pgbouncer:
+    image: edoburu/pgbouncer:1.22.0
+    container_name: atlas_pgbouncer
+    environment:
+      DB_USER: ${POSTGRES_USER:?}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?}
+      DB_HOST: db
+      DB_NAME: ${POSTGRES_DB:?}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 25
+      MIN_POOL_SIZE: 5
+      RESERVE_POOL_SIZE: 5
+      SERVER_IDLE_TIMEOUT: 600
+      SERVER_RESET_QUERY: DISCARD ALL
+    restart: unless-stopped
+    networks: [atlas_internal]
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+    logging: *logging
+
+  # ──────────────────────────────────────────────────────────
+  # BACKEND (Django/Daphne ASGI)
   # ──────────────────────────────────────────────────────────
   backend:
     build:
@@ -161,21 +218,21 @@ services:
     command: daphne -b 0.0.0.0 -p 8005 config.asgi:application
     environment:
       <<: *backend-env
-    networks:
-      - atlas_internal
+    networks: [atlas_internal]
     ports:
-      # Bind apenas no loopback para o deploy.sh e Cloudflare Tunnel local
       - "127.0.0.1:8005:8005"
     depends_on:
       db:
         condition: service_healthy
+      pgbouncer:
+        condition: service_started
       redis:
         condition: service_healthy
       minio:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8005/api/core/health/" ]
+      test: ["CMD", "curl", "-f", "http://localhost:8005/api/health/"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -184,11 +241,7 @@ services:
       resources:
         limits:
           memory: 1g
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *logging
 
   # ──────────────────────────────────────────────────────────
   # CELERY WORKER
@@ -200,7 +253,9 @@ services:
     image: ${DOCKER_REGISTRY:-ghcr.io}/${GITHUB_REPOSITORY:-yurythx/atlas}/backend:${APP_VERSION:-latest}
     container_name: atlas_celery
     command: >
-      celery -A config worker -l warning --concurrency=${CELERY_CONCURRENCY:-2} -Q default,emails,notifications
+      celery -A config worker -l warning
+      --concurrency=${CELERY_CONCURRENCY:-2}
+      -Q default,emails,notifications,reports
     environment:
       <<: *backend-env
     depends_on:
@@ -209,10 +264,9 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    networks:
-      - atlas_internal
+    networks: [atlas_internal]
     healthcheck:
-      test: [ "CMD", "celery", "-A", "config", "inspect", "ping", "-d", "celery@$$HOSTNAME" ]
+      test: ["CMD", "celery", "-A", "config", "inspect", "ping", "-d", "celery@$$HOSTNAME"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -221,11 +275,7 @@ services:
       resources:
         limits:
           memory: 512m
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *logging
 
   # ──────────────────────────────────────────────────────────
   # CELERY BEAT (Scheduler)
@@ -237,7 +287,8 @@ services:
     image: ${DOCKER_REGISTRY:-ghcr.io}/${GITHUB_REPOSITORY:-yurythx/atlas}/backend:${APP_VERSION:-latest}
     container_name: atlas_celery_beat
     command: >
-      celery -A config beat -l warning --scheduler django_celery_beat.schedulers:DatabaseScheduler
+      celery -A config beat -l warning
+      --scheduler django_celery_beat.schedulers:DatabaseScheduler
     environment:
       <<: *backend-env
     depends_on:
@@ -246,20 +297,38 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    networks:
-      - atlas_internal
+    networks: [atlas_internal]
     deploy:
       resources:
         limits:
           memory: 256m
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *logging
 
   # ──────────────────────────────────────────────────────────
-  # FRONTEND (Next.js)
+  # CELERY FLOWER (Celery monitoring — internal only)
+  # ──────────────────────────────────────────────────────────
+  flower:
+    image: mher/flower:2.0
+    container_name: atlas_flower
+    command: >
+      celery --broker=redis://:${REDIS_PASSWORD}@redis:6379/1
+      flower --port=5555
+      --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:?FLOWER_PASSWORD is required}
+    ports:
+      - "127.0.0.1:5555:5555"
+    depends_on:
+      - redis
+      - celery_worker
+    restart: unless-stopped
+    networks: [atlas_internal]
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    logging: *logging
+
+  # ──────────────────────────────────────────────────────────
+  # FRONTEND (Next.js standalone)
   # ──────────────────────────────────────────────────────────
   frontend:
     build:
@@ -274,16 +343,14 @@ services:
       API_URL_INTERNAL: http://backend:8005
       NODE_ENV: production
     ports:
-      # Bind apenas no loopback para o deploy.sh e Cloudflare Tunnel local
       - "127.0.0.1:3005:3005"
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
-    networks:
-      - atlas_internal
+    networks: [atlas_internal]
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:3005/api/health || exit 1" ]
+      test: ["CMD-SHELL", "curl -f http://localhost:3005/api/health || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -292,17 +359,79 @@ services:
       resources:
         limits:
           memory: 512m
+    logging: *logging
+
+  # ──────────────────────────────────────────────────────────
+  # PROMETHEUS (Metrics scraping)
+  # ──────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: atlas_prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.listen-address=0.0.0.0:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks: [atlas_internal]
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    logging: *logging
+
+  # ──────────────────────────────────────────────────────────
+  # GRAFANA (Dashboards + Alerting)
+  # ──────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: atlas_grafana
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
+      - GF_UNIFIED_ALERTING_ENABLED=true
+      - GF_ALERTING_ENABLED=false
+      # SMTP for alert emails (reuses EMAIL_* vars)
+      - GF_SMTP_ENABLED=${GRAFANA_SMTP_ENABLED:-false}
+      - GF_SMTP_HOST=${EMAIL_HOST:-}:${EMAIL_PORT:-587}
+      - GF_SMTP_USER=${EMAIL_HOST_USER:-}
+      - GF_SMTP_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+      - GF_SMTP_FROM_ADDRESS=${DEFAULT_FROM_EMAIL:-grafana@example.com}
+      # Passed to contact-points provisioning
+      - GRAFANA_ALERT_EMAIL=${GRAFANA_ALERT_EMAIL:-ops@example.com}
+      - GRAFANA_SLACK_WEBHOOK_URL=${GRAFANA_SLACK_WEBHOOK_URL:-}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks: [atlas_internal]
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    logging: *logging
 
 volumes:
   postgres_data:
   redis_data:
   minio_data:
-  static_volume:
-  media_volume:
-
+  prometheus_data:
+  grafana_data:
 
 networks:
   atlas_internal:
     driver: bridge
-    # Rede apenas interna — serviços conversam entre si.
-    # O Cloudflare Tunnel acessa backend/frontend via portas do host (127.0.0.1).
+    # Rede interna — serviços conversam entre si.
+    # Cloudflare Tunnel acessa backend/frontend via 127.0.0.1.
