@@ -1,5 +1,9 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     Column,
@@ -331,6 +335,7 @@ class PipelineOverviewSerializer(serializers.Serializer):
 
 class DealSerializer(serializers.ModelSerializer):
     contact_name = serializers.SerializerMethodField()
+    stage_name = serializers.CharField(source="stage.name", default="", read_only=True)
     column_id = serializers.SerializerMethodField()
     column_title = serializers.SerializerMethodField()
     column_data = ColumnSummarySerializer(source="column", read_only=True)
@@ -353,6 +358,7 @@ class DealSerializer(serializers.ModelSerializer):
             "contact",
             "contact_name",
             "stage",
+            "stage_name",
             "column",
             "column_id",
             "column_title",

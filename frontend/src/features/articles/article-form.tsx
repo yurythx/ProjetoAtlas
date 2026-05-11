@@ -224,7 +224,7 @@ export function ArticleForm({ initialData, onSuccess, onCancel }: ArticleFormPro
 
       if (initialData) {
         // Use the initial slug, as changing the slug in the form won't affect the lookup URL until saved
-        await api.put(`/api/articles/articles/${initialData.slug}/`, payload)
+        await api.patch(`/api/articles/articles/${initialData.slug}/`, payload)
       } else {
         await api.post('/api/articles/articles/', payload)
       }

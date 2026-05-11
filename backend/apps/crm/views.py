@@ -709,107 +709,6 @@ class DealViewSet(viewsets.ModelViewSet):
         deal.refresh_from_db()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=["get"])
-    def topology(self, request, pk=None):
-        """
-        ITIL Version 5: Visualização 360 graus do ecossistema do Deal.
-        Retorna nós e links para visualização em grafo (Topology tab).
-        """
-        from django.db.models import prefetch_related_objects
-
-        deal = self.get_object()
-        # Prefetch relationships not included in the base get_queryset()
-        prefetch_related_objects([deal], "affected_cis__ci_type", "swarm__participants")
-
-        nodes = []
-        links = []
-
-        # Central Node (O Deal)
-        nodes.append({
-            "id": f"deal_{deal.id}",
-            "type": "deal",
-            "label": f"[{deal.record_type.upper()}] {deal.title}",
-            "priority": deal.priority,
-            "status": "closed" if deal.is_closed else "active",
-            "uuid": str(deal.uuid)
-        })
-
-        # ICs Afetados (Affected CIs) — prefetched above, no N+1
-        if hasattr(deal, 'affected_cis'):
-            for ci in deal.affected_cis.all():
-                nodes.append({
-                    "id": f"ci_{ci.id}",
-                    "type": "ci",
-                    "kind": ci.ci_type.name if ci.ci_type else "General",
-                    "label": ci.name,
-                    "status": ci.status,
-                    "asset_tag": ci.asset_tag
-                })
-                links.append({
-                    "source": f"deal_{deal.id}",
-                    "target": f"ci_{ci.id}",
-                    "relation": "impacts",
-                    "label": "Afeta IC"
-                })
-
-        # Usuários Relacionados (Participantes do Swarm se houver) — prefetched above
-        if hasattr(deal, 'swarm') and deal.swarm:
-            for participant in deal.swarm.participants.all():
-                nodes.append({
-                    "id": f"user_{participant.id}",
-                    "type": "user",
-                    "label": participant.get_full_name() or participant.username,
-                    "email": participant.email
-                })
-                links.append({
-                    "source": f"deal_{deal.id}",
-                    "target": f"user_{participant.id}",
-                    "relation": "collaborator",
-                    "label": "Swarmer"
-                })
-
-        # Dono e Técnico Responsável — already select_related in get_queryset()
-        if deal.owner:
-            nodes.append({
-                "id": f"user_{deal.owner.id}",
-                "type": "user",
-                "label": deal.owner.get_full_name() or deal.owner.username,
-                "email": deal.owner.email,
-                "role": "Owner"
-            })
-            links.append({
-                "source": f"deal_{deal.id}",
-                "target": f"user_{deal.owner.id}",
-                "relation": "owner",
-                "label": "Responsável"
-            })
-
-        # RFCs/Problemas Vinculados (via ai_metadata)
-        # Validate that the referenced RFC belongs to the same company (prevents IDOR)
-        metadata = deal.ai_metadata or {}
-        linked_rfc_id = metadata.get('linked_rfc_id')
-        if linked_rfc_id:
-            rfc_exists = Deal.all_objects.filter(
-                id=linked_rfc_id,
-                company=deal.company,
-                is_deleted=False,
-            ).exists()
-            if rfc_exists:
-                nodes.append({
-                    "id": f"deal_{linked_rfc_id}",
-                    "type": "deal",
-                    "label": f"RFC #{linked_rfc_id} (Automática)",
-                    "kind": "change",
-                    "status": "triggered"
-                })
-                links.append({
-                    "source": f"deal_{deal.id}",
-                    "target": f"deal_{linked_rfc_id}",
-                    "relation": "triggers",
-                    "label": "Gatilhou Mudança"
-                })
-
-        return Response({"nodes": nodes, "links": links})
 
     @action(detail=True, methods=["post"])
     def start_swarm(self, request, pk=None):
@@ -1052,61 +951,110 @@ class DealViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"])
     def topology(self, request, pk=None):
-        if not self._ensure_cmdb_module_enabled(request):
-            return Response({"nodes": [], "links": [], "detail": "Módulo CMDB inativo."}, status=status.HTTP_403_FORBIDDEN)
+        """ITIL Version 5: 360-degree ecosystem graph for a Deal (Topology tab)."""
+        from django.db.models import prefetch_related_objects
 
         deal = self.get_object()
-        from apps.cmdb.models import CI, CIRelationship
-        
-        # 1. Obter CIs afetados diretamente
-        affected_cis = deal.affected_cis.all()
+        prefetch_related_objects([deal], "affected_cis__ci_type", "swarm__participants")
+
         nodes = []
         links = []
-        
-        # Adicionar o Card como nó central
-        nodes.append({"id": f"deal-{deal.id}", "label": deal.title, "type": "deal", "status": "incident"})
-        
-        involved_ci_ids = set()
-        for ci in affected_cis:
-            nodes.append({
-                "id": f"ci-{ci.id}", 
-                "label": ci.name, 
-                "type": "ci", 
-                "kind": ci.ci_type.name if ci.ci_type else "General",
-                "status": ci.status
-            })
-            links.append({"source": f"deal-{deal.id}", "target": f"ci-{ci.id}", "label": "afeta"})
-            involved_ci_ids.add(ci.id)
 
-        # 2. Buscar dependências de 1º nível (quem depende desses CIs)
-        relationships = CIRelationship.objects.filter(
-            Q(source_id__in=involved_ci_ids) | Q(target_id__in=involved_ci_ids),
-            company=deal.company
-        ).select_related('source', 'target', 'source__ci_type', 'target__ci_type')
-
-        for rel in relationships:
-            # Garantir que os nós existam
-            for ci_node in [rel.source, rel.target]:
-                node_id = f"ci-{ci_node.id}"
-                if not any(n["id"] == node_id for n in nodes):
-                    nodes.append({
-                        "id": node_id, 
-                        "label": ci_node.name, 
-                        "type": "ci", 
-                        "kind": ci_node.ci_type.name if ci_node.ci_type else "General",
-                        "status": ci_node.status
-                    })
-            
-            links.append({
-                "source": f"ci-{rel.source_id}", 
-                "target": f"ci-{rel.target_id}", 
-                "label": rel.get_relation_kind_display()
-            })
-
-        return Response({
-            "nodes": nodes,
-            "links": links
+        # Central node
+        nodes.append({
+            "id": f"deal-{deal.id}",
+            "type": "deal",
+            "label": f"[{deal.record_type.upper()}] {deal.title}",
+            "priority": deal.priority,
+            "status": "closed" if deal.is_closed else "active",
+            "uuid": str(deal.uuid),
         })
+
+        # Affected CIs (always shown)
+        involved_ci_ids = set()
+        if hasattr(deal, "affected_cis"):
+            for ci in deal.affected_cis.all():
+                nodes.append({
+                    "id": f"ci-{ci.id}",
+                    "type": "ci",
+                    "kind": ci.ci_type.name if ci.ci_type else "General",
+                    "label": ci.name,
+                    "status": ci.status,
+                    "asset_tag": ci.asset_tag,
+                })
+                links.append({"source": f"deal-{deal.id}", "target": f"ci-{ci.id}", "label": "afeta"})
+                involved_ci_ids.add(ci.id)
+
+        # Swarm participants
+        if hasattr(deal, "swarm") and deal.swarm:
+            for participant in deal.swarm.participants.all():
+                nodes.append({
+                    "id": f"user-{participant.id}",
+                    "type": "user",
+                    "label": participant.get_full_name() or participant.username,
+                    "email": participant.email,
+                    "role": "Swarmer",
+                })
+                links.append({"source": f"deal-{deal.id}", "target": f"user-{participant.id}", "label": "Swarmer"})
+
+        # Owner and assignee
+        if deal.owner:
+            nodes.append({
+                "id": f"user-{deal.owner.id}",
+                "type": "user",
+                "label": deal.owner.get_full_name() or deal.owner.username,
+                "email": deal.owner.email,
+                "role": "Owner",
+            })
+            links.append({"source": f"deal-{deal.id}", "target": f"user-{deal.owner.id}", "label": "Responsável"})
+
+        # Linked RFC/Problem via ai_metadata (IDOR-safe: same company check)
+        metadata = deal.ai_metadata or {}
+        linked_rfc_id = metadata.get("linked_rfc_id")
+        if linked_rfc_id:
+            rfc_exists = Deal.all_objects.filter(
+                id=linked_rfc_id, company=deal.company, is_deleted=False
+            ).exists()
+            if rfc_exists:
+                nodes.append({
+                    "id": f"deal-{linked_rfc_id}",
+                    "type": "deal",
+                    "label": f"RFC #{linked_rfc_id}",
+                    "kind": "change",
+                    "status": "triggered",
+                })
+                links.append({"source": f"deal-{deal.id}", "target": f"deal-{linked_rfc_id}", "label": "Gatilhou Mudança"})
+
+        # CI-to-CI relationships from CMDB (only when CMDB module is active)
+        if involved_ci_ids and self._ensure_cmdb_module_enabled(request):
+            try:
+                from apps.cmdb.models import CIRelationship
+
+                relationships = CIRelationship.objects.filter(
+                    Q(source_id__in=involved_ci_ids) | Q(target_id__in=involved_ci_ids),
+                    company=deal.company,
+                ).select_related("source", "target", "source__ci_type", "target__ci_type")
+
+                for rel in relationships:
+                    for ci_node in [rel.source, rel.target]:
+                        node_id = f"ci-{ci_node.id}"
+                        if not any(n["id"] == node_id for n in nodes):
+                            nodes.append({
+                                "id": node_id,
+                                "type": "ci",
+                                "kind": ci_node.ci_type.name if ci_node.ci_type else "General",
+                                "label": ci_node.name,
+                                "status": ci_node.status,
+                            })
+                    links.append({
+                        "source": f"ci-{rel.source_id}",
+                        "target": f"ci-{rel.target_id}",
+                        "label": rel.get_relation_kind_display(),
+                    })
+            except Exception:
+                pass
+
+        return Response({"nodes": nodes, "links": links})
 
     def perform_destroy(self, instance):
         instance.is_deleted = True
