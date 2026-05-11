@@ -144,6 +144,11 @@ class Comment(BaseTenantModel):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["article", "is_approved", "is_public"], name="art_comment_article_approved_idx"),
+            models.Index(fields=["company", "is_approved", "created_at"], name="art_comment_company_moderation_idx"),
+            models.Index(fields=["article", "parent"], name="art_comment_article_parent_idx"),
+        ]
 
     def __str__(self):
         return f"Comment by {self.author or self.name} on {self.article}"

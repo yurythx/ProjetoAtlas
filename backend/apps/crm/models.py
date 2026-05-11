@@ -387,6 +387,11 @@ class Deal(BaseTenantModel):
             models.Index(fields=["company", "record_type"]),
             models.Index(fields=["company", "sla_status"]),
             GinIndex(name="crm_deal_title_gin", fields=["title"], opclasses=["gin_trgm_ops"]),
+            # Composite indexes for the most common filtered list queries
+            models.Index(fields=["company", "is_deleted"], name="crm_deal_company_deleted_idx"),
+            models.Index(fields=["company", "is_deleted", "column"], name="crm_deal_company_deleted_col_idx"),
+            models.Index(fields=["company", "owner"], name="crm_deal_company_owner_idx"),
+            models.Index(fields=["company", "sla_resolution_deadline"], name="crm_deal_sla_deadline_idx"),
         ]
 
     def __str__(self):
@@ -480,6 +485,9 @@ class DealActivity(BaseTenantModel):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["deal", "created_at"], name="crm_dealactivity_deal_created_idx"),
+        ]
 
     def __str__(self):
         return f"{self.activity_type} - {self.deal.title}"

@@ -6,7 +6,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-atlas_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    command: [ "postgres", "-c", "max_connections=200", "-c", "shared_buffers=128MB" ]
+    command: [ "postgres", "-c", "max_connections=200", "-c", "shared_buffers=128MB", "-c", "log_min_duration_statement=200" ]
     ports:
       - "5432:5432"
     volumes:
