@@ -43,3 +43,42 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+// --- Web Push ---
+
+self.addEventListener("push", (event: PushEvent) => {
+  if (!event.data) return;
+
+  let payload: { title?: string; body?: string; data?: { url?: string } } = {};
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: "Atlas", body: event.data.text() };
+  }
+
+  const title = payload.title ?? "Atlas";
+  const options: NotificationOptions = {
+    body: payload.body ?? "",
+    icon: "/icon-192x192.png",
+    badge: "/icon-96x96.png",
+    data: payload.data ?? {},
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event: NotificationEvent) => {
+  event.notification.close();
+  const url: string = (event.notification.data as { url?: string })?.url ?? "/";
+  event.waitUntil(
+    (self.clients as Clients).matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ("focus" in client) {
+          void (client as WindowClient).focus();
+          return;
+        }
+      }
+      return (self.clients as Clients).openWindow(url);
+    })
+  );
+});

@@ -4,8 +4,11 @@ import * as React from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/axios"
 import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { H3, P } from "@/components/ui/typography"
+import { Bell, BellOff, BellRing, Loader2 } from "lucide-react"
+import { usePushSubscription } from "@/hooks/use-push-subscription"
 
 type UserNotificationPreference = {
   notify_moderation_comment_pending: boolean
@@ -13,6 +16,75 @@ type UserNotificationPreference = {
   notify_moderation_article_pending: boolean
   notify_reply_approved_single: boolean
   notify_reply_approved_thread: boolean
+}
+
+function PushNotificationToggle() {
+  const { status, toggle, isPending, subscribeError, unsubscribeError } = usePushSubscription()
+
+  React.useEffect(() => {
+    if (subscribeError) toast.error((subscribeError as Error).message || "Erro ao ativar notificações push.")
+    if (unsubscribeError) toast.error("Erro ao desativar notificações push.")
+  }, [subscribeError, unsubscribeError])
+
+  if (status === "unsupported") {
+    return (
+      <div className="flex items-start justify-between gap-6 rounded-2xl border border-border/50 bg-muted/20 p-4 opacity-50">
+        <div className="min-w-0">
+          <div className="font-medium flex items-center gap-2">
+            <BellOff className="h-4 w-4" />
+            Notificações push
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Não suportado neste navegador.
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const statusLabel: Record<typeof status, string> = {
+    loading: "Verificando...",
+    subscribed: "Ativadas neste dispositivo",
+    unsubscribed: "Desativadas",
+    denied: "Bloqueadas pelo navegador",
+    unsupported: "",
+  }
+
+  const StatusIcon = status === "subscribed" ? BellRing : status === "denied" ? BellOff : Bell
+
+  return (
+    <div className="flex items-start justify-between gap-6 rounded-2xl border border-border/50 bg-muted/20 p-4">
+      <div className="min-w-0">
+        <div className="font-medium flex items-center gap-2">
+          <StatusIcon className="h-4 w-4" />
+          Notificações push
+        </div>
+        <div className="text-sm text-muted-foreground">{statusLabel[status]}</div>
+        {status === "denied" && (
+          <div className="text-xs text-amber-500 mt-1">
+            Habilite permissões de notificação nas configurações do navegador.
+          </div>
+        )}
+      </div>
+      {status !== "denied" && status !== "unsupported" && (
+        <Button
+          size="sm"
+          variant={status === "subscribed" ? "outline" : "default"}
+          className="shrink-0 rounded-xl"
+          disabled={isPending || status === "loading"}
+          onClick={toggle}
+        >
+          {isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : status === "subscribed" ? (
+            "Desativar"
+          ) : (
+            "Ativar"
+          )}
+        </Button>
+      )}
+    </div>
+  )
 }
 
 export function UserNotificationPreferences() {
@@ -61,6 +133,8 @@ export function UserNotificationPreferences() {
           Controle quais eventos geram notificações para você.
         </P>
       </div>
+
+      <PushNotificationToggle />
 
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-6 rounded-2xl border border-border/50 bg-muted/20 p-4">

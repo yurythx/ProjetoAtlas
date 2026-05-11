@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -54,3 +55,9 @@ class PushSubscriptionViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user, company=self.request.company)
+
+    @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    def vapid_public_key(self, request):
+        """Expose the VAPID public key so the frontend can subscribe to push."""
+        key = getattr(settings, "VAPID_PUBLIC_KEY", None)
+        return Response({"vapid_public_key": key or ""})
